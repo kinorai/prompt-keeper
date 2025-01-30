@@ -1,8 +1,8 @@
 config:
   API_HOST: ""
   FRONT_HOST: ""
-  DEMO_PROMPT_SAVER_API_HOST: ""
-  DEMO_PROMPT_SAVER_FRONT_HOST: ""
+  DEMO_PROMPT_KEEPER_API_HOST: ""
+  DEMO_PROMPT_KEEPER_FRONT_HOST: ""
 
 defaultPodOptions:
   automountServiceAccountToken: false
@@ -174,9 +174,9 @@ secrets:
   api:
     enabled: true
     stringData:
-      POSTGRES_USER: "prompt_saver"
-      POSTGRES_PASSWORD: "prompt_saver"
-      POSTGRES_DB: "prompt_saver"
+      POSTGRES_USER: "prompt_keeper"
+      POSTGRES_PASSWORD: "prompt_keeper"
+      POSTGRES_DB: "prompt_keeper"
       POSTGRES_HOST: "postgres-postgresql.postgres.svc.cluster.local"
       POSTGRES_PORT: "5432"
       OPENAI_API_KEY: "your-openai-api-key"

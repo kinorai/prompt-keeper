@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prompt Saver",
+  title: "Prompt Keeper",
   description: "Search and browse your LLM conversation history",
 };
 
