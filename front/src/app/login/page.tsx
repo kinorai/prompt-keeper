@@ -51,7 +51,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle>Login</CardTitle>
           <CardDescription>
-            Enter your credentials to access the prompt saver
+            Enter your credentials to access the prompt keeper
           </CardDescription>
         </CardHeader>
         <CardContent>

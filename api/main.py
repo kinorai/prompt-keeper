@@ -91,9 +91,9 @@ async def lifespan(app: FastAPI):
     # Startup
     global pool
     pool = await asyncpg.create_pool(
-        user=os.getenv("POSTGRES_USER", "prompt_saver"),
-        password=os.getenv("POSTGRES_PASSWORD", "prompt_saver"),
-        database=os.getenv("POSTGRES_DB", "prompt_saver"),
+        user=os.getenv("POSTGRES_USER", "prompt_keeper"),
+        password=os.getenv("POSTGRES_PASSWORD", "prompt_keeper"),
+        database=os.getenv("POSTGRES_DB", "prompt_keeper"),
         host=os.getenv("POSTGRES_HOST", "localhost"),
         port=int(os.getenv("POSTGRES_PORT", "5432"))
     )
