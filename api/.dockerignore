@@ -1,8 +1,0 @@
-Dockerfile
-.dockerignore
-Pipfile
-Pipfile.lock
-README.md
-.git
-.env
-.env.*
