@@ -1,0 +1,266 @@
+Below is the revised Design Architecture Template (DAT) for Prompt Keeper, now including detailed structure data for OpenSearch.
+
+────────────────────────────────────────
+Prompt Keeper – Design Architecture Template (DAT)
+────────────────────────────────────────
+
+1. OVERVIEW
+
+• Purpose:  
+ Create an open‐source LLM API proxy that is OpenAI compatible, while also providing a rich user interface to search and analyze historical LLM conversations. The system intercepts API calls, forwards them to LiteLLM for processing, and stores the resulting conversation data in OpenSearch.
+
+• Target Audience:  
+ Technical users such as developers, data scientists, and integrators working with LLM APIs who need to review, filter, and reuse past prompt and response data.
+
+• Primary Goals:  
+ – Provide an API proxy to route requests to LiteLLM.  
+ – Log and store conversation details (metadata, token usage, messages, raw responses, etc.) asynchronously.  
+ – Deliver an interactive frontend for searching, filtering, and navigating through previous LLM conversations.
+
+──────────────────────────────────────── 2. OBJECTIVES & FEATURES
+
+1. a proxy llm openai compatible api that should also store llm conversations in opensearch
+   - passthrough the llm api calls to LiteLLM (let LiteLLM do the openai compatibility)
+   - store in opensearch all conversations fields(models, usage(total_tokens, prompt_tokens,completion_tokens,prompt_tokens_details,completion_tokens_details), choices(message,role,content,finish_reason), created, raw response), storing the information should happen after the llm api calls has been answered to the user, for yes overhead of using the proxy llm
+2. a frontend where you can search inside all your LLMs conversations that you did through api calls
+   - this is a single page application, except for login page
+   - Sections
+     - search input and filters
+       - the search bar should be above and take the full screen with search mode on the right, all other filters should be below the search bar
+       - with multiple mods (fuzzy, regex, keyword, ...)
+       - search should start after 3 characters with an optional button search
+       - filters
+         - timerange 1h, 1day, 1month, 1y, all time, custom (date picker ?)
+         - add filter on fields fields to search IN like : default prompts and responses
+         - how many results wanted
+         - if fuzzy search is selected, show the customization of fuzzy search
+   - the number of total results in how much milliseconds, s, min, hour, should be displayde, as well as the number of displayed results
+   - scroll area
+     - header of each conversations cards
+       - date
+       - time
+       - model LLM
+       - tokens total
+       - latency
+       - match score returned by open search
+       - a button to show raw response, in a modal there should be another button to copy raw response
+     - conversations : user's and assistants messages
+   - Markdown
+   - authentification
+   - highlight searched word
+     - simple highlight with highlithed character (client side)
+     - is there anything to do with opensearch
+     - highlight like fuzzy ctrl + r
+   - Improved navigation
+     - go to begin/end of chat
+     - go to begin/end of page
+     - pagination verticale on the right
+   - copy whole conversation
+   - copy code blocks
+   - copy inline code by clicking on it
+   - when any charater typing key is pressed, it should start typing in the search bar
+   - darkmode toggle by clicking on the moon or sun icon, no select component, system default
+
+──────────────────────────────────────── 3. TECHNOLOGY STACK
+
+• Frontend:  
+ – Next.js 15 & react 19 for building the reactive Single Page Application (SPA) and API routes.  
+ – UI libraries such as Shadcn UI and components from 21st.dev for a modern, responsive design.
+ – Tailwind CSS for styling.
+
+• Backend & Proxy:  
+ – Next.js 15 API routes acting as middleware to forward API calls to LiteLLM.  
+ – LiteLLM v1.60.8 to handle LLM processing and ensure OpenAI compatibility.
+
+• Data Storage & Search:  
+ – OpenSearch 2.18.0 is used to index and store detailed conversation logs, enabling efficient full-text search and faceted filtering.
+
+──────────────────────────────────────── 4. SYSTEM ARCHITECTURE
+
+A. High-Level Data Flow
+
+1. A user (or external client) sends a request (e.g., a chat completion call) to the Next.js API proxy endpoint.
+    2. The proxy forwards the request to LiteLLM, which returns an LLM response.
+    3. The proxy immediately returns the LLM response to the user.
+    4. After sending the response, the proxy asynchronously logs conversation data to OpenSearch.
+    5. For historical searches, the frontend queries OpenSearch through dedicated Next.js API routes that return filtered and ranked conversation data.
+
+B. Architecture Diagram (Conceptual)
+
+[Frontend UI (Next.js + Shadcn/21st.dev)]
+         │
+          ▼
+   [Next.js Server – API Routes]
+         │             
+          ▼
+    [LiteLLM Proxy] ←→ [OpenSearch (Conversation Store)]
+          │
+          ▼
+     [Asynchronous Logging of Conversation Data]
+
+──────────────────────────────────────── 5. DATA MODEL & OPENSEARCH SCHEMA
+
+To efficiently query and store all necessary details for each conversation, OpenSearch will be structured as follows:
+
+A. OpenSearch Index Name:  
+ “conversations”
+
+B. Sample Mapping Structure:
+
+{
+"mappings": {
+"properties": {
+"conversation_id": {
+"type": "keyword"
+},
+"created": {
+"type": "date"
+},
+"model": {
+"type": "keyword"
+},
+"usage": {
+"properties": {
+"total_tokens": { "type": "integer" },
+"prompt_tokens": { "type": "integer" },
+"completion_tokens": { "type": "integer" },
+"prompt_tokens_details": {
+"type": "nested",
+"properties": {
+"key": { "type": "keyword" },
+"value": { "type": "integer" }
+}
+},
+"completion_tokens_details": {
+"type": "nested",
+"properties": {
+"key": { "type": "keyword" },
+"value": { "type": "integer" }
+}
+}
+}
+},
+"messages": {
+"type": "nested",
+"properties": {
+"role": { "type": "keyword" },
+"content": {
+"type": "text",
+"fields": {
+"raw": { "type": "keyword" }
+}
+},
+"finish_reason": { "type": "keyword" }
+}
+},
+"raw_response": {
+"type": "object",
+"enabled": false  // stored for retrieval, not indexing
+},
+"latency": {
+"type": "float"
+},
+"match_score": {
+"type": "float"
+}
+}
+}
+}
+
+C. Indexing Considerations:  
+ • The nested types for usage details and messages enable more granular querying (e.g., filtering based on specific token counts or message content).  
+ • The raw_response field is disabled for indexing to save resources, yet remains available for retrieval when needed.  
+ • Additional fields can be added or adjusted depending on iterative requirements or optimization needs.
+
+──────────────────────────────────────── 6. SECURITY & AUTHENTICATION
+
+• Basic security is achieved by including middleware that inspects an Authorization header (e.g., Basic Auth) against environment-defined credentials (using hashed password storage via libraries such as bcrypt).
+• This protects both the API proxy endpoints and the administrative UI.
+• Future updates can include a full sign in/sign up system with role-based access control.
+
+──────────────────────────────────────── 7. MVP IMPLEMENTATION PLAN
+
+Phase 1 (MVP):
+ – Develop Next.js API routes to act as the LLM proxy and integrate with LiteLLM.  
+ – Ensure that after each API call, conversation details are logged asynchronously to OpenSearch using the provided data structure.
+ – Create a search UI with:
+  ▪ A full-width search input that activates after 3 characters.
+  ▪ Support for multiple search modes (fuzzy, regex, keyword).
+  ▪ Filter controls for time range and field-specific searches.
+  ▪ Display formatted conversation cards (date/time, model info, token stats, latency, match score) with options to view and copy raw responses.
+ – Implement simple authentication using ENV variables and hashed passwords.
+
+Phase 2 (Enhancements):
+ – Incorporate social features (like, comment, tagging, favorites).
+ – Enhance the search UI with refined fuzzy highlighting and additional filter options.
+ – Upgrade authentication to include user management (sign in/sign up).
+
+Phase 3 (Advanced Features):
+ – Integrate Kafka for real-time messaging and streaming.
+ – Explore Retrieval-Augmented Generation (RAG) and vector-based search for improved semantic retrieval.
+ – Further optimize and scale the search and indexing strategy based on feedback and performance metrics.
+
+──────────────────────────────────────── 8. PERFORMANCE & MONITORING CONSIDERATIONS
+
+• Asynchronous logging to OpenSearch minimizes API response overhead.
+• Use OpenSearch’s BM25 ranking for efficient full-text search, along with scroll APIs or virtualization for large result sets.
+• Monitor key metrics including API response times, indexing performance, search query durations, token usage patterns, and error rates.
+• Implement caching strategies for frequently used filter queries and aggregations.
+
+──────────────────────────────────────── 9. CONCLUSION & NEXT STEPS
+
+The Prompt Keeper DAT outlines an architecture that balances a simple MVP with the ability to scale into advanced features. It leverages Next.js for both the UI and API proxy, integrates LiteLLM for LLM processing, and uses OpenSearch for robust data storage and search functionality with a clearly defined schema. As the project evolves, further enhancements in security, social features, and advanced data retrieval techniques will be integrated.
+
+Next steps:
+ • Prototype and test the Next.js API routes and LiteLLM integration.
+ • Configure the OpenSearch index using the provided mapping.
+ • Develop the frontend UI and integrate search functionalities.
+ • Iterate based on user feedback and performance results.
+
+────────────────────────────────────────
+End of Document
+────────────────────────────────────────
+
+This document now provides a comprehensive guide with integrated details on the data structure for OpenSearch, ensuring clarity for both development and future enhancements.
+
+---
+
+You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, Radix UI and Tailwind.
+
+Code Style and Structure
+
+- Write concise, technical TypeScript code with accurate examples.
+- Use functional and declarative programming patterns; avoid classes.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
+- Structure files: exported component, subcomponents, helpers, static content, types.
+
+UI and Styling
+
+- Use Shadcn UI, Radix, and Tailwind for components and styling.
+- Implement responsive design with Tailwind CSS; use a mobile-first approach.
+- imports the shadcn/ui components from "@/components/ui".
+
+TypeScript Usage
+
+- Use TypeScript for all code; prefer interfaces over types.
+- Avoid enums; use maps instead.
+- Use functional components with TypeScript interfaces.
+
+Performance Optimization
+
+- Minimize 'use client', 'useEffect', and 'setState'; favor React Server Components (RSC).
+- Wrap client components in Suspense with fallback.
+- Use dynamic loading for non-critical components.
+- Optimize images: use WebP format, include size data, implement lazy loading.
+
+Key Conventions
+
+- Use 'nuqs' for URL search parameter state management.
+- Optimize Web Vitals (LCP, CLS, FID).
+- Limit 'use client':
+  - Favor server components and Next.js SSR.
+  - Use only for Web API access in small components.
+  - Avoid for data fetching or state management.
+
+Follow Next.js docs for Data Fetching, Rendering, and Routing.
