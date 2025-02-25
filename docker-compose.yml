@@ -29,9 +29,9 @@ services:
         target: runtime
     image: ghcr.io/berriai/litellm:main-stable
     volumes:
-      - ./files/config.litellm.yaml:/app/config.litellm.yaml
+      - ./files/config.dev.litellm.yaml:/app/config.dev.litellm.yaml
     command:
-      - "--config=/app/config.litellm.yaml"
+      - "--config=/app/config.dev.litellm.yaml"
     ports:
       - "4000:4000"
     env_file:
