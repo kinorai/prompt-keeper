@@ -377,16 +377,29 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 className="font-medium"
               >{`${usage.total_tokens} tokens`}</Badge>
             )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-sm text-muted-foreground flex items-center gap-1 cursor-help">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>
+                      {formatDistanceToNow(createdDate, {
+                        addSuffix: false,
+                      }).replace("about ", "")}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{createdDate.toLocaleString()}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             {score && (
               <Badge variant="outline" className="bg-primary/10 font-medium">
                 Score: {score.toFixed(2)}
               </Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">
-            {formatDistanceToNow(createdDate, { addSuffix: true })} (
-            {createdDate.toLocaleString()})
-          </p>
         </div>
         <Button
           variant="outline"
@@ -469,10 +482,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
               <span>Completion: {usage.completion_tokens || 0}</span>
             </div>
           )}
-        </div>
-        <div className="flex items-center">
-          <Clock className="h-3 w-3 mr-1" />
-          <span>{new Date(created).toLocaleTimeString()}</span>
         </div>
       </CardFooter>
     </Card>
