@@ -9,6 +9,7 @@ import {
   Zap,
   Award,
   Check,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +32,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ConversationCardProps {
   conversation: {
@@ -56,6 +59,128 @@ interface ConversationCardProps {
     };
   };
 }
+
+// Custom component to handle markdown with highlighted HTML
+const MarkdownWithHighlight = ({
+  content,
+  isHighlighted = false,
+}: {
+  content: string;
+  isHighlighted?: boolean;
+}) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Add copy buttons to code blocks and handle inline code clicks
+  useEffect(() => {
+    if (!contentRef.current) return;
+
+    // Add copy buttons to code blocks
+    const codeBlocks = contentRef.current.querySelectorAll("pre");
+
+    codeBlocks.forEach((codeBlock) => {
+      // Skip if already has a copy button
+      if (codeBlock.querySelector(".code-copy-button")) return;
+
+      // Create copy button
+      const copyButton = document.createElement("button");
+      copyButton.className =
+        "code-copy-button absolute top-2 right-2 p-1 rounded-md bg-muted-foreground/20 hover:bg-muted-foreground/30 transition-colors";
+      copyButton.innerHTML =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+
+      // Add click handler
+      copyButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Get code content
+        const code = codeBlock.querySelector("code");
+        if (!code) return;
+
+        // Copy to clipboard
+        navigator.clipboard
+          .writeText(code.textContent || "")
+          .then(() => {
+            // Show success state
+            copyButton.innerHTML =
+              '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+            // Reset after 2 seconds
+            setTimeout(() => {
+              copyButton.innerHTML =
+                '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+            }, 2000);
+          })
+          .catch((err) => console.error("Failed to copy code:", err));
+      });
+
+      // Add button to code block
+      codeBlock.style.position = "relative";
+      codeBlock.appendChild(copyButton);
+    });
+
+    // Make inline code clickable for copying
+    const inlineCodes = contentRef.current.querySelectorAll(
+      "p > code, li > code, h1 > code, h2 > code, h3 > code, h4 > code"
+    );
+
+    inlineCodes.forEach((codeElement) => {
+      // Add cursor pointer and hover effect
+      codeElement.classList.add(
+        "cursor-pointer",
+        "hover:bg-muted-foreground/20",
+        "transition-colors"
+      );
+
+      // Add click handler
+      codeElement.addEventListener("click", () => {
+        const codeText = codeElement.textContent || "";
+
+        // Copy to clipboard
+        navigator.clipboard
+          .writeText(codeText)
+          .then(() => {
+            // Show success state
+            const htmlElement = codeElement as HTMLElement;
+            const originalBg = htmlElement.style.backgroundColor;
+            const originalColor = htmlElement.style.color;
+
+            htmlElement.style.backgroundColor = "hsl(var(--primary) / 0.2)";
+            htmlElement.style.color = "hsl(var(--primary))";
+
+            // Reset after 1 second
+            setTimeout(() => {
+              htmlElement.style.backgroundColor = originalBg;
+              htmlElement.style.color = originalColor;
+            }, 1000);
+          })
+          .catch((err) => console.error("Failed to copy inline code:", err));
+      });
+    });
+  }, [content, isHighlighted]);
+
+  if (isHighlighted) {
+    // For highlighted content, we need to use dangerouslySetInnerHTML
+    // because OpenSearch returns HTML with <em> tags for highlighting
+    return (
+      <div
+        ref={contentRef}
+        className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+
+  // For regular content, use ReactMarkdown
+  return (
+    <div
+      ref={contentRef}
+      className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm"
+    >
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  );
+};
 
 export function ConversationCard({ conversation }: ConversationCardProps) {
   const { _source: source, _score, highlight } = conversation;
@@ -84,6 +209,64 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
     } catch (err) {
       console.error("Failed to copy full conversation:", err);
     }
+  };
+
+  // Helper function to get the appropriate icon for each role
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case "assistant":
+        return <Bot className="h-3 w-3" />;
+      case "user":
+        return <User className="h-3 w-3" />;
+      case "system":
+        return <Info className="h-3 w-3" />;
+      default:
+        return <MessageSquare className="h-3 w-3" />;
+    }
+  };
+
+  // Helper function to get the appropriate style for each role
+  const getRoleStyle = (role: string) => {
+    switch (role) {
+      case "assistant":
+        return "text-primary bg-primary/10 border-primary/20";
+      case "system":
+        return "text-orange-500 bg-orange-100/30 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800/30";
+      default:
+        return "text-muted-foreground bg-muted/20";
+    }
+  };
+
+  // Helper function to get the appropriate background for each role
+  const getRoleBackground = (role: string) => {
+    switch (role) {
+      case "assistant":
+        return "bg-muted/10";
+      case "system":
+        return "bg-orange-50/30 dark:bg-orange-900/10";
+      default:
+        return "bg-background";
+    }
+  };
+
+  // Helper function to render content with proper markdown and highlighting
+  const renderContent = (message: { role: string; content: string }) => {
+    // Check if this message has highlighted content
+    const isHighlighted =
+      highlight &&
+      highlight["messages.content"] &&
+      message.role === "assistant";
+
+    if (isHighlighted) {
+      return (
+        <MarkdownWithHighlight
+          content={highlight["messages.content"].join("\n")}
+          isHighlighted={true}
+        />
+      );
+    }
+
+    return <MarkdownWithHighlight content={message.content} />;
   };
 
   return (
@@ -231,26 +414,17 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
             .map((message, i) => (
               <div
                 key={i}
-                className={cn(
-                  "p-3 sm:p-5",
-                  message.role === "assistant" ? "bg-muted/10" : "bg-background"
-                )}
+                className={cn("p-3 sm:p-5", getRoleBackground(message.role))}
               >
                 <div className="flex items-center justify-between mb-2 sm:mb-3">
                   <Badge
                     variant="outline"
                     className={cn(
                       "capitalize flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs",
-                      message.role === "assistant"
-                        ? "text-primary bg-primary/10 border-primary/20"
-                        : "text-muted-foreground bg-muted/20"
+                      getRoleStyle(message.role)
                     )}
                   >
-                    {message.role === "assistant" ? (
-                      <Bot className="h-3 w-3" />
-                    ) : (
-                      <User className="h-3 w-3" />
-                    )}
+                    {getRoleIcon(message.role)}
                     {message.role}
                   </Badge>
                   <Button
@@ -266,17 +440,7 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
                     )}
                   </Button>
                 </div>
-                <div className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm">
-                  {highlight && message.role === "assistant" ? (
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: highlight["messages.content"].join("\n"),
-                      }}
-                    />
-                  ) : (
-                    message.content
-                  )}
-                </div>
+                {renderContent(message)}
               </div>
             ))}
         </div>
@@ -298,26 +462,17 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
           {source.messages.slice(2).map((message, i) => (
             <div
               key={i + 2}
-              className={cn(
-                "p-3 sm:p-5",
-                message.role === "assistant" ? "bg-muted/10" : "bg-background"
-              )}
+              className={cn("p-3 sm:p-5", getRoleBackground(message.role))}
             >
               <div className="flex items-center justify-between mb-2 sm:mb-3">
                 <Badge
                   variant="outline"
                   className={cn(
                     "capitalize flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs",
-                    message.role === "assistant"
-                      ? "text-primary bg-primary/10 border-primary/20"
-                      : "text-muted-foreground bg-muted/20"
+                    getRoleStyle(message.role)
                   )}
                 >
-                  {message.role === "assistant" ? (
-                    <Bot className="h-3 w-3" />
-                  ) : (
-                    <User className="h-3 w-3" />
-                  )}
+                  {getRoleIcon(message.role)}
                   {message.role}
                 </Badge>
                 <Button
@@ -333,17 +488,7 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
                   )}
                 </Button>
               </div>
-              <div className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm">
-                {highlight && message.role === "assistant" ? (
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: highlight["messages.content"].join("\n"),
-                    }}
-                  />
-                ) : (
-                  message.content
-                )}
-              </div>
+              {renderContent(message)}
             </div>
           ))}
         </CollapsibleContent>
