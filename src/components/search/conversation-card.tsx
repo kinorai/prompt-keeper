@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Code, FileJson } from "lucide-react";
+import { Copy, FileJson } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,7 +26,7 @@ interface ConversationCardProps {
         completion_tokens: number;
       };
       latency: number;
-      raw_response: any;
+      raw_response: JSON;
     };
     _score?: number;
     highlight?: {
