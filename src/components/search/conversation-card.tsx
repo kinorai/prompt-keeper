@@ -10,6 +10,7 @@ import {
   Award,
   Check,
   Info,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,464 +36,445 @@ import {
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { toast } from "sonner";
 
-interface ConversationCardProps {
-  conversation: {
-    _source: {
-      timestamp: string;
-      model: string;
-      messages: Array<{
-        role: string;
-        content: string;
-      }>;
-      usage: {
-        total_tokens: number;
-        prompt_tokens: number;
-        completion_tokens: number;
-      };
-      latency: number;
-      raw_response: JSON;
-    };
-    _score?: number;
-    highlight?: {
-      "messages.content": string[];
-    };
-  };
+interface Message {
+  role: string;
+  content: string;
+  finish_reason?: string;
 }
 
-// Custom component to handle markdown with highlighted HTML
-const MarkdownWithHighlight = ({
-  content,
-  isHighlighted = false,
-}: {
+export interface ConversationCardProps {
+  id: string;
+  created: string;
+  model: string;
+  usage?: {
+    total_tokens?: number;
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
+  messages: Message[];
+  raw_response: any;
+  highlight?: {
+    model?: string[];
+    "messages.content"?: string[];
+  };
+  score?: number;
+}
+
+const MarkdownWithHighlight: React.FC<{
   content: string;
   isHighlighted?: boolean;
-}) => {
-  const contentRef = useRef<HTMLDivElement>(null);
+}> = ({ content, isHighlighted = false }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Add copy buttons to code blocks and handle inline code clicks
   useEffect(() => {
-    if (!contentRef.current) return;
+    if (!containerRef.current) return;
 
-    // Add copy buttons to code blocks
-    const codeBlocks = contentRef.current.querySelectorAll("pre");
-
+    // Process code blocks
+    const codeBlocks = containerRef.current.querySelectorAll("pre code");
     codeBlocks.forEach((codeBlock) => {
-      // Skip if already has a copy button
-      if (codeBlock.querySelector(".code-copy-button")) return;
+      const pre = codeBlock.parentElement;
+      if (!pre) return;
+
+      // Create copy button container
+      const buttonContainer = document.createElement("div");
+      buttonContainer.className = "absolute top-2 right-2";
 
       // Create copy button
       const copyButton = document.createElement("button");
+      copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
       copyButton.className =
-        "code-copy-button absolute top-2 right-2 p-1 rounded-md bg-muted-foreground/20 hover:bg-muted-foreground/30 transition-colors";
-      copyButton.innerHTML =
-        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+        "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
+      copyButton.title = "Copy code";
 
-      // Add click handler
-      copyButton.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      // Add click event to copy code
+      copyButton.addEventListener("click", () => {
+        const code = codeBlock.textContent || "";
+        navigator.clipboard.writeText(code).then(() => {
+          copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>`;
+          copyButton.className =
+            "p-1 rounded-md bg-green-500/20 hover:bg-green-500/30 text-green-500";
 
-        // Get code content
-        const code = codeBlock.querySelector("code");
-        if (!code) return;
-
-        // Copy to clipboard
-        navigator.clipboard
-          .writeText(code.textContent || "")
-          .then(() => {
-            // Show success state
-            copyButton.innerHTML =
-              '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-
-            // Reset after 2 seconds
-            setTimeout(() => {
-              copyButton.innerHTML =
-                '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
-            }, 2000);
-          })
-          .catch((err) => console.error("Failed to copy code:", err));
+          setTimeout(() => {
+            copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+            copyButton.className =
+              "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
+          }, 2000);
+        });
       });
 
-      // Add button to code block
-      codeBlock.style.position = "relative";
-      codeBlock.appendChild(copyButton);
+      buttonContainer.appendChild(copyButton);
+
+      // Make pre position relative for absolute positioning of button
+      pre.style.position = "relative";
+      pre.appendChild(buttonContainer);
     });
 
-    // Make inline code clickable for copying
-    const inlineCodes = contentRef.current.querySelectorAll(
-      "p > code, li > code, h1 > code, h2 > code, h3 > code, h4 > code"
-    );
+    // Process inline code
+    const inlineCodes =
+      containerRef.current.querySelectorAll("code:not(pre code)");
+    inlineCodes.forEach((inlineCode) => {
+      const codeElement = inlineCode as HTMLElement;
+      codeElement.style.cursor = "pointer";
+      codeElement.title = "Click to copy";
 
-    inlineCodes.forEach((codeElement) => {
-      // Add cursor pointer and hover effect
-      codeElement.classList.add(
-        "cursor-pointer",
-        "hover:bg-muted-foreground/20",
-        "transition-colors"
-      );
-
-      // Add click handler
       codeElement.addEventListener("click", () => {
-        const codeText = codeElement.textContent || "";
+        const code = codeElement.textContent || "";
+        navigator.clipboard.writeText(code).then(() => {
+          const originalBg = codeElement.style.backgroundColor;
+          const originalColor = codeElement.style.color;
 
-        // Copy to clipboard
-        navigator.clipboard
-          .writeText(codeText)
-          .then(() => {
-            // Show success state
-            const htmlElement = codeElement as HTMLElement;
-            const originalBg = htmlElement.style.backgroundColor;
-            const originalColor = htmlElement.style.color;
+          codeElement.style.backgroundColor = "rgba(34, 197, 94, 0.2)";
+          codeElement.style.color = "rgb(34, 197, 94)";
 
-            htmlElement.style.backgroundColor = "hsl(var(--primary) / 0.2)";
-            htmlElement.style.color = "hsl(var(--primary))";
+          setTimeout(() => {
+            codeElement.style.backgroundColor = originalBg;
+            codeElement.style.color = originalColor;
+          }, 2000);
 
-            // Reset after 1 second
-            setTimeout(() => {
-              htmlElement.style.backgroundColor = originalBg;
-              htmlElement.style.color = originalColor;
-            }, 1000);
-          })
-          .catch((err) => console.error("Failed to copy inline code:", err));
+          toast.success("Code copied to clipboard");
+        });
       });
     });
-  }, [content, isHighlighted]);
+  }, [content]);
 
-  if (isHighlighted) {
-    // For highlighted content, we need to use dangerouslySetInnerHTML
-    // because OpenSearch returns HTML with <em> tags for highlighting
-    return (
-      <div
-        ref={contentRef}
-        className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm"
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
-    );
+  // Process highlighted content to preserve markdown formatting
+  let processedContent = content;
+
+  // First check if content already contains our markers directly
+  if (
+    content.includes("HIGHLIGHT_START") &&
+    content.includes("HIGHLIGHT_END")
+  ) {
+    // No need to process further, the content already has our markers
+    console.debug("Direct highlight markers found and processed");
+  }
+  // Check for <em> tags from OpenSearch highlighting
+  else if (isHighlighted && content.includes("<em>")) {
+    // Replace <em> tags with a custom marker that won't interfere with markdown
+    // Make sure we handle the case where the text might already contain our markers
+    processedContent = content
+      .replace(/<em>/g, "HIGHLIGHT_START")
+      .replace(/<\/em>/g, "HIGHLIGHT_END");
   }
 
-  // For regular content, use ReactMarkdown
   return (
-    <div
-      ref={contentRef}
-      className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm"
-    >
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    <div ref={containerRef} className="prose dark:prose-invert max-w-none">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code({ node, inline, className, children, ...props }: any) {
+            const match = /language-(\w+)/.exec(className || "");
+            const language = match ? match[1] : "";
+
+            // Check if the code block contains our highlight markers
+            const childrenStr = String(children).replace(/\n$/, "");
+            if (inline && childrenStr.includes("HIGHLIGHT_START")) {
+              // For inline code, we can use the mark tag
+              const parts = childrenStr.split(
+                /(HIGHLIGHT_START|HIGHLIGHT_END)/g
+              );
+              let isHighlight = false;
+              const elements = parts
+                .map((part, index) => {
+                  if (part === "HIGHLIGHT_START") {
+                    isHighlight = true;
+                    return null;
+                  } else if (part === "HIGHLIGHT_END") {
+                    isHighlight = false;
+                    return null;
+                  } else if (isHighlight) {
+                    return <mark key={index}>{part}</mark>;
+                  } else {
+                    return part;
+                  }
+                })
+                .filter(Boolean);
+
+              return (
+                <code className={className} {...props}>
+                  {elements}
+                </code>
+              );
+            }
+
+            if (!inline && language) {
+              // For code blocks, we'll just remove the markers and let syntax highlighting work
+              const cleanedCode = String(children)
+                .replace(/HIGHLIGHT_START/g, "")
+                .replace(/HIGHLIGHT_END/g, "");
+
+              return (
+                <SyntaxHighlighter
+                  language={language}
+                  style={vscDarkPlus}
+                  PreTag="div"
+                  className="rounded-md"
+                  {...props}
+                >
+                  {cleanedCode}
+                </SyntaxHighlighter>
+              );
+            }
+
+            return (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          },
+          p({ node, children, ...props }: any) {
+            // Process our custom highlight markers
+            if (
+              typeof children === "string" &&
+              (children.includes("HIGHLIGHT_START") ||
+                (Array.isArray(children) &&
+                  children.some(
+                    (child) =>
+                      typeof child === "string" &&
+                      child.includes("HIGHLIGHT_START")
+                  )))
+            ) {
+              // For string content, split by our markers and process
+              const processContent = (content: string) => {
+                const parts = content.split(/(HIGHLIGHT_START|HIGHLIGHT_END)/g);
+                let isHighlight = false;
+                return parts
+                  .map((part, index) => {
+                    if (part === "HIGHLIGHT_START") {
+                      isHighlight = true;
+                      return null;
+                    } else if (part === "HIGHLIGHT_END") {
+                      isHighlight = false;
+                      return null;
+                    } else if (isHighlight) {
+                      return <mark key={index}>{part}</mark>;
+                    } else {
+                      return part;
+                    }
+                  })
+                  .filter(Boolean);
+              };
+
+              // Handle both string and array children
+              if (typeof children === "string") {
+                return <p {...props}>{processContent(children)}</p>;
+              } else if (Array.isArray(children)) {
+                const processedChildren = (children as React.ReactNode[]).map(
+                  (child: React.ReactNode, idx: number) => {
+                    if (
+                      typeof child === "string" &&
+                      child.includes("HIGHLIGHT_START")
+                    ) {
+                      return processContent(child);
+                    }
+                    return child;
+                  }
+                );
+                return <p {...props}>{processedChildren}</p>;
+              }
+            }
+
+            return <p {...props}>{children}</p>;
+          },
+        }}
+      >
+        {processedContent}
+      </ReactMarkdown>
     </div>
   );
 };
 
-export function ConversationCard({ conversation }: ConversationCardProps) {
-  const { _source: source, _score, highlight } = conversation;
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [copiedAll, setCopiedAll] = useState(false);
+export const ConversationCard: React.FC<ConversationCardProps> = ({
+  id,
+  created,
+  model,
+  usage,
+  messages = [],
+  raw_response,
+  highlight,
+  score,
+}) => {
+  const [showRawResponse, setShowRawResponse] = useState(false);
+  const createdDate = new Date(created);
 
-  const copyToClipboard = async (text: string, index: number) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedIndex(index);
-      setTimeout(() => setCopiedIndex(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
+  const copyRawResponse = () => {
+    navigator.clipboard.writeText(JSON.stringify(raw_response, null, 2));
+    toast.success("Raw response copied to clipboard");
   };
 
-  const copyFullConversation = async () => {
-    try {
-      const text = source.messages
-        .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
-        .join("\n\n");
-      await navigator.clipboard.writeText(text);
-      setCopiedAll(true);
-      setTimeout(() => setCopiedAll(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy full conversation:", err);
-    }
-  };
+  // Group messages by role for display
+  const userMessages = messages.filter((msg) => msg.role === "user");
+  const assistantMessages = messages.filter((msg) => msg.role === "assistant");
 
-  // Helper function to get the appropriate icon for each role
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "assistant":
-        return <Bot className="h-3 w-3" />;
-      case "user":
-        return <User className="h-3 w-3" />;
-      case "system":
-        return <Info className="h-3 w-3" />;
-      default:
-        return <MessageSquare className="h-3 w-3" />;
-    }
-  };
-
-  // Helper function to get the appropriate style for each role
-  const getRoleStyle = (role: string) => {
-    switch (role) {
-      case "assistant":
-        return "text-primary bg-primary/10 border-primary/20";
-      case "system":
-        return "text-orange-500 bg-orange-100/30 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800/30";
-      default:
-        return "text-muted-foreground bg-muted/20";
-    }
-  };
-
-  // Helper function to get the appropriate background for each role
-  const getRoleBackground = (role: string) => {
-    switch (role) {
-      case "assistant":
-        return "bg-muted/10";
-      case "system":
-        return "bg-orange-50/30 dark:bg-orange-900/10";
-      default:
-        return "bg-background";
-    }
-  };
-
-  // Helper function to render content with proper markdown and highlighting
-  const renderContent = (message: { role: string; content: string }) => {
-    // Check if this message has highlighted content
-    const isHighlighted =
-      highlight &&
-      highlight["messages.content"] &&
-      message.role === "assistant";
-
-    if (isHighlighted) {
+  // Function to render message content with highlighting if available
+  const renderContent = (message: Message, index: number) => {
+    // Check if the message content already contains highlight markers
+    if (
+      message.content.includes("HIGHLIGHT_START") &&
+      message.content.includes("HIGHLIGHT_END")
+    ) {
       return (
-        <MarkdownWithHighlight
-          content={highlight["messages.content"].join("\n")}
-          isHighlighted={true}
-        />
+        <MarkdownWithHighlight content={message.content} isHighlighted={true} />
       );
     }
 
+    // Check if we have highlighted content for this message from the API
+    const hasHighlight =
+      highlight &&
+      highlight["messages.content"] &&
+      Array.isArray(highlight["messages.content"]) &&
+      highlight["messages.content"].some(
+        (h) =>
+          typeof h === "string" &&
+          h.includes(`<em>`) &&
+          message.content.includes(h.replace(/<\/?em>/g, ""))
+      );
+
+    // If we have highlighted content, use it
+    if (hasHighlight && highlight?.["messages.content"]) {
+      // Find the highlight that matches this message
+      const matchingHighlight = highlight["messages.content"].find(
+        (h) =>
+          typeof h === "string" &&
+          message.content.includes(h.replace(/<\/?em>/g, ""))
+      );
+
+      if (matchingHighlight) {
+        return (
+          <MarkdownWithHighlight
+            content={matchingHighlight}
+            isHighlighted={true}
+          />
+        );
+      }
+    }
+
+    // Otherwise use the original content
     return <MarkdownWithHighlight content={message.content} />;
   };
 
   return (
-    <div className="rounded-xl border bg-card shadow-sm transition-all hover:shadow-md overflow-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b p-3 sm:p-4 bg-muted/10">
-        <div className="flex flex-wrap items-center gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-background text-xs"
-                >
-                  <MessageSquare className="h-3 w-3" />
-                  {source.model}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>Model</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-background text-xs"
-                >
-                  <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(source.timestamp), {
-                    addSuffix: true,
-                  })}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>Time</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="secondary"
-                  className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs"
-                >
-                  <Zap className="h-3 w-3" />
-                  {source.usage?.total_tokens || "n/a"} tokens
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                Prompt: {source.usage?.prompt_tokens || "n/a"} | Completion:{" "}
-                {source.usage?.completion_tokens || "n/a"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          {source.latency && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant="secondary"
-                    className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs"
-                  >
-                    <Clock className="h-3 w-3" />
-                    {source.latency}ms
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>Latency</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          {_score && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant="secondary"
-                    className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs"
-                  >
-                    <Award className="h-3 w-3" />
-                    {_score.toFixed(2)}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>Match Score</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-
-        <div className="flex gap-2 mt-2 sm:mt-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={copyFullConversation}
-            className="h-7 sm:h-8 text-xs rounded-full bg-background"
-          >
-            {copiedAll ? (
-              <>
-                <Check className="h-3 sm:h-3.5 w-3 sm:w-3.5 mr-1 text-green-500" />
-                <span className="text-green-500">Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="h-3 sm:h-3.5 w-3 sm:w-3.5 mr-1" />
-                Copy All
-              </>
-            )}
-          </Button>
-
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
+    <Card className="w-full">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
+          <div className="flex items-center flex-wrap gap-2 mb-1 sm:mb-0">
+            <Badge variant="outline" className="font-medium">
+              {model}
+            </Badge>
+            {usage?.total_tokens !== undefined && (
+              <Badge
                 variant="outline"
-                size="sm"
-                className="h-7 sm:h-8 text-xs rounded-full bg-background"
-              >
-                <FileJson className="h-3 sm:h-3.5 w-3 sm:w-3.5 mr-1" />
-                Raw JSON
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-full sm:max-w-4xl max-h-[80vh] p-4 sm:p-6">
-              <DialogHeader>
-                <DialogTitle>Raw Response</DialogTitle>
-              </DialogHeader>
-              <div className="overflow-auto max-h-[calc(80vh-8rem)]">
-                <pre className="bg-muted p-3 sm:p-4 rounded-lg text-xs">
-                  <code>{JSON.stringify(source.raw_response, null, 2)}</code>
-                </pre>
-              </div>
-            </DialogContent>
-          </Dialog>
+                className="font-medium"
+              >{`${usage.total_tokens} tokens`}</Badge>
+            )}
+            {score && (
+              <Badge variant="outline" className="bg-primary/10 font-medium">
+                Score: {score.toFixed(2)}
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {formatDistanceToNow(createdDate, { addSuffix: true })} (
+            {createdDate.toLocaleString()})
+          </p>
         </div>
-      </div>
-
-      <Collapsible
-        open={isExpanded}
-        onOpenChange={setIsExpanded}
-        className="space-y-0"
-      >
-        <div className="space-y-0 divide-y divide-border/40">
-          {source.messages
-            .slice(0, isExpanded ? undefined : 2)
-            .map((message, i) => (
-              <div
-                key={i}
-                className={cn("p-3 sm:p-5", getRoleBackground(message.role))}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowRawResponse(!showRawResponse)}
+          title={showRawResponse ? "Hide raw response" : "Show raw response"}
+          className="ml-2 whitespace-nowrap flex items-center gap-1"
+        >
+          <Eye className="h-4 w-4" />
+          <span className="hidden sm:inline">
+            {showRawResponse ? "Hide Raw" : "View Raw"}
+          </span>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {showRawResponse ? (
+          <div className="relative">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-medium">Raw Response</h3>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={copyRawResponse}
+                className="flex items-center gap-1"
               >
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "capitalize flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs",
-                      getRoleStyle(message.role)
-                    )}
-                  >
-                    {getRoleIcon(message.role)}
-                    {message.role}
+                <Copy className="h-4 w-4" />
+                Copy
+              </Button>
+            </div>
+            <div className="max-h-96 overflow-auto rounded-md bg-muted p-4">
+              <pre className="text-sm whitespace-pre-wrap break-words font-mono">
+                {typeof raw_response === "string"
+                  ? raw_response
+                  : JSON.stringify(raw_response, null, 2)}
+              </pre>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {userMessages.map((message, index) => (
+              <div
+                key={`user-${index}`}
+                className="space-y-2 p-3 rounded-lg bg-muted/30"
+              >
+                <div className="flex items-center mb-1">
+                  <Badge variant="secondary" className="mr-2 px-2 py-0.5">
+                    <User className="h-3 w-3 mr-1" />
+                    User
                   </Badge>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 sm:h-7 sm:w-7 rounded-full"
-                    onClick={() => copyToClipboard(message.content, i)}
-                  >
-                    {copiedIndex === i ? (
-                      <Check className="h-3 sm:h-3.5 w-3 sm:w-3.5 text-green-500" />
-                    ) : (
-                      <Copy className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
-                    )}
-                  </Button>
                 </div>
-                {renderContent(message)}
+                {renderContent(message, index)}
               </div>
             ))}
-        </div>
 
-        {source.messages.length > 2 && (
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full rounded-none border-t h-8 sm:h-9 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              {isExpanded
-                ? "Show Less"
-                : `Show ${source.messages.length - 2} More Messages`}
-            </Button>
-          </CollapsibleTrigger>
-        )}
-
-        <CollapsibleContent className="space-y-0 divide-y divide-border/40">
-          {source.messages.slice(2).map((message, i) => (
-            <div
-              key={i + 2}
-              className={cn("p-3 sm:p-5", getRoleBackground(message.role))}
-            >
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "capitalize flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs",
-                    getRoleStyle(message.role)
-                  )}
-                >
-                  {getRoleIcon(message.role)}
-                  {message.role}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 sm:h-7 sm:w-7 rounded-full"
-                  onClick={() => copyToClipboard(message.content, i + 2)}
-                >
-                  {copiedIndex === i + 2 ? (
-                    <Check className="h-3 sm:h-3.5 w-3 sm:w-3.5 text-green-500" />
-                  ) : (
-                    <Copy className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
-                  )}
-                </Button>
+            {assistantMessages.map((message, index) => (
+              <div
+                key={`assistant-${index}`}
+                className="space-y-2 p-3 rounded-lg bg-primary/5"
+              >
+                <div className="flex items-center mb-1">
+                  <Badge variant="default" className="mr-2 px-2 py-0.5">
+                    <Bot className="h-3 w-3 mr-1" />
+                    Assistant
+                  </Badge>
+                </div>
+                {renderContent(message, index)}
               </div>
-              {renderContent(message)}
+            ))}
+          </div>
+        )}
+      </CardContent>
+      <CardFooter className="pt-2 flex justify-between items-center text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span>ID: {id.substring(0, 8)}...</span>
+          {usage && (
+            <div className="flex items-center gap-1">
+              <span>•</span>
+              <span>Prompt: {usage.prompt_tokens || 0}</span>
+              <span>•</span>
+              <span>Completion: {usage.completion_tokens || 0}</span>
             </div>
-          ))}
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+          )}
+        </div>
+        <div className="flex items-center">
+          <Clock className="h-3 w-3 mr-1" />
+          <span>{new Date(created).toLocaleTimeString()}</span>
+        </div>
+      </CardFooter>
+    </Card>
   );
-}
+};

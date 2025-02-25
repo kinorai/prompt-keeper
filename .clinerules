@@ -117,16 +117,15 @@ Mapping Structure:
 {
   "mappings": {
     "properties": {
-      "conversation_id": {
-        "type": "keyword",
-        "index": false
-      },
-      "created": {
-        "type": "date",
-        "index": false
+      "timestamp": {
+        "type": "date"
       },
       "model": {
         "type": "keyword"
+      },
+      "latency": {
+        "type": "integer",
+        "index": false
       },
       "usage": {
         "properties": {
@@ -141,32 +140,6 @@ Mapping Structure:
           "completion_tokens": {
             "type": "integer",
             "index": false
-          },
-          "prompt_tokens_details": {
-            "type": "nested",
-            "properties": {
-              "key": {
-                "type": "keyword",
-                "index": false
-              },
-              "value": {
-                "type": "integer",
-                "index": false
-              }
-            }
-          },
-          "completion_tokens_details": {
-            "type": "nested",
-            "properties": {
-              "key": {
-                "type": "keyword",
-                "index": false
-              },
-              "value": {
-                "type": "integer",
-                "index": false
-              }
-            }
           }
         }
       },
@@ -183,10 +156,6 @@ Mapping Structure:
                 "type": "keyword"
               }
             }
-          },
-          "finish_reason": {
-            "type": "keyword",
-            "index": false
           }
         }
       },
@@ -286,5 +255,10 @@ Key Conventions
   - Favor server components and Next.js SSR.
   - Use only for Web API access in small components.
   - Avoid for data fetching or state management.
+
+Debug
+
+- Do not add debug buttons in the UI, or debug api routes, just use console.debug
+- Do not add any debug code or files, just use console.debug
 
 Follow Next.js docs for Data Fetching, Rendering, and Routing.
