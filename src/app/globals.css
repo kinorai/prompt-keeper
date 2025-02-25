@@ -32,6 +32,7 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --primary-rgb: 221, 83, 53;
   }
   .dark {
     --background: 222.2 84% 4.9%;
@@ -66,6 +67,7 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --primary-rgb: 29, 144, 255;
   }
 }
 
@@ -272,7 +274,44 @@
 
 /* Highlight styles */
 mark, em {
-  @apply bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded not-italic;
+  background-color: rgba(var(--primary-rgb), 0.15);
+  color: hsl(var(--primary));
+  padding: 0.1em 0.2em;
+  border-radius: 0.2em;
+  font-style: normal;
+  font-weight: normal;
+}
+
+.dark mark, .dark em {
+  background-color: rgba(var(--primary-rgb), 0.25);
+}
+
+.prose mark code, .prose em code {
+  background-color: rgba(var(--primary-rgb), 0.2);
+  color: hsl(var(--primary));
+}
+
+.prose pre mark, .prose pre em {
+  background-color: rgba(var(--primary-rgb), 0.2);
+  border-radius: 0.2em;
+  padding: 0.1em 0.2em;
+}
+
+/* Add specific styles for highlighted text */
+.highlight-text {
+  background-color: rgba(var(--primary-rgb), 0.2);
+  color: hsl(var(--primary));
+  padding: 0.1em 0.2em;
+  border-radius: 0.2em;
+  font-weight: 500;
+}
+
+/* Ensure highlighted code blocks maintain their styling */
+pre code .highlight-text {
+  background-color: rgba(var(--primary-rgb), 0.25);
+  color: hsl(var(--primary));
+  padding: 0.1em 0.2em;
+  border-radius: 0.2em;
 }
 
 /* Responsive adjustments */

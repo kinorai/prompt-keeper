@@ -12,6 +12,15 @@ export async function POST(req: NextRequest) {
       fuzzyConfig,
     } = await req.json();
 
+    console.log("[Search API] Request:", {
+      query,
+      searchMode,
+      timeRange,
+      size,
+      from,
+      fuzzyConfig,
+    });
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const queryBody: any = {
       bool: {
@@ -114,6 +123,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    console.log("[Search API] Query:", JSON.stringify(queryBody, null, 2));
+
     const startTime = Date.now();
     const response = await opensearchClient.search({
       index: PROMPT_KEEPER_INDEX,
@@ -125,37 +136,77 @@ export async function POST(req: NextRequest) {
         highlight: {
           fields: {
             model: {},
-            "messages.content": {},
+            "messages.content": {
+              number_of_fragments: 0,
+              pre_tags: ["<em>"],
+              post_tags: ["</em>"],
+              highlight_query: {
+                nested: {
+                  path: "messages",
+                  query: {
+                    bool: {
+                      should: [
+                        {
+                          match: {
+                            "messages.content": query,
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
           },
+          require_field_match: true,
         },
+        _source: true,
       },
     });
 
     const searchTime = Date.now() - startTime;
 
-    console.debug("[Search API Response]", {
-      query: JSON.stringify(queryBody, null, 2),
-      hits:
+    console.log("[Search API] Response:", {
+      total:
         typeof response.body.hits.total === "number"
           ? response.body.hits.total
           : response.body.hits.total?.value || 0,
+      hits: response.body.hits.hits.length,
+      took: response.body.took,
       searchTime,
     });
+
+    // Log the first result if available
+    if (response.body.hits.hits.length > 0) {
+      const firstResult = response.body.hits.hits[0];
+      console.log("[Search API] First result:", {
+        id: firstResult._id,
+        score: firstResult._score,
+        model: firstResult._source?.model,
+        messageCount: firstResult._source?.messages?.length || 0,
+        highlight: firstResult.highlight,
+      });
+    }
+
     // Ensure we always return a consistent structure
     return NextResponse.json({
-      hits: response.body.hits.hits,
-      total: response.body.hits.total,
-      searchTime,
+      hits: {
+        hits: response.body.hits.hits,
+        total: response.body.hits.total,
+      },
+      took: response.body.took || searchTime,
     });
   } catch (error) {
     console.error("[Search API Error]", error);
     // Return empty results on error
     return NextResponse.json(
       {
-        hits: [],
-        total: { value: 0 },
-        searchTime: 0,
-        error: "Internal server error",
+        hits: {
+          hits: [],
+          total: { value: 0 },
+        },
+        took: 0,
+        error: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );
