@@ -43,8 +43,54 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { toast } from "sonner";
+
+// Define a custom style for syntax highlighting that respects the theme
+const customCodeStyle = {
+  // Minimal styling that respects the theme
+  'code[class*="language-"]': {
+    color: "inherit",
+    background: "transparent",
+    fontFamily: "var(--font-mono, monospace)",
+    fontSize: "inherit",
+    textAlign: "left",
+    whiteSpace: "pre",
+    wordSpacing: "normal",
+    wordBreak: "normal",
+    wordWrap: "normal",
+    lineHeight: "1.5",
+    tabSize: "2",
+    hyphens: "none",
+  },
+  'pre[class*="language-"]': {
+    color: "inherit",
+    background: "transparent",
+    fontFamily: "var(--font-mono, monospace)",
+    fontSize: "inherit",
+    textAlign: "left",
+    whiteSpace: "pre",
+    wordSpacing: "normal",
+    wordBreak: "normal",
+    wordWrap: "normal",
+    lineHeight: "1.5",
+    tabSize: "2",
+    hyphens: "none",
+    margin: "0",
+    padding: "0",
+    overflow: "auto",
+  },
+  // Minimal token styling
+  ".token": {
+    background: "transparent !important",
+  },
+  ".token.comment": { color: "hsl(var(--muted-foreground))" },
+  ".token.string": { color: "inherit" },
+  ".token.keyword": { color: "inherit" },
+  ".token.function": { color: "inherit" },
+  ".token.number": { color: "inherit" },
+  ".token.operator": { color: "inherit" },
+  ".token.punctuation": { color: "inherit" },
+};
 
 interface Message {
   role: string;
@@ -216,9 +262,23 @@ const MarkdownWithHighlight: React.FC<{
               return (
                 <SyntaxHighlighter
                   language={language}
-                  style={vscDarkPlus}
+                  style={customCodeStyle}
                   PreTag="div"
                   className="rounded-md"
+                  useInlineStyles={true}
+                  wrapLines={true}
+                  wrapLongLines={true}
+                  customStyle={{
+                    backgroundColor: "transparent",
+                    padding: "0",
+                    margin: "0",
+                  }}
+                  codeTagProps={{
+                    style: {
+                      backgroundColor: "transparent",
+                      color: "inherit",
+                    },
+                  }}
                   {...props}
                 >
                   {cleanedCode}
@@ -365,23 +425,26 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-2 sm:px-6 pt-2 sm:pt-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
-          <div className="flex items-center flex-wrap gap-2 mb-1 sm:mb-0">
-            <Badge variant="outline" className="font-medium">
+          <div className="flex items-center flex-wrap gap-1 sm:gap-2 mb-0.5 sm:mb-0">
+            <Badge
+              variant="outline"
+              className="font-medium text-xs sm:text-sm py-0.5"
+            >
               {model}
             </Badge>
             {usage?.total_tokens !== undefined && (
               <Badge
                 variant="outline"
-                className="font-medium"
+                className="font-medium text-xs sm:text-sm py-0.5"
               >{`${usage.total_tokens} tokens`}</Badge>
             )}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="text-sm text-muted-foreground flex items-center gap-1 cursor-help">
-                    <Clock className="h-3.5 w-3.5" />
+                  <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 cursor-help">
+                    <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     <span>
                       {formatDistanceToNow(createdDate, {
                         addSuffix: false,
@@ -395,7 +458,10 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
               </Tooltip>
             </TooltipProvider>
             {score && (
-              <Badge variant="outline" className="bg-primary/10 font-medium">
+              <Badge
+                variant="outline"
+                className="bg-primary/10 font-medium text-xs sm:text-sm py-0.5"
+              >
                 Score: {score.toFixed(2)}
               </Badge>
             )}
@@ -406,31 +472,31 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
           size="sm"
           onClick={() => setShowRawResponse(!showRawResponse)}
           title={showRawResponse ? "Hide raw response" : "Show raw response"}
-          className="ml-2 whitespace-nowrap flex items-center gap-1"
+          className="ml-1 sm:ml-2 whitespace-nowrap flex items-center gap-1 h-6 sm:h-8 px-1.5 sm:px-3"
         >
-          <Eye className="h-4 w-4" />
+          <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           <span className="hidden sm:inline">
             {showRawResponse ? "Hide Raw" : "View Raw"}
           </span>
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4">
         {showRawResponse ? (
           <div className="relative">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-medium">Raw Response</h3>
+            <div className="flex justify-between items-center mb-1 sm:mb-2">
+              <h3 className="text-xs sm:text-sm font-medium">Raw Response</h3>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={copyRawResponse}
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 h-7 text-xs"
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="h-3.5 w-3.5" />
                 Copy
               </Button>
             </div>
-            <div className="max-h-96 overflow-auto rounded-md bg-muted p-4">
-              <pre className="text-sm whitespace-pre-wrap break-words font-mono">
+            <div className="max-h-96 overflow-auto rounded-md bg-muted p-2 sm:p-4">
+              <pre className="text-xs sm:text-sm whitespace-pre-wrap break-words font-mono">
                 {typeof raw_response === "string"
                   ? raw_response
                   : JSON.stringify(raw_response, null, 2)}
@@ -438,15 +504,18 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2 sm:space-y-4">
             {userMessages.map((message, index) => (
               <div
                 key={`user-${index}`}
-                className="space-y-2 p-3 rounded-lg bg-muted/30"
+                className="space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-muted/30"
               >
-                <div className="flex items-center mb-1">
-                  <Badge variant="secondary" className="mr-2 px-2 py-0.5">
-                    <User className="h-3 w-3 mr-1" />
+                <div className="flex items-center mb-0.5 sm:mb-1">
+                  <Badge
+                    variant="secondary"
+                    className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
+                  >
+                    <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                     User
                   </Badge>
                 </div>
@@ -457,11 +526,14 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
             {assistantMessages.map((message, index) => (
               <div
                 key={`assistant-${index}`}
-                className="space-y-2 p-3 rounded-lg bg-primary/5"
+                className="space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-primary/5"
               >
-                <div className="flex items-center mb-1">
-                  <Badge variant="default" className="mr-2 px-2 py-0.5">
-                    <Bot className="h-3 w-3 mr-1" />
+                <div className="flex items-center mb-0.5 sm:mb-1">
+                  <Badge
+                    variant="default"
+                    className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
+                  >
+                    <Bot className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                     Assistant
                   </Badge>
                 </div>
@@ -471,11 +543,11 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
           </div>
         )}
       </CardContent>
-      <CardFooter className="pt-2 flex justify-between items-center text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <span>ID: {id.substring(0, 8)}...</span>
+      <CardFooter className="pt-1 sm:pt-2 px-2 sm:px-6 pb-2 sm:pb-4 flex justify-between items-center text-xs text-muted-foreground">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <span className="text-xs">ID: {id.substring(0, 8)}...</span>
           {usage && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 sm:gap-1 text-xs">
               <span>•</span>
               <span>Prompt: {usage.prompt_tokens || 0}</span>
               <span>•</span>
