@@ -107,6 +107,7 @@
   /* Add some space at the top of the main content area */
   .main-content {
     padding-top: 0.25rem;
+    padding-bottom: 5rem !important;
   }
   
   /* Style for the mobile theme toggle */
@@ -131,6 +132,52 @@
   
   .search-input-mobile {
     flex: 1;
+  }
+  
+  /* Mobile search bar at bottom */
+  .mobile-search-expanded {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    background-color: hsl(var(--background) / 0.95);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid hsl(var(--border));
+  }
+  
+  .mobile-search-compact {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    background-color: hsl(var(--background) / 0.95);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid hsl(var(--border));
+  }
+  
+  /* Search metadata in mobile search bar */
+  .mobile-search-expanded .text-xs.text-muted-foreground,
+  .mobile-search-compact .text-xs.text-muted-foreground {
+    font-size: 0.7rem;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    opacity: 0.8;
+  }
+  
+  /* Adjust the scroll to top button position to be above the search bar */
+  .scroll-to-top-button {
+    bottom: 5rem !important;
+  }
+  
+  /* Message copy buttons on mobile */
+  .message-copy-btn {
+    opacity: 0.7;
+    top: 0.5rem;
+    right: 0.5rem;
+    height: 1.5rem !important;
+    width: 1.5rem !important;
+    min-width: 1.5rem !important;
+    margin: 0 !important;
+    padding: 0.25rem !important;
+  }
+  
+  .message-copy-btn svg {
+    height: 1rem;
+    width: 1rem;
   }
 }
 
@@ -251,83 +298,18 @@
   background: transparent !important;
 }
 
-/* Ensure code blocks in dark mode have appropriate styling */
-.dark .prose pre {
-  @apply bg-muted/30;
-}
-
-.dark .prose code {
-  @apply bg-muted/30;
-}
-
-/* Ensure inline code has proper styling */
-.prose p > code,
-.prose li > code,
-.prose h1 > code,
-.prose h2 > code,
-.prose h3 > code,
-.prose h4 > code {
-  @apply bg-muted/50 px-1 py-0.5 rounded text-xs sm:text-sm;
-}
-
-/* Ensure dark mode inline code has proper styling */
-.dark .prose p > code,
-.dark .prose li > code,
-.dark .prose h1 > code,
-.dark .prose h2 > code,
-.dark .prose h3 > code,
-.dark .prose h4 > code {
-  @apply bg-muted/30;
-}
-
-/* Highlight styles */
+/* Highlighted content styles */
 mark, em {
-  background-color: rgba(var(--primary-rgb), 0.15);
-  color: hsl(var(--primary));
-  padding: 0.1em 0.2em;
-  border-radius: 0.2em;
-  font-style: normal;
-  font-weight: normal;
+  @apply bg-primary/10 dark:bg-primary/20 px-1 py-0.5 rounded not-italic;
 }
 
-.dark mark, .dark em {
-  background-color: rgba(var(--primary-rgb), 0.25);
+.prose mark, .prose em {
+  @apply bg-primary/10 dark:bg-primary/20 px-1 py-0.5 rounded not-italic;
 }
 
-.prose mark code, .prose em code {
-  background-color: rgba(var(--primary-rgb), 0.2);
-  color: hsl(var(--primary));
-}
-
+/* Ensure highlighted code blocks look good */
 .prose pre mark, .prose pre em {
-  background-color: rgba(var(--primary-rgb), 0.2);
-  border-radius: 0.2em;
-  padding: 0.1em 0.2em;
-}
-
-/* Add specific styles for highlighted text */
-.highlight-text {
-  background-color: rgba(var(--primary-rgb), 0.2);
-  color: hsl(var(--primary));
-  padding: 0.1em 0.2em;
-  border-radius: 0.2em;
-  font-weight: 500;
-}
-
-/* Ensure highlighted code blocks maintain their styling */
-pre code .highlight-text {
-  background-color: rgba(var(--primary-rgb), 0.25);
-  color: hsl(var(--primary));
-  padding: 0.1em 0.2em;
-  border-radius: 0.2em;
-}
-
-/* Responsive adjustments */
-@media (max-width: 639px) {
-  .dialog-content {
-    width: calc(100% - 32px) !important;
-    max-width: calc(100% - 32px) !important;
-  }
+  @apply bg-primary/10 dark:bg-primary/20 px-0.5 py-0 rounded-sm;
 }
 
 /* Style for the floating theme toggle */
