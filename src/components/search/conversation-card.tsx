@@ -116,6 +116,75 @@ export interface ConversationCardProps {
   score?: number;
 }
 
+// Helper function to copy text to clipboard
+const copyToClipboard = (
+  text: string,
+  successMessage: string = "Copied to clipboard"
+) => {
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      toast.success(successMessage);
+    })
+    .catch((err) => {
+      console.error("Failed to copy: ", err);
+      toast.error("Failed to copy to clipboard");
+    });
+};
+
+// Component for copy button
+const CopyButton = ({
+  text,
+  className = "",
+  showText = true,
+  successMessage = "Copied to clipboard",
+  size = "sm",
+}: {
+  text: string;
+  className?: string;
+  showText?: boolean;
+  successMessage?: string;
+  size?: "xs" | "sm" | "md";
+}) => {
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopy = () => {
+    copyToClipboard(text, successMessage);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const sizeClasses = {
+    xs: "h-6 w-6 p-1 sm:p-1",
+    sm: "h-7 px-2 py-1",
+    md: "h-8 px-3 py-1.5",
+  };
+
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={handleCopy}
+      className={cn(
+        "flex items-center justify-center gap-1 bg-muted/50 hover:bg-muted/80",
+        sizeClasses[size],
+        className
+      )}
+    >
+      {isCopied ? (
+        <Check className="h-3.5 w-3.5" />
+      ) : (
+        <Copy className="h-3.5 w-3.5" />
+      )}
+      {showText && (
+        <span className="hidden sm:inline text-xs">
+          {isCopied ? "Copied" : "Copy"}
+        </span>
+      )}
+    </Button>
+  );
+};
+
 const MarkdownWithHighlight: React.FC<{
   content: string;
   isHighlighted?: boolean;
@@ -372,10 +441,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
     toast.success("Raw response copied to clipboard");
   };
 
-  // Group messages by role for display
-  const userMessages = messages.filter((msg) => msg.role === "user");
-  const assistantMessages = messages.filter((msg) => msg.role === "assistant");
-
   // Function to render message content with highlighting if available
   const renderContent = (message: Message, index: number) => {
     // Check if the message content already contains highlight markers
@@ -423,6 +488,96 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
     return <MarkdownWithHighlight content={message.content} />;
   };
 
+  // Function to generate the full conversation text for copying
+  const getFullConversationText = () => {
+    return messages
+      .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
+      .join("\n\n");
+  };
+
+  // Function to render a message based on its role
+  const renderMessage = (message: Message, index: number) => {
+    switch (message.role) {
+      case "system":
+        return (
+          <div
+            key={`message-${index}`}
+            className="relative space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-secondary/30"
+          >
+            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+              <Badge
+                variant="outline"
+                className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
+              >
+                <Info className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                System
+              </Badge>
+              <CopyButton
+                text={message.content}
+                className="absolute top-2 right-2 z-10 message-copy-btn"
+                showText={false}
+                size="xs"
+                successMessage="System message copied"
+              />
+            </div>
+            {renderContent(message, index)}
+          </div>
+        );
+      case "user":
+        return (
+          <div
+            key={`message-${index}`}
+            className="relative space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-muted/30"
+          >
+            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+              <Badge
+                variant="secondary"
+                className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
+              >
+                <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                User
+              </Badge>
+              <CopyButton
+                text={message.content}
+                className="absolute top-2 right-2 z-10 message-copy-btn"
+                showText={false}
+                size="xs"
+                successMessage="User message copied"
+              />
+            </div>
+            {renderContent(message, index)}
+          </div>
+        );
+      case "assistant":
+        return (
+          <div
+            key={`message-${index}`}
+            className="relative space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-primary/5"
+          >
+            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+              <Badge
+                variant="default"
+                className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
+              >
+                <Bot className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                Assistant
+              </Badge>
+              <CopyButton
+                text={message.content}
+                className="absolute top-2 right-2 z-10 message-copy-btn"
+                showText={false}
+                size="xs"
+                successMessage="Assistant message copied"
+              />
+            </div>
+            {renderContent(message, index)}
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-2 sm:px-6 pt-2 sm:pt-4">
@@ -467,20 +622,26 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
             )}
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowRawResponse(!showRawResponse)}
-          title={showRawResponse ? "Hide raw response" : "Show raw response"}
-          className="ml-1 sm:ml-2 whitespace-nowrap flex items-center gap-1 h-6 sm:h-8 px-1.5 sm:px-3"
-        >
-          <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          <span className="hidden sm:inline">
-            {showRawResponse ? "Hide Raw" : "View Raw"}
-          </span>
-        </Button>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <CopyButton
+            text={getFullConversationText()}
+            successMessage="Conversation copied to clipboard"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRawResponse(!showRawResponse)}
+            title={showRawResponse ? "Hide raw response" : "Show raw response"}
+            className="ml-1 whitespace-nowrap flex items-center gap-1 h-7 sm:h-8 px-1.5 sm:px-3"
+          >
+            <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">
+              {showRawResponse ? "Hide Raw" : "View Raw"}
+            </span>
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4">
+      <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4 pb-3 sm:pb-6">
         {showRawResponse ? (
           <div className="relative">
             <div className="flex justify-between items-center mb-1 sm:mb-2">
@@ -505,57 +666,11 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
           </div>
         ) : (
           <div className="space-y-2 sm:space-y-4">
-            {userMessages.map((message, index) => (
-              <div
-                key={`user-${index}`}
-                className="space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-muted/30"
-              >
-                <div className="flex items-center mb-0.5 sm:mb-1">
-                  <Badge
-                    variant="secondary"
-                    className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
-                  >
-                    <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                    User
-                  </Badge>
-                </div>
-                {renderContent(message, index)}
-              </div>
-            ))}
-
-            {assistantMessages.map((message, index) => (
-              <div
-                key={`assistant-${index}`}
-                className="space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-primary/5"
-              >
-                <div className="flex items-center mb-0.5 sm:mb-1">
-                  <Badge
-                    variant="default"
-                    className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
-                  >
-                    <Bot className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                    Assistant
-                  </Badge>
-                </div>
-                {renderContent(message, index)}
-              </div>
-            ))}
+            {/* Render messages in their original order */}
+            {messages.map((message, index) => renderMessage(message, index))}
           </div>
         )}
       </CardContent>
-      <CardFooter className="pt-1 sm:pt-2 px-2 sm:px-6 pb-2 sm:pb-4 flex justify-between items-center text-xs text-muted-foreground">
-        <div className="flex items-center gap-1 sm:gap-2">
-          <span className="text-xs">ID: {id.substring(0, 8)}...</span>
-          {usage && (
-            <div className="flex items-center gap-0.5 sm:gap-1 text-xs">
-              <span>•</span>
-              <span>Prompt: {usage.prompt_tokens || 0}</span>
-              <span>•</span>
-              <span>Completion: {usage.completion_tokens || 0}</span>
-            </div>
-          )}
-        </div>
-      </CardFooter>
     </Card>
   );
 };

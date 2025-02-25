@@ -16,6 +16,7 @@ model_list:
           8. Create unit tests for core functionality
           9. Set up monitoring and alerts
           10. Plan for scalability considerations
+          11. `inline code` should be highlighted
 
           Here's a sample implementation to get you started:
 

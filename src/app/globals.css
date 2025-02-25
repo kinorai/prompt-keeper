@@ -169,7 +169,6 @@
 .prose pre {
   @apply bg-muted/50 p-3 sm:p-4 rounded-lg overflow-auto text-xs sm:text-sm;
   position: relative;
-  padding-right: 2.5rem;
 }
 
 .prose code {
@@ -360,4 +359,43 @@ pre:hover .code-copy-button {
   opacity: 1;
   outline: none;
   box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+/* Message copy button styles */
+.prose {
+  position: relative;
+}
+
+/* Ensure copy buttons are properly positioned */
+.relative > .absolute.top-2.right-2 {
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.relative:hover > .absolute.top-2.right-2 {
+  opacity: 1;
+}
+
+/* Ensure copy buttons don't overlap with content on mobile */
+@media (max-width: 639px) {
+  .relative > .absolute.top-2.right-2 {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+/* Style for inline code copy feedback */
+code:not(pre code) {
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+code:not(pre code):hover {
+  background-color: hsl(var(--muted-foreground) / 0.2);
+}
+
+code:not(pre code):active {
+  transform: scale(0.97);
 }
