@@ -166,6 +166,8 @@
 /* Prose styles for markdown content */
 .prose pre {
   @apply bg-muted p-3 sm:p-4 rounded-lg overflow-auto text-xs sm:text-sm;
+  position: relative;
+  padding-right: 2.5rem;
 }
 
 .prose code {
@@ -208,6 +210,66 @@
   @apply text-sm sm:text-base;
 }
 
+/* Additional markdown styles */
+.prose blockquote {
+  @apply border-l-4 border-muted pl-4 italic my-4 text-muted-foreground;
+}
+
+.prose hr {
+  @apply my-6 border-t border-border;
+}
+
+.prose table {
+  @apply w-full my-4 border-collapse;
+}
+
+.prose table th {
+  @apply bg-muted p-2 text-left font-semibold border border-border;
+}
+
+.prose table td {
+  @apply p-2 border border-border;
+}
+
+.prose a {
+  @apply text-primary underline hover:text-primary/80 transition-colors;
+}
+
+.prose img {
+  @apply max-w-full h-auto rounded-md my-4;
+}
+
+/* Inline code styling */
+.prose p > code,
+.prose li > code,
+.prose h1 > code,
+.prose h2 > code,
+.prose h3 > code,
+.prose h4 > code {
+  @apply bg-muted px-1 py-0.5 rounded text-xs sm:text-sm font-mono;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.prose p > code:hover,
+.prose li > code:hover,
+.prose h1 > code:hover,
+.prose h2 > code:hover,
+.prose h3 > code:hover,
+.prose h4 > code:hover {
+  background-color: hsl(var(--muted-foreground) / 0.2);
+}
+
+.prose p > code:active,
+.prose li > code:active,
+.prose h1 > code:active,
+.prose h2 > code:active,
+.prose h3 > code:active,
+.prose h4 > code:active {
+  transform: scale(0.97);
+}
+
 /* Highlight styles */
 mark, em {
   @apply bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded not-italic;
@@ -234,4 +296,20 @@ mark, em {
   border-radius: 9999px;
   padding: 4px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Code block copy button */
+.code-copy-button {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+pre:hover .code-copy-button {
+  opacity: 1;
+}
+
+.code-copy-button:focus {
+  opacity: 1;
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
 }
