@@ -265,8 +265,8 @@ export default function Home() {
   }, [searchResults]);
 
   return (
-    <div className="container px-4 sm:px-6 py-6 space-y-4 sm:space-y-8 mx-auto">
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm p-3 sm:p-5 rounded-xl shadow-sm border sm:rounded-xl sm:mx-0 sticky-search-container">
+    <div className="container px-2 sm:px-6 py-6 space-y-4 sm:space-y-8 mx-auto">
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm p-2 sm:p-5 rounded-xl shadow-sm border sm:rounded-xl sm:mx-0 sticky-search-container">
         <div className="flex items-center space-x-2 mb-3 sm:hidden">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -378,7 +378,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="space-y-4 sm:space-y-6 main-content">
+      <div className="space-y-3 sm:space-y-6 main-content">
         {loading ? (
           <div className="space-y-4 sm:space-y-6">
             {Array.from({ length: 3 }).map((_, index) => (

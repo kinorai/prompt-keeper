@@ -85,7 +85,7 @@
     -webkit-text-size-adjust: 100%;
   }
   .container {
-    @apply px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto;
+    @apply px-2 sm:px-4 lg:px-8 max-w-6xl mx-auto;
   }
 }
 
@@ -95,18 +95,18 @@
     border-radius: 0 !important;
     border-left: none !important;
     border-right: none !important;
-    margin-left: -1rem !important;
-    margin-right: -1rem !important;
-    width: calc(100% + 2rem) !important;
-    padding-top: 1rem !important;
-    padding-bottom: 0.75rem !important;
+    margin-left: -0.5rem !important;
+    margin-right: -0.5rem !important;
+    width: calc(100% + 1rem) !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.5rem !important;
     border-top: none !important;
     margin-top: 0 !important;
   }
   
   /* Add some space at the top of the main content area */
   .main-content {
-    padding-top: 0.5rem;
+    padding-top: 0.25rem;
   }
   
   /* Style for the mobile theme toggle */
@@ -167,13 +167,13 @@
 
 /* Prose styles for markdown content */
 .prose pre {
-  @apply bg-muted p-3 sm:p-4 rounded-lg overflow-auto text-xs sm:text-sm;
+  @apply bg-muted/50 p-3 sm:p-4 rounded-lg overflow-auto text-xs sm:text-sm;
   position: relative;
   padding-right: 2.5rem;
 }
 
 .prose code {
-  @apply bg-muted px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono;
+  @apply bg-muted/50 px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono;
 }
 
 .prose p {
@@ -241,35 +241,44 @@
   @apply max-w-full h-auto rounded-md my-4;
 }
 
-/* Inline code styling */
+/* Add specific styles for code blocks to ensure they're not white/highlighted */
+.prose pre code {
+  @apply bg-transparent text-foreground;
+  color: inherit;
+}
+
+/* Ensure syntax highlighting doesn't override our theme */
+.prose .token {
+  background: transparent !important;
+}
+
+/* Ensure code blocks in dark mode have appropriate styling */
+.dark .prose pre {
+  @apply bg-muted/30;
+}
+
+.dark .prose code {
+  @apply bg-muted/30;
+}
+
+/* Ensure inline code has proper styling */
 .prose p > code,
 .prose li > code,
 .prose h1 > code,
 .prose h2 > code,
 .prose h3 > code,
 .prose h4 > code {
-  @apply bg-muted px-1 py-0.5 rounded text-xs sm:text-sm font-mono;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  @apply bg-muted/50 px-1 py-0.5 rounded text-xs sm:text-sm;
 }
 
-.prose p > code:hover,
-.prose li > code:hover,
-.prose h1 > code:hover,
-.prose h2 > code:hover,
-.prose h3 > code:hover,
-.prose h4 > code:hover {
-  background-color: hsl(var(--muted-foreground) / 0.2);
-}
-
-.prose p > code:active,
-.prose li > code:active,
-.prose h1 > code:active,
-.prose h2 > code:active,
-.prose h3 > code:active,
-.prose h4 > code:active {
-  transform: scale(0.97);
+/* Ensure dark mode inline code has proper styling */
+.dark .prose p > code,
+.dark .prose li > code,
+.dark .prose h1 > code,
+.dark .prose h2 > code,
+.dark .prose h3 > code,
+.dark .prose h4 > code {
+  @apply bg-muted/30;
 }
 
 /* Highlight styles */
