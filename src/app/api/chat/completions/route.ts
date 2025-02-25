@@ -92,7 +92,9 @@ function formatStreamToResponse(chunks: StreamChunk[]): FormattedResponse {
 }
 
 // Add this helper function to sanitize messages
-function sanitizeMessage(message: any) {
+function sanitizeMessage(message: {
+  content: string | { type: string; text: string }[];
+}) {
   // If message is a simple string content
   if (typeof message.content === "string") {
     return message;
@@ -103,8 +105,8 @@ function sanitizeMessage(message: any) {
     return {
       ...message,
       content: message.content
-        .filter((item: any) => item.type === "text")
-        .map((item: any) => item.text)
+        .filter((item: { type: string }) => item.type === "text")
+        .map((item: { text: string }) => item.text)
         .join("\n"),
     };
   }
@@ -113,7 +115,7 @@ function sanitizeMessage(message: any) {
 }
 
 async function storeConversation(
-  requestMessages: any[],
+  requestMessages: [],
   response: FormattedResponse,
   latency: number
 ) {

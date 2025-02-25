@@ -21,17 +21,12 @@ interface SearchResult {
       completion_tokens: number;
     };
     latency: number;
-    raw_response: any;
+    raw_response: JSON;
   };
   _score?: number;
   highlight?: {
     "messages.content": string[];
   };
-}
-
-interface SearchMetadata {
-  total: { value: number };
-  searchTime: number;
 }
 
 export default function Home() {

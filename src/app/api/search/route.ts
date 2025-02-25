@@ -7,13 +7,13 @@ export async function POST(req: NextRequest) {
       query,
       searchMode = "keyword",
       timeRange,
-      fields = ["messages.content", "model"],
       size = 20,
       from = 0,
       fuzzyConfig,
     } = await req.json();
 
-    let queryBody: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const queryBody: any = {
       bool: {
         should: [],
         minimum_should_match: 1,
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     // Add time range filter if specified
     if (timeRange && timeRange !== "all") {
-      const range: any = {};
+      const range: { gte?: string; lte?: string } = {};
       switch (timeRange) {
         case "1h":
           range.gte = "now-1h";
