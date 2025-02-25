@@ -20,26 +20,61 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-interface SearchResult {
+// Define the types for our search results
+interface SearchHit {
+  _id: string;
+  _score: number;
   _source: {
     timestamp: string;
     model: string;
-    messages: Array<{
+    usage?: {
+      total_tokens?: number;
+      prompt_tokens?: number;
+      completion_tokens?: number;
+    };
+    messages?: Array<{
       role: string;
       content: string;
+      finish_reason?: string;
     }>;
-    usage: {
-      total_tokens: number;
-      prompt_tokens: number;
-      completion_tokens: number;
-    };
-    latency: number;
-    raw_response: JSON;
+    raw_response: any;
   };
-  _score?: number;
   highlight?: {
-    "messages.content": string[];
+    model?: string[];
+    "messages.content"?: string[];
   };
+}
+
+interface SearchResponse {
+  hits: {
+    total: {
+      value: number;
+    };
+    hits: SearchHit[];
+  };
+  took: number;
+}
+
+interface MappedSearchResult {
+  id: string;
+  created: string;
+  model: string;
+  usage?: {
+    total_tokens?: number;
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
+  messages: Array<{
+    role: string;
+    content: string;
+    finish_reason?: string;
+  }>;
+  raw_response: any;
+  highlight?: {
+    model?: string[];
+    "messages.content"?: string[];
+  };
+  score?: number;
 }
 
 export default function Home() {
@@ -62,10 +97,12 @@ export default function Home() {
 
   const debouncedQuery = useDebounce(query, 300);
 
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<
+    MappedSearchResult[] | null
+  >(null);
   const [searchMetadata, setSearchMetadata] = useState<{
     total: number;
-    searchTime: number;
+    took: number;
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -96,6 +133,14 @@ export default function Home() {
 
     setLoading(true);
     try {
+      console.log("Sending search request with:", {
+        query,
+        searchMode,
+        timeRange,
+        size: resultsSize,
+        fuzzyConfig: searchMode === "fuzzy" ? fuzzyConfig : undefined,
+      });
+
       const response = await fetch("/api/search", {
         method: "POST",
         headers: {
@@ -112,13 +157,56 @@ export default function Home() {
 
       const data = await response.json();
 
+      // Debug: Log the search results structure
+      console.log("Search API response:", JSON.stringify(data, null, 2));
+
+      // Check if we have valid search results
+      if (!data?.hits?.hits) {
+        console.error("Invalid search results structure:", data);
+        setSearchResults([]);
+        setSearchMetadata(null);
+        return;
+      }
+
+      // Debug: Log the first result if available
+      if (data.hits.hits.length > 0) {
+        const firstResult = data.hits.hits[0];
+        console.log("First result:", {
+          id: firstResult._id,
+          source: firstResult._source,
+          highlight: firstResult.highlight,
+        });
+
+        // Check if the first result has messages
+        if (firstResult._source?.messages) {
+          console.log("First result messages:", firstResult._source.messages);
+        }
+      }
+
+      // Map search results to ConversationCard props
+      const mappedResults =
+        data.hits.hits.map(
+          (hit: SearchHit): MappedSearchResult => ({
+            id: hit._id,
+            created: hit._source?.timestamp || new Date().toISOString(),
+            model: hit._source?.model || "Unknown",
+            usage: hit._source?.usage || undefined,
+            messages: hit._source?.messages || [],
+            raw_response: hit._source?.raw_response || {},
+            highlight: hit.highlight,
+            score: hit._score,
+          })
+        ) || [];
+
+      console.log("Mapped results:", mappedResults);
+
       // Safely handle the search results
-      setSearchResults(data.hits || []);
+      setSearchResults(mappedResults);
 
       // Safely handle the metadata
       setSearchMetadata({
-        total: data.total?.value || 0,
-        searchTime: data.searchTime || 0,
+        total: data?.hits?.total?.value || 0,
+        took: data?.took || 0,
       });
     } catch (error) {
       console.error("Search failed:", error);
@@ -169,6 +257,12 @@ export default function Home() {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  useEffect(() => {
+    if (searchResults && searchResults.length > 0) {
+      console.log("Rendering search results:", searchResults);
+    }
+  }, [searchResults]);
 
   return (
     <div className="container px-4 sm:px-6 py-6 space-y-4 sm:space-y-8 mx-auto">
@@ -278,7 +372,7 @@ export default function Home() {
             </span>
             <span className="mx-1">results in</span>
             <span className="font-medium">
-              {searchMetadata.searchTime.toLocaleString()}ms
+              {searchMetadata.took.toLocaleString()}ms
             </span>
           </div>
         )}
@@ -319,21 +413,27 @@ export default function Home() {
             </div>
           </div>
         ) : searchResults && searchResults.length > 0 ? (
-          searchResults.map((result, index) => (
-            <ConversationCard key={index} conversation={result} />
-          ))
+          <div className="space-y-6">
+            {searchResults.map((result) => (
+              <ConversationCard
+                key={result.id}
+                id={result.id}
+                created={result.created}
+                model={result.model}
+                usage={result.usage}
+                messages={result.messages}
+                raw_response={result.raw_response}
+                highlight={result.highlight}
+                score={result.score}
+              />
+            ))}
+          </div>
         ) : (
-          <div className="text-center py-12 sm:py-16 px-4 rounded-xl border bg-muted/5">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/20 mb-4">
-              <Search className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg sm:text-xl font-medium mb-2">
-              {query ? "No results found" : "Enter a search query to begin"}
-            </h3>
-            <p className="text-muted-foreground max-w-md mx-auto text-sm sm:text-base">
+          <div className="text-center py-10">
+            <p className="text-muted-foreground">
               {query
-                ? "Try adjusting your search terms or filters to find what you're looking for."
-                : "Type at least 3 characters to search through your conversation history."}
+                ? "No conversations found matching your search"
+                : "Enter a search query to find conversations"}
             </p>
           </div>
         )}
