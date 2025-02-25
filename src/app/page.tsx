@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilters } from "@/components/search/search-filters";
 import { ConversationCard } from "@/components/search/conversation-card";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Loader2, Search, MessageSquare, X } from "lucide-react";
+import {
+  ArrowUp,
+  Loader2,
+  Search,
+  MessageSquare,
+  X,
+  Settings,
+} from "lucide-react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useDebounce } from "../hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +26,14 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 // Define the types for our search results
 interface SearchHit {
@@ -81,6 +96,10 @@ export default function Home() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const resultsContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [searchMode, setSearchMode] = useState(
@@ -106,6 +125,34 @@ export default function Home() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+
+  // Handle scroll events
+  useEffect(() => {
+    const handleScroll = () => {
+      if (resultsContainerRef.current) {
+        const scrollTop = resultsContainerRef.current.scrollTop;
+        setShowScrollToTop(scrollTop > 300);
+        setIsScrolled(scrollTop > 50);
+      }
+    };
+
+    const resultsContainer = resultsContainerRef.current;
+    if (resultsContainer) {
+      resultsContainer.addEventListener("scroll", handleScroll);
+      return () => {
+        resultsContainer.removeEventListener("scroll", handleScroll);
+      };
+    }
+  }, []);
+
+  const scrollToTop = () => {
+    if (resultsContainerRef.current) {
+      resultsContainerRef.current.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+  };
 
   const updateSearchParams = () => {
     const params = new URLSearchParams(searchParams);
@@ -254,10 +301,6 @@ export default function Home() {
     return () => window.removeEventListener("keypress", handleKeyPress);
   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   useEffect(() => {
     if (searchResults && searchResults.length > 0) {
       console.log("Rendering search results:", searchResults);
@@ -265,187 +308,225 @@ export default function Home() {
   }, [searchResults]);
 
   return (
-    <div className="container px-2 sm:px-6 py-6 space-y-4 sm:space-y-8 mx-auto">
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm p-2 sm:p-5 rounded-xl shadow-sm border sm:rounded-xl sm:mx-0 sticky-search-container">
-        <div className="flex items-center space-x-2 mb-3 sm:hidden">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search conversations..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="pl-9 pr-9 h-10 rounded-full border-muted-foreground/20 bg-background shadow-sm focus-visible:ring-primary/50"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearch();
-              }}
-            />
-            {query && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-1.5 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full p-0 hover:bg-muted"
-                onClick={() => setQuery("")}
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Clear search</span>
-              </Button>
+    <div className="flex flex-col h-screen relative">
+      {/* Main content area with results */}
+      <div
+        ref={resultsContainerRef}
+        className="flex-1 overflow-y-auto pb-16 sm:pb-0 main-content"
+      >
+        <div className="container py-4 sm:py-6">
+          {/* Desktop search bar and filters */}
+          <div className="hidden sm:block sticky top-0 z-10 bg-background/80 backdrop-blur-sm pb-4">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="w-8"></div>
+                <ThemeToggle />
+              </div>
+              <SearchBar
+                query={query}
+                searchMode={searchMode}
+                onQueryChange={setQuery}
+                onSearchModeChange={setSearchMode}
+                onSearch={handleSearch}
+              />
+              <SearchFilters
+                timeRange={timeRange}
+                resultsSize={resultsSize}
+                fuzzyConfig={fuzzyConfig}
+                searchMode={searchMode}
+                onTimeRangeChange={setTimeRange}
+                onResultsSizeChange={setResultsSize}
+                onFuzzyConfigChange={setFuzzyConfig}
+              />
+            </div>
+          </div>
+
+          {/* Search results */}
+          <div className="mt-2 sm:mt-4">
+            {/* Search metadata - only visible on desktop */}
+            {searchMetadata && (
+              <div className="hidden sm:block text-sm text-muted-foreground mb-3 sm:mb-4">
+                {searchMetadata.total > 0 ? (
+                  <p>
+                    Found {searchMetadata.total} results in{" "}
+                    {searchMetadata.took < 1000
+                      ? `${searchMetadata.took}ms`
+                      : `${(searchMetadata.took / 1000).toFixed(2)}s`}
+                  </p>
+                ) : (
+                  <p>No results found</p>
+                )}
+              </div>
+            )}
+
+            {/* Loading state */}
+            {loading && (
+              <div className="space-y-3 sm:space-y-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="w-full h-[200px] rounded-xl" />
+                ))}
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!loading && searchResults && searchResults.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+                <div className="bg-muted/30 p-4 rounded-full mb-4">
+                  <MessageSquare className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-semibold mb-2">
+                  No conversations found
+                </h3>
+                <p className="text-muted-foreground max-w-md">
+                  {query
+                    ? "Try adjusting your search or filters to find what you're looking for."
+                    : "Start searching to find conversations."}
+                </p>
+              </div>
+            )}
+
+            {/* Results */}
+            {!loading && searchResults && searchResults.length > 0 && (
+              <div className="space-y-3 sm:space-y-6">
+                {searchResults.map((result) => (
+                  <ConversationCard key={result.id} {...result} />
+                ))}
+              </div>
+            )}
+
+            {/* Initial empty state */}
+            {initialLoad && !loading && !searchResults && (
+              <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+                <div className="bg-muted/30 p-4 rounded-full mb-4">
+                  <Search className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-semibold mb-2">
+                  Search your conversations
+                </h3>
+                <p className="text-muted-foreground max-w-md">
+                  Enter a search term to find conversations from your history.
+                </p>
+              </div>
             )}
           </div>
-          <div>
-            <ThemeToggle />
-          </div>
         </div>
-
-        <div className="flex justify-end mb-4 sm:hidden">
-          <div className="flex gap-2 w-full">
-            <div className="flex-1">
-              <Select value={searchMode} onValueChange={setSearchMode}>
-                <SelectTrigger className="h-10 rounded-full border-muted-foreground/20 bg-background shadow-sm w-full">
-                  <SelectValue placeholder="Search mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="keyword">
-                    <div className="flex items-center">
-                      <span>Keyword</span>
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        Exact
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="fuzzy">
-                    <div className="flex items-center">
-                      <span>Fuzzy</span>
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        Similar
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="regex">
-                    <div className="flex items-center">
-                      <span>Regex</span>
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        Pattern
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              onClick={handleSearch}
-              className="h-10 px-4 rounded-full shadow-sm"
-            >
-              Search
-            </Button>
-          </div>
-        </div>
-
-        {/* Desktop search bar */}
-        <div className="hidden sm:flex items-center mb-4">
-          <div className="flex-1">
-            <SearchBar
-              query={query}
-              searchMode={searchMode}
-              onQueryChange={setQuery}
-              onSearchModeChange={setSearchMode}
-              onSearch={handleSearch}
-            />
-          </div>
-          <div className="ml-3">
-            <ThemeToggle />
-          </div>
-        </div>
-
-        <SearchFilters
-          timeRange={timeRange}
-          resultsSize={resultsSize}
-          fuzzyConfig={fuzzyConfig}
-          searchMode={searchMode}
-          onTimeRangeChange={setTimeRange}
-          onResultsSizeChange={setResultsSize}
-          onFuzzyConfigChange={setFuzzyConfig}
-        />
-        {searchMetadata && (
-          <div className="text-sm text-muted-foreground flex items-center mt-3">
-            <span className="font-medium">
-              {searchMetadata.total.toLocaleString()}
-            </span>
-            <span className="mx-1">results in</span>
-            <span className="font-medium">
-              {searchMetadata.took.toLocaleString()}ms
-            </span>
-          </div>
-        )}
       </div>
 
-      <div className="space-y-3 sm:space-y-6 main-content">
-        {loading ? (
-          <div className="space-y-4 sm:space-y-6">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className="rounded-xl border bg-card shadow-sm p-3 sm:p-4 space-y-4 overflow-hidden"
-              >
-                <div className="flex flex-wrap items-center gap-2 border-b pb-4">
-                  <Skeleton className="h-6 w-24 rounded-full" />
-                  <Skeleton className="h-6 w-32 rounded-full" />
-                  <Skeleton className="h-6 w-20 rounded-full" />
-                </div>
-                <Skeleton className="h-24 w-full rounded-lg" />
-                <Skeleton className="h-24 w-full rounded-lg" />
-              </div>
-            ))}
-          </div>
-        ) : initialLoad ? (
-          <div className="text-center py-12 sm:py-16 px-4 rounded-xl border bg-muted/5">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-              <MessageSquare className="h-8 w-8 text-primary" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-semibold mb-2">
-              Welcome to Prompt Keeper
-            </h2>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto text-sm sm:text-base">
-              Search through your LLM conversation history to find and analyze
-              past interactions
-            </p>
-            <div className="flex justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          </div>
-        ) : searchResults && searchResults.length > 0 ? (
-          <div className="space-y-6">
-            {searchResults.map((result) => (
-              <ConversationCard
-                key={result.id}
-                id={result.id}
-                created={result.created}
-                model={result.model}
-                usage={result.usage}
-                messages={result.messages}
-                raw_response={result.raw_response}
-                highlight={result.highlight}
-                score={result.score}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-10">
-            <p className="text-muted-foreground">
-              {query
-                ? "No conversations found matching your search"
-                : "Enter a search query to find conversations"}
-            </p>
-          </div>
-        )}
-      </div>
-
-      <Button
-        className="fixed bottom-4 sm:bottom-8 right-4 sm:right-8 rounded-full shadow-lg h-10 w-10 sm:h-12 sm:w-12"
-        size="icon"
-        onClick={scrollToTop}
+      {/* Mobile search bar at bottom */}
+      <div
+        className={`sm:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border z-20 transition-all duration-300 ${
+          isScrolled ? "mobile-search-compact" : "mobile-search-expanded"
+        }`}
       >
-        <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" />
-      </Button>
+        <div className="container py-2">
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <SearchBar
+                query={query}
+                searchMode={searchMode}
+                onQueryChange={setQuery}
+                onSearchModeChange={setSearchMode}
+                onSearch={handleSearch}
+                isCompact={true}
+              />
+            </div>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 rounded-full"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
+                <SheetHeader className="mb-4">
+                  <SheetTitle>Search Settings</SheetTitle>
+                  <SheetDescription>
+                    Adjust your search filters and preferences
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm font-medium">Search Mode</span>
+                    <Select value={searchMode} onValueChange={setSearchMode}>
+                      <SelectTrigger className="w-[160px] h-9 rounded-lg border-muted-foreground/20 bg-background shadow-sm">
+                        <SelectValue placeholder="Search mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="keyword">
+                          <div className="flex items-center">
+                            <span>Keyword</span>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              Exact
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="fuzzy">
+                          <div className="flex items-center">
+                            <span>Fuzzy</span>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              Similar
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="regex">
+                          <div className="flex items-center">
+                            <span>Regex</span>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              Pattern
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <ThemeToggle />
+                </div>
+                <div className="pb-16">
+                  <SearchFilters
+                    timeRange={timeRange}
+                    resultsSize={resultsSize}
+                    fuzzyConfig={fuzzyConfig}
+                    searchMode={searchMode}
+                    onTimeRangeChange={setTimeRange}
+                    onResultsSizeChange={setResultsSize}
+                    onFuzzyConfigChange={setFuzzyConfig}
+                    alwaysExpanded={true}
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+          {searchMetadata && (
+            <div className="text-xs text-muted-foreground mt-1 px-1">
+              {searchMetadata.total > 0 ? (
+                <p>
+                  Found {searchMetadata.total} results in{" "}
+                  {searchMetadata.took < 1000
+                    ? `${searchMetadata.took}ms`
+                    : `${(searchMetadata.took / 1000).toFixed(2)}s`}
+                </p>
+              ) : (
+                <p>No results found</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Scroll to top button */}
+      {showScrollToTop && (
+        <Button
+          variant="secondary"
+          size="icon"
+          className="fixed bottom-20 right-4 sm:bottom-4 sm:right-4 z-30 rounded-full shadow-md scroll-to-top-button"
+          onClick={scrollToTop}
+        >
+          <ArrowUp className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 }
