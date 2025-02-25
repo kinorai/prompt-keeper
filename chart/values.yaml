@@ -5,10 +5,47 @@ litellm:
   enabled: true
   db:
     deployStandalone: false
+  environmentSecrets:
+    - prompt-keeper-litellm
+  proxy_config:
+    model_list:
+  # Use this if you want to make requests to `claude-3-haiku-20240307`,`claude-3-opus-20240229`,`claude-2.1` without defining them on the config.yaml
+  # Default models
+  # Works for ALL Providers and needs the default provider credentials in .env
+    - model_name: "*"
+      litellm_params:
+        model: openai/*
+        api_key: os.environ/OPENAI_API_KEY
+    - model_name: "*"
+      litellm_params:
+        model: anthropic/*
+        api_key: os.environ/ANTHROPIC_API_KEY
+    - model_name: "*"
+      litellm_params:
+        model: deepseek/*
+        api_key: os.environ/DEEPSEEK_API_KEY
+    - model_name: "*"
+      litellm_params:
+        model: gemini/*
+        api_key: os.environ/GEMINI_API_KEY
+    # - model_name: "*"
+    #   litellm_params:
+    #     model: archipels-svc/*
+    #     api_key: os.environ/ARCHIPELS_API_KEY
+    #     api_base: os.environ/ARCHIPELS_API_BASE
+
 opensearch:
   enabled: true
-
----
+  master:
+    masterOnly: false
+    replicaCount: 1
+    extraEnvVarsSecret: "prompt-keeper-opensearch"
+  data:
+    replicaCount: 1
+  coordinating:
+    replicaCount: 1
+  ingest:
+    replicaCount: 1
 
 config:
   API_HOST: ""
@@ -52,7 +89,9 @@ controllers:
           - name: API_BASE_URL
             value: "http://{{.Release.Name}}-api.{{.Release.Namespace}}.svc.cluster.local:8000"
         envFrom:
-          - secret: prompt-keeper
+          - secret: api
+          - secret: common
+          - secret: opensearch
         ports:
           - containerPort: 3000
         resources: {}
@@ -97,20 +136,32 @@ service:
 ingress: []
 
 secrets:
+  api:
+    enabled: true
+    stringData:
+      OPENSEARCH_HOST: "http://{{ .Release.Name }}-opensearch.{{ .Release.Namespace }}.svc.cluster.local:9200"
+      OPENSEARCH_INDEX: "litellm"
+      OPENSEARCH_INDEX_SETTINGS: "{}"
   # Secrets are used instead of ConfigMaps because pods are automatically reloaded when Secrets change, unlike ConfigMaps
-  prompt-keeper:
+  common:
     enabled: true
     stringData:
       LOG_LEVEL: "debug"
-      OPENAI_API_KEY: ""
-      OPENAI_API_BASE: ""
+  # LiteLLM
+  litellm:
+    enabled: true
+    stringData:
       OR_APP_NAME: "Prompt Keeper LiteLLM"
-      ANTHROPIC_API_KEY: ""
       LITELLM_MASTER_KEY: "sk-1234"
+      OPENAI_API_KEY: "sk-1234"
+      ANTHROPIC_API_KEY: "sk-1234"
+      DEEPSEEK_API_KEY: "sk-1234"
+      GEMINI_API_KEY: "sk-1234"
+      ARCHIPELS_API_KEY: "sk-1234"
+      ARCHIPELS_API_BASE: "https://chat.svc.archipels.io/api"
       # OpenSearch
-      OPENSEARCH_HOST: "http://{{ .Release.Name }}-opensearch.{{ .Release.Namespace }}.svc.cluster.local:9200"
-      OPENSEARCH_USERNAME: "admin"
+  opensearch:
+    enabled: true
+    stringData:
+      OPENSEARCH_USERNAME: "azkjfaegfeiaufnjoiahj"
       OPENSEARCH_PASSWORD: "adminadminA2!^eaA325153!!*"
-      OPENSEARCH_INDEX: "litellm"
-      OPENSEARCH_INDEX_SETTINGS: "{}"
-
