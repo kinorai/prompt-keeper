@@ -3,7 +3,7 @@ import opensearchClient, { PROMPT_KEEPER_INDEX } from "@/lib/opensearch";
 
 // Constants
 const CONFIG = {
-  TARGET_URL: process.env.TARGET_URL || "http://localhost:4000",
+  LITELLM_URL: process.env.LITELLM_URL || "http://localhost:4000",
   REQUEST_TIMEOUT: 30000,
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
   CORS_METHODS: process.env.CORS_METHODS || "GET, POST, OPTIONS",
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
     const requestData = parsedBody; // Use already parsed body
     const requestMessages = requestData.messages || [];
 
-    const response = await fetch(`${CONFIG.TARGET_URL}/v1/chat/completions`, {
+    const response = await fetch(`${CONFIG.LITELLM_URL}/v1/chat/completions`, {
       method: "POST",
       headers: forwardHeaders,
       body: requestBody,

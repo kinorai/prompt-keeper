@@ -1,23 +1,15 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilters } from "@/components/search/search-filters";
 import { ConversationCard } from "@/components/search/conversation-card";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowUp,
-  Loader2,
-  Search,
-  MessageSquare,
-  X,
-  Settings,
-} from "lucide-react";
+import { ArrowUp, Search, MessageSquare, Settings } from "lucide-react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useDebounce } from "../hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectTrigger,
@@ -52,24 +44,13 @@ interface SearchHit {
       content: string;
       finish_reason?: string;
     }>;
-    raw_response: any;
+    raw_response: Record<string, unknown>;
   };
   highlight?: {
     model?: string[];
     "messages.content"?: string[];
   };
 }
-
-interface SearchResponse {
-  hits: {
-    total: {
-      value: number;
-    };
-    hits: SearchHit[];
-  };
-  took: number;
-}
-
 interface MappedSearchResult {
   id: string;
   created: string;
@@ -84,7 +65,7 @@ interface MappedSearchResult {
     content: string;
     finish_reason?: string;
   }>;
-  raw_response: any;
+  raw_response: Record<string, unknown>;
   highlight?: {
     model?: string[];
     "messages.content"?: string[];
@@ -98,7 +79,6 @@ export default function Home() {
   const searchParams = useSearchParams();
   const resultsContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
@@ -154,7 +134,7 @@ export default function Home() {
     }
   };
 
-  const updateSearchParams = () => {
+  const updateSearchParams = useCallback(() => {
     const params = new URLSearchParams(searchParams);
     if (query) params.set("q", query);
     else params.delete("q");
@@ -172,9 +152,18 @@ export default function Home() {
     }
 
     router.replace(`${pathname}?${params.toString()}`);
-  };
+  }, [
+    query,
+    searchMode,
+    timeRange,
+    resultsSize,
+    fuzzyConfig,
+    searchParams,
+    router,
+    pathname,
+  ]);
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (query.length < 3 && query.length > 0) return;
     updateSearchParams();
 
@@ -263,7 +252,14 @@ export default function Home() {
       setLoading(false);
       setInitialLoad(false);
     }
-  };
+  }, [
+    query,
+    searchMode,
+    timeRange,
+    resultsSize,
+    fuzzyConfig,
+    updateSearchParams,
+  ]);
 
   useEffect(() => {
     if (debouncedQuery.length >= 3 || debouncedQuery.length === 0) {
@@ -276,6 +272,7 @@ export default function Home() {
     resultsSize,
     fuzzyConfig.fuzziness,
     fuzzyConfig.prefixLength,
+    handleSearch,
   ]);
 
   useEffect(() => {

@@ -1,32 +1,8 @@
 import { formatDistanceToNow } from "date-fns";
-import {
-  Copy,
-  FileJson,
-  MessageSquare,
-  Bot,
-  User,
-  Clock,
-  Zap,
-  Award,
-  Check,
-  Info,
-  Eye,
-} from "lucide-react";
+import { Copy, Bot, User, Clock, Check, Info, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Tooltip,
   TooltipContent,
@@ -36,17 +12,13 @@ import {
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { toast } from "sonner";
+import { CSSProperties } from "react";
 
 // Define a custom style for syntax highlighting that respects the theme
-const customCodeStyle = {
+const customCodeStyle: Record<string, CSSProperties> = {
   // Minimal styling that respects the theme
   'code[class*="language-"]': {
     color: "inherit",
@@ -108,7 +80,7 @@ export interface ConversationCardProps {
     completion_tokens?: number;
   };
   messages: Message[];
-  raw_response: any;
+  raw_response: Record<string, unknown>;
   highlight?: {
     model?: string[];
     "messages.content"?: string[];
@@ -287,7 +259,7 @@ const MarkdownWithHighlight: React.FC<{
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, inline, className, children, ...props }: any) {
+          code({ inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || "");
             const language = match ? match[1] : "";
 
@@ -361,7 +333,7 @@ const MarkdownWithHighlight: React.FC<{
               </code>
             );
           },
-          p({ node, children, ...props }: any) {
+          p({ children, ...props }) {
             // Process our custom highlight markers
             if (
               typeof children === "string" &&
@@ -398,17 +370,15 @@ const MarkdownWithHighlight: React.FC<{
               if (typeof children === "string") {
                 return <p {...props}>{processContent(children)}</p>;
               } else if (Array.isArray(children)) {
-                const processedChildren = (children as React.ReactNode[]).map(
-                  (child: React.ReactNode, idx: number) => {
-                    if (
-                      typeof child === "string" &&
-                      child.includes("HIGHLIGHT_START")
-                    ) {
-                      return processContent(child);
-                    }
-                    return child;
+                const processedChildren = children.map((child) => {
+                  if (
+                    typeof child === "string" &&
+                    child.includes("HIGHLIGHT_START")
+                  ) {
+                    return processContent(child);
                   }
-                );
+                  return child;
+                });
                 return <p {...props}>{processedChildren}</p>;
               }
             }
@@ -424,7 +394,6 @@ const MarkdownWithHighlight: React.FC<{
 };
 
 export const ConversationCard: React.FC<ConversationCardProps> = ({
-  id,
   created,
   model,
   usage,
@@ -442,7 +411,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   };
 
   // Function to render message content with highlighting if available
-  const renderContent = (message: Message, index: number) => {
+  const renderContent = (message: Message) => {
     // Check if the message content already contains highlight markers
     if (
       message.content.includes("HIGHLIGHT_START") &&

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const CONFIG = {
-  TARGET_URL: process.env.TARGET_URL || "https://api.openai.com/",
+  LITELLM_URL: process.env.LITELLM_URL || "https://api.openai.com/",
   REQUEST_TIMEOUT: 30000,
 };
 
 export async function GET(req: NextRequest) {
   try {
     const forwardHeaders = new Headers(req.headers);
-    const response = await fetch(`${CONFIG.TARGET_URL}/v1/models`, {
+    const response = await fetch(`${CONFIG.LITELLM_URL}/v1/models`, {
       headers: forwardHeaders,
       signal: AbortSignal.timeout(CONFIG.REQUEST_TIMEOUT),
     });
