@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME, verifyApiKey, verifyToken } from "./lib/auth";
 
+// LiteLLM API routes that should use LiteLLM authentication
+const LITELLM_ROUTES = [
+  "/api/chat/completions",
+  "/api/completions",
+  "/api/models",
+];
+
 export async function middleware(request: NextRequest) {
   // Set CORS headers
   const response = NextResponse.next();
@@ -11,7 +18,7 @@ export async function middleware(request: NextRequest) {
   );
   response.headers.set(
     "Access-Control-Allow-Headers",
-    "Content-Type, X-Prompt-Keeper-API-Key"
+    "Content-Type, X-Prompt-Keeper-API-Key, Authorization"
   );
 
   // Handle preflight requests
@@ -27,8 +34,17 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
+  // Check if the route is a LiteLLM route
+  const isLiteLLMRoute = LITELLM_ROUTES.includes(request.nextUrl.pathname);
+
   // Check for API key authentication for API routes
   if (request.nextUrl.pathname.startsWith("/api/")) {
+    // For LiteLLM routes, let the request pass through (LiteLLM will handle auth)
+    if (isLiteLLMRoute) {
+      return response;
+    }
+
+    // For non-LiteLLM API routes, require X-Prompt-Keeper-API-Key
     if (verifyApiKey(request)) {
       return response;
     }

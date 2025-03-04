@@ -28,14 +28,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Authentication
 
-Prompt Keeper uses two authentication methods:
+Prompt Keeper uses three authentication methods:
 
 1. **UI Authentication**: Username and password-based authentication for the web interface.
 
    - Set `AUTH_USERNAME` and `AUTH_PASSWORD_HASH` in your `.env` file.
    - Use the `npm run generate-password` script to generate a secure password hash.
 
-2. **API Key Authentication**: For direct API calls.
+2. **LiteLLM API Authentication**: For LLM API routes (`/api/chat/completions`, `/api/completions`, `/api/models`).
+
+   - Uses LiteLLM's authentication mechanism
+   - Configure through LiteLLM environment variables (e.g., `LITELLM_MASTER_KEY`)
+
+3. **Prompt Keeper API Authentication**: For all other API routes (e.g., `/api/search`).
    - Set `PROMPT_KEEPER_API_KEY` in your `.env` file.
    - Include the API key in your requests using the custom header:
      ```
@@ -47,7 +52,7 @@ Prompt Keeper uses two authentication methods:
 - OpenAI-compatible API proxy that routes requests to LiteLLM
 - Conversation storage in OpenSearch
 - Interactive frontend for searching and filtering conversations
-- Authentication system for both UI and API access
+- Separate authentication for LLM API and management API
 
 ## Learn More
 
