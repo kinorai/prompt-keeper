@@ -169,8 +169,7 @@ controllers:
       main:
         image:
           repository : "kinorai/prompt-keeper"
-          tag: "2"
-          pullPolicy: Always
+          tag: "latest"
         env:
           - name: API_BASE_URL
             value: "http://{{.Release.Name}}-api.{{.Release.Namespace}}.svc.cluster.local:8000"
