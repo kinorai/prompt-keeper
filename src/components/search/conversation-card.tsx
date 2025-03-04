@@ -9,16 +9,29 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import type { SyntaxHighlighterProps } from "react-syntax-highlighter";
 import { toast } from "sonner";
 import { CSSProperties } from "react";
+// Define custom types for ReactMarkdown components
+interface CodeProps {
+  inline?: boolean;
+  className?: string;
+  children: ReactNode;
+  [key: string]: unknown;
+}
+
+interface ParagraphProps {
+  children: ReactNode;
+  [key: string]: unknown;
+}
 
 // Define a custom style for syntax highlighting that respects the theme
-const customCodeStyle: Record<string, CSSProperties> = {
+const customCodeStyle: { [key: string]: CSSProperties } = {
   // Minimal styling that respects the theme
   'code[class*="language-"]': {
     color: "inherit",
@@ -259,7 +272,8 @@ const MarkdownWithHighlight: React.FC<{
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ inline, className, children, ...props }) {
+          // @ts-expect-error - ReactMarkdown types are incompatible with our custom types
+          code({ inline, className, children, ...props }: CodeProps) {
             const match = /language-(\w+)/.exec(className || "");
             const language = match ? match[1] : "";
 
@@ -303,7 +317,7 @@ const MarkdownWithHighlight: React.FC<{
               return (
                 <SyntaxHighlighter
                   language={language}
-                  style={customCodeStyle}
+                  style={customCodeStyle as SyntaxHighlighterProps["style"]}
                   PreTag="div"
                   className="rounded-md"
                   useInlineStyles={true}
@@ -333,7 +347,8 @@ const MarkdownWithHighlight: React.FC<{
               </code>
             );
           },
-          p({ children, ...props }) {
+          // @ts-expect-error - ReactMarkdown types are incompatible with our custom types
+          p({ children, ...props }: ParagraphProps) {
             // Process our custom highlight markers
             if (
               typeof children === "string" &&
@@ -370,15 +385,17 @@ const MarkdownWithHighlight: React.FC<{
               if (typeof children === "string") {
                 return <p {...props}>{processContent(children)}</p>;
               } else if (Array.isArray(children)) {
-                const processedChildren = children.map((child) => {
-                  if (
-                    typeof child === "string" &&
-                    child.includes("HIGHLIGHT_START")
-                  ) {
-                    return processContent(child);
+                const processedChildren = (children as ReactNode[]).map(
+                  (child: ReactNode) => {
+                    if (
+                      typeof child === "string" &&
+                      child.includes("HIGHLIGHT_START")
+                    ) {
+                      return processContent(child);
+                    }
+                    return child;
                   }
-                  return child;
-                });
+                );
                 return <p {...props}>{processedChildren}</p>;
               }
             }
@@ -489,7 +506,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 successMessage="System message copied"
               />
             </div>
-            {renderContent(message, index)}
+            {renderContent(message)}
           </div>
         );
       case "user":
@@ -514,7 +531,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 successMessage="User message copied"
               />
             </div>
-            {renderContent(message, index)}
+            {renderContent(message)}
           </div>
         );
       case "assistant":
@@ -539,7 +556,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 successMessage="Assistant message copied"
               />
             </div>
-            {renderContent(message, index)}
+            {renderContent(message)}
           </div>
         );
       default:
