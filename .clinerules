@@ -57,6 +57,9 @@ Prompt Keeper - Design Architecture Template (DAT)
      - conversations : user\'s and assistants messages
    - Markdown
    - authentification
+     - login page
+     - simple login with username and password (hashed password in enviroment variables)
+     - api key authentication for direct api calls (api key in enviroment variables)
    - highlight searched word
      - simple highlight with highlithed character (client side)
      - is there anything to do with opensearch
@@ -227,6 +230,7 @@ Code Style and Structure
 - Prefer iteration and modularization over code duplication.
 - Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
 - Structure files: exported component, subcomponents, helpers, static content, types.
+- Ignore linting errors as last resort.
 
 UI and Styling
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilters } from "@/components/search/search-filters";
 import { ConversationCard } from "@/components/search/conversation-card";
@@ -10,6 +10,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useDebounce } from "../hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { LogoutButton } from "@/components/logout-button";
 import {
   Select,
   SelectTrigger,
@@ -73,7 +74,8 @@ interface MappedSearchResult {
   score?: number;
 }
 
-export default function Home() {
+// Create a separate component that uses useSearchParams
+function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -305,7 +307,18 @@ export default function Home() {
   }, [searchResults]);
 
   return (
-    <div className="flex flex-col h-screen relative">
+    <div className="flex flex-col h-screen">
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          <h1 className="text-lg font-semibold">Prompt Keeper</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <LogoutButton />
+        </div>
+      </div>
+
       {/* Main content area with results */}
       <div
         ref={resultsContainerRef}
@@ -525,5 +538,14 @@ export default function Home() {
         </Button>
       )}
     </div>
+  );
+}
+
+// Main component that wraps the content with Suspense
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="p-4">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
