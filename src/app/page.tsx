@@ -308,37 +308,27 @@ function HomeContent() {
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          <h1 className="text-lg font-semibold">Prompt Keeper</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <LogoutButton />
-        </div>
-      </div>
-
       {/* Main content area with results */}
       <div
         ref={resultsContainerRef}
         className="flex-1 overflow-y-auto pb-16 sm:pb-0 main-content"
       >
-        <div className="container py-4 sm:py-6">
+        <div className="container pb-4 sm:py-6">
           {/* Desktop search bar and filters */}
           <div className="hidden sm:block sticky top-0 z-10 bg-background/80 backdrop-blur-sm pb-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <div className="w-8"></div>
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <SearchBar
+                    query={query}
+                    searchMode={searchMode}
+                    onQueryChange={setQuery}
+                    onSearchModeChange={setSearchMode}
+                    onSearch={handleSearch}
+                  />
+                </div>
                 <ThemeToggle />
               </div>
-              <SearchBar
-                query={query}
-                searchMode={searchMode}
-                onQueryChange={setQuery}
-                onSearchModeChange={setSearchMode}
-                onSearch={handleSearch}
-              />
               <SearchFilters
                 timeRange={timeRange}
                 resultsSize={resultsSize}
@@ -492,7 +482,10 @@ function HomeContent() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <ThemeToggle />
+                  <div className="flex items-center gap-2">
+                    <ThemeToggle />
+                    <LogoutButton />
+                  </div>
                 </div>
                 <div className="pb-16">
                   <SearchFilters
