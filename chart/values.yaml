@@ -3,6 +3,7 @@
 
 litellm:
   enabled: true
+  masterkey: sk-1234
   db:
     deployStandalone: false
   environmentSecrets:
@@ -12,19 +13,19 @@ litellm:
   # Use this if you want to make requests to `claude-3-haiku-20240307`,`claude-3-opus-20240229`,`claude-2.1` without defining them on the config.yaml
   # Default models
   # Works for ALL Providers and needs the default provider credentials in .env
-    - model_name: "*"
+    - model_name: "openai/*"
       litellm_params:
         model: openai/*
         api_key: os.environ/OPENAI_API_KEY
-    - model_name: "*"
+    - model_name: "anthropic/*"
       litellm_params:
         model: anthropic/*
         api_key: os.environ/ANTHROPIC_API_KEY
-    - model_name: "*"
+    - model_name: "deepseek/*"
       litellm_params:
         model: deepseek/*
         api_key: os.environ/DEEPSEEK_API_KEY
-    - model_name: "*"
+    - model_name: "gemini/*"
       litellm_params:
         model: gemini/*
         api_key: os.environ/GEMINI_API_KEY
@@ -116,6 +117,9 @@ litellm:
           Let me know if you need any clarification on these points or would like more specific examples for your use case!
         api_key: my-fake-key
         api_base: https://exampleopenaiendpoint-production.up.railway.app/
+  migrationJob:
+    enabled: false # Enable or disable the schema migration Job
+
 opensearch:
   enabled: true
   master:
@@ -165,7 +169,7 @@ controllers:
       main:
         image:
           repository : "kinorai/prompt-keeper"
-          tag: "1"
+          tag: "2"
           pullPolicy: Always
         env:
           - name: API_BASE_URL
@@ -235,7 +239,6 @@ secrets:
     enabled: true
     stringData:
       OR_APP_NAME: "Prompt Keeper LiteLLM"
-      LITELLM_MASTER_KEY: "sk-1234"
       OPENAI_API_KEY: "sk-1234"
       ANTHROPIC_API_KEY: "sk-1234"
       DEEPSEEK_API_KEY: "sk-1234"

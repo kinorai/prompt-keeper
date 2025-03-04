@@ -1,22 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Prompt Keeper
+
+Prompt Keeper is an open-source LLM API proxy that is OpenAI compatible, providing a rich user interface to search and analyze historical LLM conversations. The system intercepts API calls, forwards them to LiteLLM for processing, and stores the resulting conversation data in OpenSearch.
 
 ## Getting Started
 
-First, run the development server:
+First, set up your environment variables:
+
+```bash
+cp .env.example .env
+```
+
+Then, generate a hashed password for authentication:
+
+```bash
+npm run generate-password
+```
+
+Add the generated hash to your `.env` file as `AUTH_PASSWORD_HASH`.
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Authentication
+
+Prompt Keeper uses two authentication methods:
+
+1. **UI Authentication**: Username and password-based authentication for the web interface.
+
+   - Set `AUTH_USERNAME` and `AUTH_PASSWORD_HASH` in your `.env` file.
+   - Use the `npm run generate-password` script to generate a secure password hash.
+
+2. **API Key Authentication**: For direct API calls.
+   - Set `PROMPT_KEEPER_API_KEY` in your `.env` file.
+   - Include the API key in your requests using the custom header:
+     ```
+     X-Prompt-Keeper-API-Key: your-api-key
+     ```
+
+## Features
+
+- OpenAI-compatible API proxy that routes requests to LiteLLM
+- Conversation storage in OpenSearch
+- Interactive frontend for searching and filtering conversations
+- Authentication system for both UI and API access
+
+## Learn More
+
+To learn more about the technologies used in this project:
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [OpenSearch Documentation](https://opensearch.org/docs/latest/)
+- [LiteLLM Documentation](https://docs.litellm.ai/)
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
