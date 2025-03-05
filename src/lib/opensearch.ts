@@ -64,21 +64,6 @@ export async function initializeIndex() {
                 },
               },
               latency: { type: "float" },
-              raw_response: {
-                type: "object",
-                properties: {
-                  choices: {
-                    type: "nested",
-                    properties: {
-                      message: {
-                        properties: {
-                          content: { type: "text" },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
             },
           },
         },

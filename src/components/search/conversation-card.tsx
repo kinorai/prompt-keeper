@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Bot, User, Clock, Check, Info, Eye } from "lucide-react";
+import { Copy, Bot, User, Clock, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -93,7 +93,6 @@ export interface ConversationCardProps {
     completion_tokens?: number;
   };
   messages: Message[];
-  raw_response: Record<string, unknown>;
   highlight?: {
     model?: string[];
     "messages.content"?: string[];
@@ -415,17 +414,10 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   model,
   usage,
   messages = [],
-  raw_response,
   highlight,
   score,
 }) => {
-  const [showRawResponse, setShowRawResponse] = useState(false);
   const createdDate = new Date(created);
-
-  const copyRawResponse = () => {
-    navigator.clipboard.writeText(JSON.stringify(raw_response, null, 2));
-    toast.success("Raw response copied to clipboard");
-  };
 
   // Function to render message content with highlighting if available
   const renderContent = (message: Message) => {
@@ -613,49 +605,13 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
             text={getFullConversationText()}
             successMessage="Conversation copied to clipboard"
           />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowRawResponse(!showRawResponse)}
-            title={showRawResponse ? "Hide raw response" : "Show raw response"}
-            className="ml-1 whitespace-nowrap flex items-center gap-1 h-7 sm:h-8 px-1.5 sm:px-3"
-          >
-            <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">
-              {showRawResponse ? "Hide Raw" : "View Raw"}
-            </span>
-          </Button>
         </div>
       </CardHeader>
       <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4 pb-3 sm:pb-6">
-        {showRawResponse ? (
-          <div className="relative">
-            <div className="flex justify-between items-center mb-1 sm:mb-2">
-              <h3 className="text-xs sm:text-sm font-medium">Raw Response</h3>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={copyRawResponse}
-                className="flex items-center gap-1 h-7 text-xs"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                Copy
-              </Button>
-            </div>
-            <div className="max-h-96 overflow-auto rounded-md bg-muted p-2 sm:p-4">
-              <pre className="text-xs sm:text-sm whitespace-pre-wrap break-words font-mono">
-                {typeof raw_response === "string"
-                  ? raw_response
-                  : JSON.stringify(raw_response, null, 2)}
-              </pre>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2 sm:space-y-4">
-            {/* Render messages in their original order */}
-            {messages.map((message, index) => renderMessage(message, index))}
-          </div>
-        )}
+        <div className="space-y-2 sm:space-y-4">
+          {/* Render messages in their original order */}
+          {messages.map((message, index) => renderMessage(message, index))}
+        </div>
       </CardContent>
     </Card>
   );

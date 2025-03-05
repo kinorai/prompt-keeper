@@ -15,7 +15,7 @@ Prompt Keeper - Design Architecture Template (DAT)
 • Primary Goals:
 
 - Provide an API proxy to route requests to LiteLLM.
-- Log and store conversation details (metadata, token usage, messages, raw responses, etc.) asynchronously.
+- Log and store conversation details (metadata, token usage, messages, etc.) asynchronously.
 - Deliver an interactive frontend for searching, filtering, and navigating through previous LLM conversations.
 
 ──────────────────────────────────────── 2. OBJECTIVES & FEATURES
@@ -23,7 +23,7 @@ Prompt Keeper - Design Architecture Template (DAT)
 1. OpenAI Compatible API Proxy with Conversation Storage in OpenSearch
 
    - passthrough the llm api calls to LiteLLM (let LiteLLM do the openai compatibility)
-   - store in opensearch all conversations fields(models, usage(total_tokens, prompt_tokens,completion_tokens,prompt_tokens_details,completion_tokens_details), choices(message,role,content,finish_reason), created, raw response), storing the information should happen after the llm api calls has been answered to the user, for yes overhead of using the proxy llm
+   - store in opensearch all conversations fields(models, usage(total_tokens, prompt_tokens,completion_tokens,prompt_tokens_details,completion_tokens_details), choices(message,role,content,finish_reason), created), storing the information should happen after the llm api calls has been answered to the user, for yes overhead of using the proxy llm
    - then use /api/search to search inside all your LLMs conversations that you did through api calls
    - routes
      - /api/chat/completions : Forward chat completion requests to LiteLLM and store the conversation in opensearch
@@ -53,7 +53,6 @@ Prompt Keeper - Design Architecture Template (DAT)
        - tokens total
        - latency
        - match score returned by open search
-       - a button to show raw response, in a modal there should be another button to copy raw response
      - conversations : user\'s and assistants messages
    - Markdown
    - authentification
@@ -123,12 +122,21 @@ Mapping Structure:
       "timestamp": {
         "type": "date"
       },
+      "created_at": {
+        "type": "date"
+      },
+      "updated_at": {
+        "type": "date"
+      },
       "model": {
         "type": "keyword"
       },
       "latency": {
         "type": "integer",
         "index": false
+      },
+      "conversation_hash": {
+        "type": "keyword"
       },
       "usage": {
         "properties": {
@@ -161,10 +169,6 @@ Mapping Structure:
             }
           }
         }
-      },
-      "raw_response": {
-        "type": "object",
-        "index": false
       }
     }
   }
@@ -173,7 +177,6 @@ Mapping Structure:
 
 C. Indexing Considerations:  
  • The nested types for usage details and messages enable more granular querying (e.g., filtering based on specific token counts or message content).  
- • The raw_response field is disabled for indexing to save resources, yet remains available for retrieval when needed.  
  • Additional fields can be added or adjusted depending on iterative requirements or optimization needs.
 
 ──────────────────────────────────────── 6. SECURITY & AUTHENTICATION
@@ -192,7 +195,7 @@ Phase 1 (MVP):
   ▪ A full-width search input that activates after 3 characters.
   ▪ Support for multiple search modes (fuzzy, regex, keyword).
   ▪ Filter controls for time range and field-specific searches.
-  ▪ Display formatted conversation cards (date/time, model info, token stats, latency, match score) with options to view and copy raw responses.
+  ▪ Display formatted conversation cards (date/time, model info, token stats, latency, match score).
 - Implement simple authentication using ENV variables and hashed passwords.
 
 Phase 2 (Enhancements):

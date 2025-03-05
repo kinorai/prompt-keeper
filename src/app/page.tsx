@@ -45,7 +45,6 @@ interface SearchHit {
       content: string;
       finish_reason?: string;
     }>;
-    raw_response: Record<string, unknown>;
   };
   highlight?: {
     model?: string[];
@@ -66,7 +65,6 @@ interface MappedSearchResult {
     content: string;
     finish_reason?: string;
   }>;
-  raw_response: Record<string, unknown>;
   highlight?: {
     model?: string[];
     "messages.content"?: string[];
@@ -230,7 +228,6 @@ function HomeContent() {
             model: hit._source?.model || "Unknown",
             usage: hit._source?.usage || undefined,
             messages: hit._source?.messages || [],
-            raw_response: hit._source?.raw_response || {},
             highlight: hit.highlight,
             score: hit._score,
           })
