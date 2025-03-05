@@ -32,6 +32,14 @@ export async function initializeIndex() {
           mappings: {
             properties: {
               timestamp: { type: "date" },
+              created_at: { type: "date" },
+              updated_at: { type: "date" },
+              conversation_hash: {
+                type: "keyword",
+                fields: {
+                  keyword: { type: "keyword" },
+                },
+              },
               model: {
                 type: "text",
                 fields: {
@@ -76,6 +84,31 @@ export async function initializeIndex() {
         },
       });
       console.log(`Index ${PROMPT_KEEPER_INDEX} created successfully`);
+    } else {
+      // If index already exists, update mapping to add new fields
+      try {
+        await client.indices.putMapping({
+          index: PROMPT_KEEPER_INDEX,
+          body: {
+            properties: {
+              created_at: { type: "date" },
+              updated_at: { type: "date" },
+              conversation_hash: {
+                type: "keyword",
+                fields: {
+                  keyword: { type: "keyword" },
+                },
+              },
+            },
+          },
+        });
+        console.log(
+          `Updated mapping for ${PROMPT_KEEPER_INDEX} to include conversation_hash and timestamp fields`
+        );
+      } catch (mappingError) {
+        console.error("Failed to update OpenSearch mapping:", mappingError);
+        // Continue even if mapping update fails, as it might already include these fields
+      }
     }
   } catch (error) {
     console.error("Failed to initialize OpenSearch index:", error);
