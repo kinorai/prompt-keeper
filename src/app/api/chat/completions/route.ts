@@ -208,8 +208,22 @@ async function storeConversation(
           index: PROMPT_KEEPER_INDEX,
           body: {
             query: {
-              term: {
-                "conversation_hash.keyword": conversationHash,
+              bool: {
+                must: [
+                  {
+                    term: {
+                      "conversation_hash.keyword": conversationHash,
+                    },
+                  },
+                  {
+                    range: {
+                      timestamp: {
+                        gte: "now-1y",
+                        lte: "now",
+                      },
+                    },
+                  },
+                ],
               },
             },
             sort: [{ timestamp: { order: "desc" } }],
