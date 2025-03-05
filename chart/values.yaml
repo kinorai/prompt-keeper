@@ -139,17 +139,17 @@ config:
   DEMO_PROMPT_KEEPER_API_HOST: ""
   DEMO_PROMPT_KEEPER_FRONT_HOST: ""
 
-# defaultPodOptions:
-#   automountServiceAccountToken: false
-#   securityContext:
-#     fsGroup: 1001
-#     fsGroupChangePolicy: "OnRootMismatch"
-#     runAsGroup: 1001
-#     runAsNonRoot: true
-#     runAsUser: 1001
-#     seccompProfile:
-#       type: RuntimeDefault
-#     seLinuxOptions: {}
+defaultPodOptions:
+  automountServiceAccountToken: false
+  securityContext:
+    fsGroup: 1001
+    fsGroupChangePolicy: "OnRootMismatch"
+    runAsGroup: 1001
+    runAsNonRoot: true
+    runAsUser: 1001
+    seccompProfile:
+      type: RuntimeDefault
+    seLinuxOptions: {}
 
 defaultContainerSecurityContext: &defaultContainerSecurityContext
   allowPrivilegeEscalation: false
@@ -179,14 +179,13 @@ controllers:
           - secret: opensearch
         ports:
           - containerPort: 3000
-        resources: {}
-        # resources:
-        #   requests:
-        #     cpu: 10m
-        #     memory: 64Mi
-        #   limits:
-        #     cpu: 200m
-        #     memory: 256Mi
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 1
+            memory: 1Gi
         probes:
           liveness:
             enabled: true
@@ -207,7 +206,7 @@ controllers:
               periodSeconds: 5
               timeoutSeconds: 5
         # Additional security hardening for nginx
-        # securityContext: *defaultContainerSecurityContext
+        securityContext: *defaultContainerSecurityContext
 
 service:
   prompt-keeper:

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import opensearchClient, { PROMPT_KEEPER_INDEX } from "@/lib/opensearch";
+import crypto from "crypto";
 
 // Constants
 const CONFIG = {
@@ -47,6 +48,11 @@ interface FormattedResponse {
   }>;
 }
 
+interface Message {
+  role: string;
+  content: string | { type: string; text: string }[];
+}
+
 const skipHeaders = [
   "host",
   "domain",
@@ -56,6 +62,59 @@ const skipHeaders = [
   "content-length",
   "content-encoding",
 ];
+
+// Helper function to generate a conversation hash based on initial messages
+function generateConversationHash(messages: Message[]): string {
+  if (!messages || messages.length === 0) return "";
+
+  // For conversation continuity identification, we'll use:
+  // 1. If the first message is a system message:
+  //    - Use the system message and the first user message (if it exists)
+  // 2. If there's no system message:
+  //    - Use only the first user message
+
+  const messagesToHash: Message[] = [];
+
+  // Find system and first user message
+  const systemMessage = messages.find((msg) => msg.role === "system");
+  const firstUserMessage = messages.find((msg) => msg.role === "user");
+
+  if (systemMessage) {
+    messagesToHash.push(systemMessage);
+    if (firstUserMessage) {
+      messagesToHash.push(firstUserMessage);
+    }
+  } else if (firstUserMessage) {
+    messagesToHash.push(firstUserMessage);
+  } else {
+    // Fallback: use the first message whatever it is
+    messagesToHash.push(messages[0]);
+  }
+
+  // Create a string from the selected messages
+  const contentString = messagesToHash
+    .map((msg) => {
+      let contentStr = "";
+
+      if (typeof msg.content === "string") {
+        contentStr = msg.content;
+      } else if (Array.isArray(msg.content)) {
+        contentStr = msg.content
+          .filter((item) => item.type === "text")
+          .map((item) => item.text)
+          .join("\n");
+      }
+
+      // Normalize content by trimming and converting to lowercase
+      contentStr = contentStr.trim().toLowerCase();
+
+      return `${msg.role}:${contentStr}`;
+    })
+    .join("|");
+
+  // Return a hash of the content string
+  return crypto.createHash("sha256").update(contentString).digest("hex");
+}
 
 function formatStreamToResponse(chunks: StreamChunk[]): FormattedResponse {
   if (chunks.length === 0) {
@@ -115,7 +174,7 @@ function sanitizeMessage(message: {
 }
 
 async function storeConversation(
-  requestMessages: [],
+  requestMessages: Message[],
   response: FormattedResponse,
   latency: number
 ) {
@@ -132,7 +191,84 @@ async function storeConversation(
       ...sanitizedResponseMessages,
     ];
 
-    await opensearchClient.index({
+    // Generate conversation hash based on the initial messages
+    const conversationHash = generateConversationHash(requestMessages);
+
+    console.debug("[OpenSearch] Processing conversation", {
+      messageCount: requestMessages.length,
+      conversationHash,
+      firstMessageRole: requestMessages[0]?.role || "none",
+    });
+
+    // If we have a valid hash and more than one message (likely a continuation)
+    if (conversationHash && requestMessages.length > 1) {
+      try {
+        // Try to find an existing conversation with the same conversation hash
+        const searchResponse = await opensearchClient.search({
+          index: PROMPT_KEEPER_INDEX,
+          body: {
+            query: {
+              term: {
+                "conversation_hash.keyword": conversationHash,
+              },
+            },
+            sort: [{ timestamp: { order: "desc" } }],
+            size: 1,
+          },
+        });
+
+        const hits = searchResponse.body.hits.hits;
+
+        if (hits && hits.length > 0) {
+          const existingConversation = hits[0];
+          const existingId = existingConversation._id;
+
+          console.debug("[OpenSearch] Found existing conversation", {
+            hash: conversationHash,
+            id: existingId,
+            existingMessageCount:
+              existingConversation._source?.messages?.length || 0,
+            updatingToMessageCount: allMessages.length,
+          });
+
+          // Update the existing conversation with new messages
+          await opensearchClient.update({
+            index: PROMPT_KEEPER_INDEX,
+            id: existingId,
+            body: {
+              doc: {
+                timestamp: new Date(), // Update timestamp to now
+                messages: allMessages,
+                usage: response.usage,
+                latency,
+                raw_response: response,
+                updated_at: new Date(),
+              },
+            },
+          });
+
+          console.debug("[OpenSearch] Updated existing conversation", {
+            id: existingId,
+          });
+          return;
+        } else {
+          console.debug(
+            "[OpenSearch] No existing conversation found with hash",
+            conversationHash
+          );
+        }
+      } catch (searchError) {
+        console.error(
+          "[OpenSearch] Error searching for existing conversation:",
+          searchError
+        );
+        // Continue to create a new document if search fails
+      }
+    }
+
+    // If no existing conversation found, or if this is a new conversation
+    // Create a new document
+    const indexResult = await opensearchClient.index({
       index: PROMPT_KEEPER_INDEX,
       body: {
         timestamp: new Date(),
@@ -141,7 +277,16 @@ async function storeConversation(
         usage: response.usage,
         latency,
         raw_response: response,
+        conversation_hash: conversationHash,
+        created_at: new Date(),
+        updated_at: new Date(),
       },
+    });
+
+    console.debug("[OpenSearch] Created new conversation", {
+      id: indexResult.body._id,
+      hash: conversationHash,
+      messageCount: allMessages.length,
     });
   } catch (error) {
     console.error("[OpenSearch Storage Error]", error);
