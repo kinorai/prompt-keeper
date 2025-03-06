@@ -1,0 +1,383 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    --primary-rgb: 221, 83, 53;
+  }
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    --primary-rgb: 29, 144, 255;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  .container {
+    @apply px-2 sm:px-4 lg:px-8 max-w-6xl mx-auto;
+  }
+}
+
+/* Mobile specific styles */
+@media (max-width: 639px) {
+  .sticky-search-container {
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    margin-left: -0.5rem !important;
+    margin-right: -0.5rem !important;
+    width: calc(100% + 1rem) !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.5rem !important;
+    border-top: none !important;
+    margin-top: 0 !important;
+  }
+  
+  /* Add some space at the top of the main content area */
+  .main-content {
+    padding-top: 0.25rem;
+    padding-bottom: 5rem !important;
+  }
+  
+  /* Style for the mobile theme toggle */
+  .theme-toggle-mobile {
+    height: 2.5rem !important;
+    width: 2.5rem !important;
+    min-width: 2.5rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background-color: hsl(var(--secondary)) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  /* Adjust search bar width on mobile */
+  .search-container-mobile {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .search-input-mobile {
+    flex: 1;
+  }
+  
+  /* Mobile search bar at bottom */
+  .mobile-search-expanded {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    background-color: hsl(var(--background) / 0.95);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid hsl(var(--border));
+  }
+  
+  .mobile-search-compact {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    background-color: hsl(var(--background) / 0.95);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid hsl(var(--border));
+  }
+  
+  /* Search metadata in mobile search bar */
+  .mobile-search-expanded .text-xs.text-muted-foreground,
+  .mobile-search-compact .text-xs.text-muted-foreground {
+    font-size: 0.7rem;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    opacity: 0.8;
+  }
+  
+  /* Adjust the scroll to top button position to be above the search bar */
+  .scroll-to-top-button {
+    bottom: 5rem !important;
+  }
+  
+  /* Message copy buttons on mobile */
+  .message-copy-btn {
+    opacity: 0.7;
+    top: 0.5rem;
+    right: 0.5rem;
+    height: 1.5rem !important;
+    width: 1.5rem !important;
+    min-width: 1.5rem !important;
+    margin: 0 !important;
+    padding: 0.25rem !important;
+  }
+  
+  .message-copy-btn svg {
+    height: 1rem;
+    width: 1rem;
+  }
+}
+
+/* Custom scrollbar */
+@media (min-width: 640px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+/* Hide scrollbar on mobile */
+@media (max-width: 639px) {
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+}
+
+/* Prose styles for markdown content */
+.prose pre {
+  @apply bg-muted/50 p-3 sm:p-4 rounded-lg overflow-auto text-xs sm:text-sm;
+  position: relative;
+}
+
+.prose code {
+  @apply bg-muted/50 px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono;
+}
+
+.prose p {
+  @apply mb-3 sm:mb-4;
+}
+
+.prose ul, .prose ol {
+  @apply pl-4 sm:pl-6 mb-3 sm:mb-4;
+}
+
+.prose ul {
+  @apply list-disc;
+}
+
+.prose ol {
+  @apply list-decimal;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  @apply font-semibold mb-2 mt-4 sm:mt-6;
+}
+
+.prose h1 {
+  @apply text-xl sm:text-2xl;
+}
+
+.prose h2 {
+  @apply text-lg sm:text-xl;
+}
+
+.prose h3 {
+  @apply text-base sm:text-lg;
+}
+
+.prose h4 {
+  @apply text-sm sm:text-base;
+}
+
+/* Additional markdown styles */
+.prose blockquote {
+  @apply border-l-4 border-muted pl-4 italic my-4 text-muted-foreground;
+}
+
+.prose hr {
+  @apply my-6 border-t border-border;
+}
+
+.prose table {
+  @apply w-full my-4 border-collapse;
+}
+
+.prose table th {
+  @apply bg-muted p-2 text-left font-semibold border border-border;
+}
+
+.prose table td {
+  @apply p-2 border border-border;
+}
+
+.prose a {
+  @apply text-primary underline hover:text-primary/80 transition-colors;
+}
+
+.prose img {
+  @apply max-w-full h-auto rounded-md my-4;
+}
+
+/* Add specific styles for code blocks to ensure they're not white/highlighted */
+.prose pre code {
+  @apply bg-transparent text-foreground;
+  color: inherit;
+}
+
+/* Ensure syntax highlighting doesn't override our theme */
+.prose .token {
+  background: transparent !important;
+}
+
+/* Highlighted content styles */
+mark, em {
+  @apply bg-primary/10 dark:bg-primary/20 px-1 py-0.5 rounded not-italic;
+}
+
+.prose mark, .prose em {
+  @apply bg-primary/10 dark:bg-primary/20 px-1 py-0.5 rounded not-italic;
+}
+
+/* Ensure highlighted code blocks look good */
+.prose pre mark, .prose pre em {
+  @apply bg-primary/10 dark:bg-primary/20 px-0.5 py-0 rounded-sm;
+}
+
+/* Style for the floating theme toggle */
+.theme-toggle-mobile {
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle-container {
+  background-color: hsl(var(--background) / 0.8);
+  backdrop-filter: blur(8px);
+  border-radius: 9999px;
+  padding: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Code block copy button */
+.code-copy-button {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+pre:hover .code-copy-button {
+  opacity: 1;
+}
+
+.code-copy-button:focus {
+  opacity: 1;
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+/* Message copy button styles */
+.prose {
+  position: relative;
+}
+
+/* Ensure copy buttons are properly positioned */
+.relative > .absolute.top-2.right-2 {
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.relative:hover > .absolute.top-2.right-2 {
+  opacity: 1;
+}
+
+/* Ensure copy buttons don't overlap with content on mobile */
+@media (max-width: 639px) {
+  .relative > .absolute.top-2.right-2 {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+/* Style for inline code copy feedback */
+code:not(pre code) {
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+code:not(pre code):hover {
+  background-color: hsl(var(--muted-foreground) / 0.2);
+}
+
+code:not(pre code):active {
+  transform: scale(0.97);
+}

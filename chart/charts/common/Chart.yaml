@@ -1,11 +1,14 @@
 annotations:
   artifacthub.io/changes: |-
-    - kind: added
+    - kind: fixed
       description: |-
-        Add hostUsers field to pod spec for k8s clusters >= 1.29
-    - kind: added
+        Only add hostUsers when explicitly configured
+    - kind: fixed
       description: |-
-        Allow propagating global labels and annotations to Pod metadata
+        `hosts` should be an optional field for Ingress resources
+    - kind: fixed
+      description: |-
+        `defaultBackend` should be an object for Ingress resources
 apiVersion: v2
 description: Function library for Helm charts
 home: https://github.com/bjw-s/helm-charts/tree/main/charts/library/common
@@ -18,4 +21,4 @@ maintainers:
   name: bjw-s
 name: common
 type: library
-version: 3.6.0
+version: 3.6.1
