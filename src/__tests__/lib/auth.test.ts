@@ -42,7 +42,7 @@ describe("Auth Library", () => {
       });
       expect(compare).toHaveBeenCalledWith(
         "correctpassword",
-        mockEnv.AUTH_PASSWORD_HASH
+        mockEnv.AUTH_PASSWORD_HASH,
       );
     });
 
@@ -67,7 +67,7 @@ describe("Auth Library", () => {
       });
       expect(compare).toHaveBeenCalledWith(
         "wrongpassword",
-        mockEnv.AUTH_PASSWORD_HASH
+        mockEnv.AUTH_PASSWORD_HASH,
       );
     });
 

@@ -83,11 +83,11 @@ function HomeContent() {
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [searchMode, setSearchMode] = useState(
-    searchParams.get("mode") || "fuzzy"
+    searchParams.get("mode") || "fuzzy",
   );
   const [timeRange, setTimeRange] = useState(searchParams.get("time") || "1y");
   const [resultsSize, setResultsSize] = useState(
-    parseInt(searchParams.get("size") || "20")
+    parseInt(searchParams.get("size") || "20"),
   );
   const [fuzzyConfig, setFuzzyConfig] = useState({
     fuzziness: searchParams.get("fuzziness") || "AUTO",
@@ -230,7 +230,7 @@ function HomeContent() {
             messages: hit._source?.messages || [],
             highlight: hit.highlight,
             score: hit._score,
-          })
+          }),
         ) || [];
 
       console.log("Mapped results:", mappedResults);
@@ -285,7 +285,7 @@ function HomeContent() {
       if (e.key.length === 1 && e.key.match(/[a-zA-Z0-9]/)) {
         setQuery(e.key);
         const searchInput = document.querySelector(
-          'input[type="text"]'
+          'input[type="text"]',
         ) as HTMLInputElement;
         if (searchInput) {
           searchInput.focus();

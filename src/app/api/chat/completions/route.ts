@@ -176,13 +176,13 @@ function sanitizeMessage(message: {
 async function storeConversation(
   requestMessages: Message[],
   response: FormattedResponse,
-  latency: number
+  latency: number,
 ) {
   try {
     // Sanitize all messages before storing
     const sanitizedRequestMessages = requestMessages.map(sanitizeMessage);
     const sanitizedResponseMessages = response.choices.map((choice) =>
-      sanitizeMessage(choice.message)
+      sanitizeMessage(choice.message),
     );
 
     // Combine sanitized messages
@@ -268,13 +268,13 @@ async function storeConversation(
         } else {
           console.debug(
             "[OpenSearch] No existing conversation found with hash",
-            conversationHash
+            conversationHash,
           );
         }
       } catch (searchError) {
         console.error(
           "[OpenSearch] Error searching for existing conversation:",
-          searchError
+          searchError,
         );
         // Continue to create a new document if search fails
       }
@@ -343,7 +343,7 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json(
         { error: await response.text() },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -357,7 +357,7 @@ export async function POST(req: NextRequest) {
       if (!reader) {
         return NextResponse.json(
           { error: "No reader available" },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
@@ -375,7 +375,7 @@ export async function POST(req: NextRequest) {
               await storeConversation(
                 requestMessages,
                 formattedResponse,
-                latency
+                latency,
               );
               break;
             }
@@ -432,7 +432,7 @@ export async function POST(req: NextRequest) {
     console.error("[API Error]", err);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

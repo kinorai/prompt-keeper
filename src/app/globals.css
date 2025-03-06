@@ -103,13 +103,13 @@
     border-top: none !important;
     margin-top: 0 !important;
   }
-  
+
   /* Add some space at the top of the main content area */
   .main-content {
     padding-top: 0.25rem;
     padding-bottom: 5rem !important;
   }
-  
+
   /* Style for the mobile theme toggle */
   .theme-toggle-mobile {
     height: 2.5rem !important;
@@ -122,18 +122,18 @@
     align-items: center !important;
     justify-content: center !important;
   }
-  
+
   /* Adjust search bar width on mobile */
   .search-container-mobile {
     display: flex;
     align-items: center;
     width: 100%;
   }
-  
+
   .search-input-mobile {
     flex: 1;
   }
-  
+
   /* Mobile search bar at bottom */
   .mobile-search-expanded {
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
@@ -141,14 +141,14 @@
     backdrop-filter: blur(8px);
     border-top: 1px solid hsl(var(--border));
   }
-  
+
   .mobile-search-compact {
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     background-color: hsl(var(--background) / 0.95);
     backdrop-filter: blur(8px);
     border-top: 1px solid hsl(var(--border));
   }
-  
+
   /* Search metadata in mobile search bar */
   .mobile-search-expanded .text-xs.text-muted-foreground,
   .mobile-search-compact .text-xs.text-muted-foreground {
@@ -157,12 +157,12 @@
     margin-bottom: 0.25rem;
     opacity: 0.8;
   }
-  
+
   /* Adjust the scroll to top button position to be above the search bar */
   .scroll-to-top-button {
     bottom: 5rem !important;
   }
-  
+
   /* Message copy buttons on mobile */
   .message-copy-btn {
     opacity: 0.7;
@@ -174,7 +174,7 @@
     margin: 0 !important;
     padding: 0.25rem !important;
   }
-  
+
   .message-copy-btn svg {
     height: 1rem;
     width: 1rem;
@@ -226,7 +226,8 @@
   @apply mb-3 sm:mb-4;
 }
 
-.prose ul, .prose ol {
+.prose ul,
+.prose ol {
   @apply pl-4 sm:pl-6 mb-3 sm:mb-4;
 }
 
@@ -238,7 +239,10 @@
   @apply list-decimal;
 }
 
-.prose h1, .prose h2, .prose h3, .prose h4 {
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
   @apply font-semibold mb-2 mt-4 sm:mt-6;
 }
 
@@ -299,16 +303,19 @@
 }
 
 /* Highlighted content styles */
-mark, em {
+mark,
+em {
   @apply bg-primary/10 dark:bg-primary/20 px-1 py-0.5 rounded not-italic;
 }
 
-.prose mark, .prose em {
+.prose mark,
+.prose em {
   @apply bg-primary/10 dark:bg-primary/20 px-1 py-0.5 rounded not-italic;
 }
 
 /* Ensure highlighted code blocks look good */
-.prose pre mark, .prose pre em {
+.prose pre mark,
+.prose pre em {
   @apply bg-primary/10 dark:bg-primary/20 px-0.5 py-0 rounded-sm;
 }
 
