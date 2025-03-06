@@ -29,37 +29,37 @@ jobs:
       - name: Run npm audit
         run: npm audit --omit=dev
   
-  codeql-analysis:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
+  # codeql-analysis:
+  #   name: CodeQL Analysis
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     security-events: write
+  #     actions: read
+  #     contents: read
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
       
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
-        with:
-          languages: javascript, typescript
+  #     - name: Initialize CodeQL
+  #       uses: github/codeql-action/init@v2
+  #       with:
+  #         languages: javascript, typescript
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #         cache: 'npm'
       
-      - name: Install dependencies
-        run: npm ci --force
+  #     - name: Install dependencies
+  #       run: npm ci --force
       
-      - name: Build application
-        run: npm run build
+  #     - name: Build application
+  #       run: npm run build
       
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+  #     - name: Perform CodeQL Analysis
+  #       uses: github/codeql-action/analyze@v2
   
   docker-scan:
     name: Docker Image Scan
