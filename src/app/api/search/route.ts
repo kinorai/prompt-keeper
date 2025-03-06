@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
                   regexp: { "messages.content": query },
                 },
               },
-            }
+            },
           );
           break;
 
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
                   match: { "messages.content": query },
                 },
               },
-            }
+            },
           );
       }
     }
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
         took: 0,
         error: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
