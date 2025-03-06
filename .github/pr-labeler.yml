@@ -1,0 +1,35 @@
+# PR labeler configuration
+# Add labels based on file changes
+
+frontend:
+  - 'src/app/**/*'
+  - 'src/components/**/*'
+  - 'src/lib/hooks/**/*'
+  - 'src/styles/**/*'
+
+api:
+  - 'src/app/api/**/*'
+  - 'src/lib/api/**/*'
+
+opensearch:
+  - 'src/lib/opensearch/**/*'
+
+documentation:
+  - '**/*.md'
+  - 'docs/**/*'
+
+dependencies:
+  - 'package.json'
+  - 'package-lock.json'
+
+configuration:
+  - '*.config.*'
+  - '.github/**/*'
+  - 'docker-compose.yml'
+  - 'Dockerfile'
+
+tests:
+  - '**/*.test.*'
+  - '**/*.spec.*'
+  - 'jest.config.js'
+  - 'jest.setup.ts' 
