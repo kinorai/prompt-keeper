@@ -93,7 +93,7 @@ describe("Chat Completions API Route", () => {
         headers: new Headers({
           "Content-Type": "application/json",
         }),
-      })
+      }),
     );
 
     // Create a mock request
@@ -123,7 +123,7 @@ describe("Chat Completions API Route", () => {
         method: "POST",
         headers: expect.any(Object),
         body: expect.any(String),
-      })
+      }),
     );
 
     // Verify that the conversation was stored in OpenSearch
@@ -137,7 +137,7 @@ describe("Chat Completions API Route", () => {
           model: "gpt-4",
           messages: expect.any(Array),
         }),
-      })
+      }),
     );
   });
 
@@ -151,12 +151,12 @@ describe("Chat Completions API Route", () => {
         json: () => Promise.resolve({ error: { message: "Invalid request" } }),
         text: () =>
           Promise.resolve(
-            JSON.stringify({ error: { message: "Invalid request" } })
+            JSON.stringify({ error: { message: "Invalid request" } }),
           ),
         headers: new Headers({
           "Content-Type": "application/json",
         }),
-      })
+      }),
     );
 
     // Create a mock request
@@ -237,7 +237,7 @@ describe("Chat Completions API Route", () => {
         (clause): clause is RangeClause =>
           "range" in clause &&
           clause.range !== undefined &&
-          "timestamp" in clause.range
+          "timestamp" in clause.range,
       );
 
       // Verify the time range filter exists

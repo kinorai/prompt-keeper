@@ -59,17 +59,17 @@ describe("Middleware", () => {
 
       expect(mockResponse.headers.get("Access-Control-Allow-Origin")).toBe("*");
       expect(mockResponse.headers.get("Access-Control-Allow-Methods")).toBe(
-        "GET, POST, PUT, DELETE, OPTIONS"
+        "GET, POST, PUT, DELETE, OPTIONS",
       );
       expect(mockResponse.headers.get("Access-Control-Allow-Headers")).toBe(
-        "Content-Type, X-Prompt-Keeper-API-Key, Authorization"
+        "Content-Type, X-Prompt-Keeper-API-Key, Authorization",
       );
     });
 
     it("should handle OPTIONS requests", async () => {
       mockRequest = createMockNextRequest(
         "http://localhost:3000/api/test",
-        "OPTIONS"
+        "OPTIONS",
       );
 
       const response = await middleware(mockRequest);
@@ -90,7 +90,7 @@ describe("Middleware", () => {
 
       it("should allow access to login API", async () => {
         mockRequest = createMockNextRequest(
-          "http://localhost:3000/api/auth/login"
+          "http://localhost:3000/api/auth/login",
         );
 
         const response = await middleware(mockRequest);
@@ -102,7 +102,7 @@ describe("Middleware", () => {
     describe("LiteLLM Routes", () => {
       it("should allow access to LiteLLM routes", async () => {
         mockRequest = createMockNextRequest(
-          "http://localhost:3000/api/chat/completions"
+          "http://localhost:3000/api/chat/completions",
         );
 
         const response = await middleware(mockRequest);
@@ -130,7 +130,7 @@ describe("Middleware", () => {
         (verifyToken as jest.Mock).mockResolvedValue({ username: "testuser" });
 
         const request = createMockNextRequest(
-          "http://localhost:3000/api/search"
+          "http://localhost:3000/api/search",
         );
         (request.cookies.get as jest.Mock).mockImplementation(() => ({
           value: "valid-token",
@@ -147,7 +147,7 @@ describe("Middleware", () => {
         (verifyToken as jest.Mock).mockResolvedValue(null);
 
         const request = createMockNextRequest(
-          "http://localhost:3000/api/search"
+          "http://localhost:3000/api/search",
         );
         (request.cookies.get as jest.Mock).mockImplementation(() => ({
           value: "invalid-token",
@@ -170,7 +170,7 @@ describe("Middleware", () => {
         (verifyToken as jest.Mock).mockResolvedValue({ username: "testuser" });
 
         const request = createMockNextRequest(
-          "http://localhost:3000/dashboard"
+          "http://localhost:3000/dashboard",
         );
         (request.cookies.get as jest.Mock).mockImplementation(() => ({
           value: "valid-token",
@@ -184,14 +184,14 @@ describe("Middleware", () => {
 
       it("should redirect to login with no token", async () => {
         const request = createMockNextRequest(
-          "http://localhost:3000/dashboard"
+          "http://localhost:3000/dashboard",
         );
         (request.cookies.get as jest.Mock).mockImplementation(() => undefined);
 
         expect(NextResponse.redirect).toHaveBeenCalledWith(
           expect.objectContaining({
             pathname: "/login",
-          })
+          }),
         );
       });
 
@@ -199,7 +199,7 @@ describe("Middleware", () => {
         (verifyToken as jest.Mock).mockResolvedValue(null);
 
         const request = createMockNextRequest(
-          "http://localhost:3000/dashboard"
+          "http://localhost:3000/dashboard",
         );
         (request.cookies.get as jest.Mock).mockImplementation(() => ({
           value: "invalid-token",
@@ -208,7 +208,7 @@ describe("Middleware", () => {
         expect(NextResponse.redirect).toHaveBeenCalledWith(
           expect.objectContaining({
             pathname: "/login",
-          })
+          }),
         );
       });
     });

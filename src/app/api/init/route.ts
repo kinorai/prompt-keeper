@@ -9,7 +9,7 @@ export async function POST() {
     console.error("Failed to initialize index:", error);
     return NextResponse.json(
       { error: "Failed to initialize index" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 
 // Secret key for JWT signing and verification
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "prompt-keeper-default-secret-key"
+  process.env.JWT_SECRET || "prompt-keeper-default-secret-key",
 );
 
 // Token expiration time (24 hours)
@@ -29,7 +29,7 @@ export interface AuthResult {
 // Verify username and password against environment variables
 export async function verifyCredentials(
   username: string,
-  password: string
+  password: string,
 ): Promise<AuthResult> {
   const envUsername = process.env.AUTH_USERNAME;
   const envPasswordHash = process.env.AUTH_PASSWORD_HASH;

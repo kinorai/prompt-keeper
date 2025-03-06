@@ -103,7 +103,7 @@ export interface ConversationCardProps {
 // Helper function to copy text to clipboard
 const copyToClipboard = (
   text: string,
-  successMessage: string = "Copied to clipboard"
+  successMessage: string = "Copied to clipboard",
 ) => {
   navigator.clipboard
     .writeText(text)
@@ -152,7 +152,7 @@ const CopyButton = ({
       className={cn(
         "flex items-center justify-center gap-1 bg-muted/50 hover:bg-muted/80",
         sizeClasses[size],
-        className
+        className,
       )}
     >
       {isCopied ? (
@@ -281,7 +281,7 @@ const MarkdownWithHighlight: React.FC<{
             if (inline && childrenStr.includes("HIGHLIGHT_START")) {
               // For inline code, we can use the mark tag
               const parts = childrenStr.split(
-                /(HIGHLIGHT_START|HIGHLIGHT_END)/g
+                /(HIGHLIGHT_START|HIGHLIGHT_END)/g,
               );
               let isHighlight = false;
               const elements = parts
@@ -356,7 +356,7 @@ const MarkdownWithHighlight: React.FC<{
                   children.some(
                     (child) =>
                       typeof child === "string" &&
-                      child.includes("HIGHLIGHT_START")
+                      child.includes("HIGHLIGHT_START"),
                   )))
             ) {
               // For string content, split by our markers and process
@@ -393,7 +393,7 @@ const MarkdownWithHighlight: React.FC<{
                       return processContent(child);
                     }
                     return child;
-                  }
+                  },
                 );
                 return <p {...props}>{processedChildren}</p>;
               }
@@ -440,7 +440,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
         (h) =>
           typeof h === "string" &&
           h.includes(`<em>`) &&
-          message.content.includes(h.replace(/<\/?em>/g, ""))
+          message.content.includes(h.replace(/<\/?em>/g, "")),
       );
 
     // If we have highlighted content, use it
@@ -449,7 +449,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       const matchingHighlight = highlight["messages.content"].find(
         (h) =>
           typeof h === "string" &&
-          message.content.includes(h.replace(/<\/?em>/g, ""))
+          message.content.includes(h.replace(/<\/?em>/g, "")),
       );
 
       if (matchingHighlight) {
