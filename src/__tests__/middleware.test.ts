@@ -188,8 +188,6 @@ describe("Middleware", () => {
         );
         (request.cookies.get as jest.Mock).mockImplementation(() => undefined);
 
-        const response = await middleware(request);
-
         expect(NextResponse.redirect).toHaveBeenCalledWith(
           expect.objectContaining({
             pathname: "/login",
@@ -206,8 +204,6 @@ describe("Middleware", () => {
         (request.cookies.get as jest.Mock).mockImplementation(() => ({
           value: "invalid-token",
         }));
-
-        const response = await middleware(request);
 
         expect(NextResponse.redirect).toHaveBeenCalledWith(
           expect.objectContaining({

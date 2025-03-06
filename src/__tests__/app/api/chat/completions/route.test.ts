@@ -22,7 +22,7 @@ jest.mock("@/lib/opensearch", () => ({
 }));
 
 // Mock fetch
-global.fetch = jest.fn();
+global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 
 // Mock Date.now to return a fixed timestamp
 const mockNow = 1677858242000; // Fixed timestamp for testing
@@ -197,14 +197,6 @@ describe("Chat Completions API Route", () => {
       timestamp: TimeRange;
     };
   }
-
-  interface TermClause {
-    term: {
-      "conversation_hash.keyword": string;
-    };
-  }
-
-  type QueryClause = RangeClause | TermClause;
 
   // Test for time range limitation in conversation hash search
   describe("Conversation hash search time range", () => {

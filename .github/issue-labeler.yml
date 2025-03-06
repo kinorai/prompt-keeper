@@ -1,0 +1,26 @@
+# Issue labeler configuration
+# Add labels based on issue title patterns
+
+bug:
+  - '(bug|fix|error|crash|problem|fail)'
+
+enhancement:
+  - '(feature|enhancement|improve|add|request)'
+
+documentation:
+  - '(doc|docs|document|documentation)'
+
+question:
+  - '(help|question|support|how to)'
+
+opensearch:
+  - '(opensearch|search|index|query)'
+
+frontend:
+  - '(ui|ux|interface|design|css|tailwind|component)'
+
+api:
+  - '(api|endpoint|route|proxy|litellm)'
+
+security:
+  - '(security|auth|authentication|authorization|vulnerability)' 
