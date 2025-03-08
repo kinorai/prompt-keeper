@@ -12,8 +12,10 @@ import {
 import { useState, useEffect, useRef, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
+
 // Define custom types for ReactMarkdown components
 interface CodeProps {
   inline?: boolean;
@@ -22,13 +24,7 @@ interface CodeProps {
   [key: string]: unknown;
 }
 
-interface ParagraphProps {
-  children: ReactNode;
-  [key: string]: unknown;
-}
-
-
-interface Message {
+export interface Message {
   role: string;
   content: string;
   finish_reason?: string;
@@ -56,7 +52,7 @@ export interface ConversationCardProps {
 // Helper function to copy text to clipboard
 const copyToClipboard = (
   text: string,
-  successMessage: string = "Copied to clipboard"
+  successMessage: string = "Copied to clipboard",
 ) => {
   navigator.clipboard
     .writeText(text)
@@ -105,7 +101,7 @@ const CopyButton = ({
       className={cn(
         "flex items-center justify-center gap-1 bg-muted/50 hover:bg-muted/80",
         sizeClasses[size],
-        className
+        className,
       )}
     >
       {isCopied ? (
@@ -127,16 +123,7 @@ const HighlightedContent: React.FC<{
   content: string;
   highlightedContent?: string;
 }> = ({ content, highlightedContent }) => {
-  if (!highlightedContent) {
-    return <MarkdownContent content={content} />;
-  }
-
-  return (
-    <div 
-      className="prose dark:prose-invert max-w-none"
-      dangerouslySetInnerHTML={{ __html: highlightedContent }}
-    />
-  );
+  return <MarkdownContent content={highlightedContent || content} />;
 };
 
 const MarkdownContent: React.FC<{
@@ -219,6 +206,7 @@ const MarkdownContent: React.FC<{
     <div ref={containerRef} className="prose dark:prose-invert max-w-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={{
           // @ts-expect-error - ReactMarkdown types are incompatible with our custom types
           code({ inline, className, children, ...props }: CodeProps) {
@@ -250,6 +238,65 @@ const MarkdownContent: React.FC<{
   );
 };
 
+// ChatBubble component to render individual messages as chat bubbles
+const ChatBubble: React.FC<{
+  message: Message;
+  index: number;
+  highlightedContent?: string;
+}> = ({ message, highlightedContent }) => {
+  let alignmentClass = "";
+  let bubbleBg = "";
+  let icon = null;
+
+  switch (message.role) {
+    case "assistant":
+      alignmentClass = "justify-start";
+      bubbleBg = "bg-blue-50 dark:bg-blue-900/30";
+      icon = <Bot className="h-4 w-4" />;
+      break;
+    case "user":
+      alignmentClass = "justify-end";
+      bubbleBg = "bg-green-50 dark:bg-green-900/30";
+      icon = <User className="h-4 w-4" />;
+      break;
+    case "system":
+      alignmentClass = "justify-center";
+      bubbleBg = "bg-gray-200 dark:bg-gray-800";
+      icon = <Info className="h-4 w-4" />;
+      break;
+    default:
+      alignmentClass = "justify-start";
+      bubbleBg = "bg-gray-50 dark:bg-gray-900";
+  }
+
+  return (
+    <div className={`flex ${alignmentClass} my-2`}>
+      <div
+        className={`relative max-w-[97%] rounded-lg p-3 ${bubbleBg} shadow-sm`}
+      >
+        <div className="flex items-center mb-2">
+          {icon}
+          <span className="ml-1 text-xs font-semibold">
+            {message.role.toUpperCase()}
+          </span>
+        </div>
+        <HighlightedContent
+          content={message.content}
+          highlightedContent={highlightedContent}
+        />
+        <div className="absolute top-2 right-2">
+          <CopyButton
+            text={message.content}
+            showText={false}
+            size="xs"
+            successMessage={`${message.role} message copied`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ConversationCard: React.FC<ConversationCardProps> = ({
   created,
   model,
@@ -260,106 +307,11 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 }) => {
   const createdDate = new Date(created);
 
-  // Function to generate the full conversation text for copying
+  // Generate full conversation text for copying
   const getFullConversationText = () => {
     return messages
       .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
       .join("\n\n");
-  };
-
-  // Function to render a message based on its role
-  const renderMessage = (message: Message, index: number) => {
-    // Find highlighted content for this message if available
-    const highlightedContent = highlight?.["messages.content"]?.[index];
-
-    switch (message.role) {
-      case "system":
-        return (
-          <div
-            key={`message-${index}`}
-            className="relative space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-secondary/30"
-          >
-            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-              <Badge
-                variant="outline"
-                className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
-              >
-                <Info className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                System
-              </Badge>
-              <CopyButton
-                text={message.content}
-                className="absolute top-2 right-2 z-10 message-copy-btn"
-                showText={false}
-                size="xs"
-                successMessage="System message copied"
-              />
-            </div>
-            <HighlightedContent 
-              content={message.content} 
-              highlightedContent={highlightedContent} 
-            />
-          </div>
-        );
-      case "user":
-        return (
-          <div
-            key={`message-${index}`}
-            className="relative space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-muted/30"
-          >
-            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-              <Badge
-                variant="secondary"
-                className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
-              >
-                <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                User
-              </Badge>
-              <CopyButton
-                text={message.content}
-                className="absolute top-2 right-2 z-10 message-copy-btn"
-                showText={false}
-                size="xs"
-                successMessage="User message copied"
-              />
-            </div>
-            <HighlightedContent 
-              content={message.content} 
-              highlightedContent={highlightedContent} 
-            />
-          </div>
-        );
-      case "assistant":
-        return (
-          <div
-            key={`message-${index}`}
-            className="relative space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-primary/5"
-          >
-            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-              <Badge
-                variant="default"
-                className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
-              >
-                <Bot className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                Assistant
-              </Badge>
-              <CopyButton
-                text={message.content}
-                className="absolute top-2 right-2 z-10 message-copy-btn"
-                showText={false}
-                size="xs"
-                successMessage="Assistant message copied"
-              />
-            </div>
-            <HighlightedContent 
-              content={message.content} 
-              highlightedContent={highlightedContent} 
-            />
-          </div>
-        );
-      default:
-        return null;
-    }
   };
 
   return (
@@ -415,8 +367,17 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       </CardHeader>
       <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4 pb-3 sm:pb-6">
         <div className="space-y-2 sm:space-y-4">
-          {/* Render messages in their original order */}
-          {messages.map((message, index) => renderMessage(message, index))}
+          {messages.map((message, index) => {
+            const highlightedContent = highlight?.["messages.content"]?.[index];
+            return (
+              <ChatBubble
+                key={`message-${index}`}
+                message={message}
+                index={index}
+                highlightedContent={highlightedContent}
+              />
+            );
+          })}
         </div>
       </CardContent>
     </Card>
