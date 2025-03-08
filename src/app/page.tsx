@@ -46,6 +46,10 @@ interface SearchHit {
       finish_reason?: string;
     }>;
   };
+  highlight?: {
+    "messages.content"?: string[];
+    model?: string[];
+  };
 }
 interface MappedSearchResult {
   id: string;
@@ -62,6 +66,10 @@ interface MappedSearchResult {
     finish_reason?: string;
   }>;
   score?: number;
+  highlight?: {
+    "messages.content"?: string[];
+    model?: string[];
+  };
 }
 
 // Create a separate component that uses useSearchParams
@@ -220,6 +228,7 @@ function HomeContent() {
             usage: hit._source?.usage || undefined,
             messages: hit._source?.messages || [],
             score: hit._score,
+            highlight: hit.highlight,
           }),
         ) || [];
 

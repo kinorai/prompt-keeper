@@ -34,6 +34,11 @@ interface Message {
   finish_reason?: string;
 }
 
+interface Highlight {
+  "messages.content"?: string[];
+  model?: string[];
+}
+
 export interface ConversationCardProps {
   id: string;
   created: string;
@@ -45,6 +50,7 @@ export interface ConversationCardProps {
   };
   messages: Message[];
   score?: number;
+  highlight?: Highlight;
 }
 
 // Helper function to copy text to clipboard
@@ -113,6 +119,23 @@ const CopyButton = ({
         </span>
       )}
     </Button>
+  );
+};
+
+// Component to render content with OpenSearch highlights
+const HighlightedContent: React.FC<{
+  content: string;
+  highlightedContent?: string;
+}> = ({ content, highlightedContent }) => {
+  if (!highlightedContent) {
+    return <MarkdownContent content={content} />;
+  }
+
+  return (
+    <div 
+      className="prose dark:prose-invert max-w-none"
+      dangerouslySetInnerHTML={{ __html: highlightedContent }}
+    />
   );
 };
 
@@ -233,6 +256,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   usage,
   messages = [],
   score,
+  highlight,
 }) => {
   const createdDate = new Date(created);
 
@@ -245,6 +269,9 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 
   // Function to render a message based on its role
   const renderMessage = (message: Message, index: number) => {
+    // Find highlighted content for this message if available
+    const highlightedContent = highlight?.["messages.content"]?.[index];
+
     switch (message.role) {
       case "system":
         return (
@@ -268,7 +295,10 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 successMessage="System message copied"
               />
             </div>
-            <MarkdownContent content={message.content} />
+            <HighlightedContent 
+              content={message.content} 
+              highlightedContent={highlightedContent} 
+            />
           </div>
         );
       case "user":
@@ -293,7 +323,10 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 successMessage="User message copied"
               />
             </div>
-            <MarkdownContent content={message.content} />
+            <HighlightedContent 
+              content={message.content} 
+              highlightedContent={highlightedContent} 
+            />
           </div>
         );
       case "assistant":
@@ -318,7 +351,10 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 successMessage="Assistant message copied"
               />
             </div>
-            <MarkdownContent content={message.content} />
+            <HighlightedContent 
+              content={message.content} 
+              highlightedContent={highlightedContent} 
+            />
           </div>
         );
       default:
