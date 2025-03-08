@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     if (!response.ok) {
       return NextResponse.json(
         { error: await response.text() },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     console.error("[Models API Error]", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

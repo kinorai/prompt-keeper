@@ -88,7 +88,7 @@ export async function initializeIndex() {
           },
         });
         console.log(
-          `Updated mapping for ${PROMPT_KEEPER_INDEX} to include conversation_hash and timestamp fields`
+          `Updated mapping for ${PROMPT_KEEPER_INDEX} to include conversation_hash and timestamp fields`,
         );
       } catch (mappingError) {
         console.error("Failed to update OpenSearch mapping:", mappingError);

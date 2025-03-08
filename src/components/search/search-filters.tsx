@@ -57,12 +57,12 @@ export function SearchFilters({
               {timeRange === "1h"
                 ? "Last hour"
                 : timeRange === "1d"
-                ? "Last 24 hours"
-                : timeRange === "1m"
-                ? "Last month"
-                : timeRange === "1y"
-                ? "Last year"
-                : "All time"}
+                  ? "Last 24 hours"
+                  : timeRange === "1m"
+                    ? "Last month"
+                    : timeRange === "1y"
+                      ? "Last year"
+                      : "All time"}
             </Badge>
             <Badge variant="secondary" className="text-xs font-normal">
               <SlidersHorizontal className="mr-1 h-3 w-3" />
@@ -168,12 +168,12 @@ export function SearchFilters({
                 {timeRange === "1h"
                   ? "Last hour"
                   : timeRange === "1d"
-                  ? "Last 24 hours"
-                  : timeRange === "1m"
-                  ? "Last month"
-                  : timeRange === "1y"
-                  ? "Last year"
-                  : "All time"}
+                    ? "Last 24 hours"
+                    : timeRange === "1m"
+                      ? "Last month"
+                      : timeRange === "1y"
+                        ? "Last year"
+                        : "All time"}
               </Badge>
               <Badge variant="secondary" className="text-xs font-normal">
                 <SlidersHorizontal className="mr-1 h-3 w-3" />

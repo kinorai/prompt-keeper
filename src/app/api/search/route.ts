@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
                   regexp: { "messages.content": query },
                 },
               },
-            }
+            },
           );
           break;
 
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
                   match: { "messages.content": query },
                 },
               },
-            }
+            },
           );
       }
     }
@@ -133,34 +133,22 @@ export async function POST(req: NextRequest) {
         sort: [{ timestamp: "desc" }],
         size,
         from,
+        _source: true,
         highlight: {
           fields: {
-            model: {},
             "messages.content": {
+              pre_tags: ["<mark>"],
+              post_tags: ["</mark>"],
+              fragment_size: 150,
               number_of_fragments: 0,
-              pre_tags: ["<em>"],
-              post_tags: ["</em>"],
-              highlight_query: {
-                nested: {
-                  path: "messages",
-                  query: {
-                    bool: {
-                      should: [
-                        {
-                          match: {
-                            "messages.content": query,
-                          },
-                        },
-                      ],
-                    },
-                  },
-                },
-              },
+            },
+            model: {
+              pre_tags: ["<mark>"],
+              post_tags: ["</mark>"],
             },
           },
-          require_field_match: true,
+          require_field_match: false,
         },
-        _source: true,
       },
     });
 
@@ -184,7 +172,6 @@ export async function POST(req: NextRequest) {
         score: firstResult._score,
         model: firstResult._source?.model,
         messageCount: firstResult._source?.messages?.length || 0,
-        highlight: firstResult.highlight,
       });
     }
 
@@ -208,7 +195,7 @@ export async function POST(req: NextRequest) {
         took: 0,
         error: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

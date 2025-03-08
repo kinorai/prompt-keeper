@@ -47,8 +47,8 @@ interface SearchHit {
     }>;
   };
   highlight?: {
-    model?: string[];
     "messages.content"?: string[];
+    model?: string[];
   };
 }
 interface MappedSearchResult {
@@ -65,11 +65,11 @@ interface MappedSearchResult {
     content: string;
     finish_reason?: string;
   }>;
-  highlight?: {
-    model?: string[];
-    "messages.content"?: string[];
-  };
   score?: number;
+  highlight?: {
+    "messages.content"?: string[];
+    model?: string[];
+  };
 }
 
 // Create a separate component that uses useSearchParams
@@ -83,11 +83,11 @@ function HomeContent() {
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [searchMode, setSearchMode] = useState(
-    searchParams.get("mode") || "fuzzy"
+    searchParams.get("mode") || "fuzzy",
   );
   const [timeRange, setTimeRange] = useState(searchParams.get("time") || "1y");
   const [resultsSize, setResultsSize] = useState(
-    parseInt(searchParams.get("size") || "20")
+    parseInt(searchParams.get("size") || "20"),
   );
   const [fuzzyConfig, setFuzzyConfig] = useState({
     fuzziness: searchParams.get("fuzziness") || "AUTO",
@@ -210,7 +210,6 @@ function HomeContent() {
         console.log("First result:", {
           id: firstResult._id,
           source: firstResult._source,
-          highlight: firstResult.highlight,
         });
 
         // Check if the first result has messages
@@ -228,9 +227,9 @@ function HomeContent() {
             model: hit._source?.model || "Unknown",
             usage: hit._source?.usage || undefined,
             messages: hit._source?.messages || [],
-            highlight: hit.highlight,
             score: hit._score,
-          })
+            highlight: hit.highlight,
+          }),
         ) || [];
 
       console.log("Mapped results:", mappedResults);
@@ -285,7 +284,7 @@ function HomeContent() {
       if (e.key.length === 1 && e.key.match(/[a-zA-Z0-9]/)) {
         setQuery(e.key);
         const searchInput = document.querySelector(
-          'input[type="text"]'
+          'input[type="text"]',
         ) as HTMLInputElement;
         if (searchInput) {
           searchInput.focus();

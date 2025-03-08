@@ -12,11 +12,10 @@ import {
 import { useState, useEffect, useRef, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import type { SyntaxHighlighterProps } from "react-syntax-highlighter";
 import { toast } from "sonner";
-import { CSSProperties } from "react";
+
 // Define custom types for ReactMarkdown components
 interface CodeProps {
   inline?: boolean;
@@ -25,62 +24,15 @@ interface CodeProps {
   [key: string]: unknown;
 }
 
-interface ParagraphProps {
-  children: ReactNode;
-  [key: string]: unknown;
-}
-
-// Define a custom style for syntax highlighting that respects the theme
-const customCodeStyle: { [key: string]: CSSProperties } = {
-  // Minimal styling that respects the theme
-  'code[class*="language-"]': {
-    color: "inherit",
-    background: "transparent",
-    fontFamily: "var(--font-mono, monospace)",
-    fontSize: "inherit",
-    textAlign: "left",
-    whiteSpace: "pre",
-    wordSpacing: "normal",
-    wordBreak: "normal",
-    wordWrap: "normal",
-    lineHeight: "1.5",
-    tabSize: "2",
-    hyphens: "none",
-  },
-  'pre[class*="language-"]': {
-    color: "inherit",
-    background: "transparent",
-    fontFamily: "var(--font-mono, monospace)",
-    fontSize: "inherit",
-    textAlign: "left",
-    whiteSpace: "pre",
-    wordSpacing: "normal",
-    wordBreak: "normal",
-    wordWrap: "normal",
-    lineHeight: "1.5",
-    tabSize: "2",
-    hyphens: "none",
-    margin: "0",
-    padding: "0",
-    overflow: "auto",
-  },
-  // Minimal token styling
-  ".token": {
-    background: "transparent !important",
-  },
-  ".token.comment": { color: "hsl(var(--muted-foreground))" },
-  ".token.string": { color: "inherit" },
-  ".token.keyword": { color: "inherit" },
-  ".token.function": { color: "inherit" },
-  ".token.number": { color: "inherit" },
-  ".token.operator": { color: "inherit" },
-  ".token.punctuation": { color: "inherit" },
-};
-
-interface Message {
+export interface Message {
   role: string;
   content: string;
   finish_reason?: string;
+}
+
+interface Highlight {
+  "messages.content"?: string[];
+  model?: string[];
 }
 
 export interface ConversationCardProps {
@@ -93,17 +45,14 @@ export interface ConversationCardProps {
     completion_tokens?: number;
   };
   messages: Message[];
-  highlight?: {
-    model?: string[];
-    "messages.content"?: string[];
-  };
   score?: number;
+  highlight?: Highlight;
 }
 
 // Helper function to copy text to clipboard
 const copyToClipboard = (
   text: string,
-  successMessage: string = "Copied to clipboard"
+  successMessage: string = "Copied to clipboard",
 ) => {
   navigator.clipboard
     .writeText(text)
@@ -152,7 +101,7 @@ const CopyButton = ({
       className={cn(
         "flex items-center justify-center gap-1 bg-muted/50 hover:bg-muted/80",
         sizeClasses[size],
-        className
+        className,
       )}
     >
       {isCopied ? (
@@ -169,10 +118,17 @@ const CopyButton = ({
   );
 };
 
-const MarkdownWithHighlight: React.FC<{
+// Component to render content with OpenSearch highlights
+const HighlightedContent: React.FC<{
   content: string;
-  isHighlighted?: boolean;
-}> = ({ content, isHighlighted = false }) => {
+  highlightedContent?: string;
+}> = ({ content, highlightedContent }) => {
+  return <MarkdownContent content={highlightedContent || content} />;
+};
+
+const MarkdownContent: React.FC<{
+  content: string;
+}> = ({ content }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -246,97 +202,25 @@ const MarkdownWithHighlight: React.FC<{
     });
   }, [content]);
 
-  // Process highlighted content to preserve markdown formatting
-  let processedContent = content;
-
-  // First check if content already contains our markers directly
-  if (
-    content.includes("HIGHLIGHT_START") &&
-    content.includes("HIGHLIGHT_END")
-  ) {
-    // No need to process further, the content already has our markers
-    console.debug("Direct highlight markers found and processed");
-  }
-  // Check for <em> tags from OpenSearch highlighting
-  else if (isHighlighted && content.includes("<em>")) {
-    // Replace <em> tags with a custom marker that won't interfere with markdown
-    // Make sure we handle the case where the text might already contain our markers
-    processedContent = content
-      .replace(/<em>/g, "HIGHLIGHT_START")
-      .replace(/<\/em>/g, "HIGHLIGHT_END");
-  }
-
   return (
     <div ref={containerRef} className="prose dark:prose-invert max-w-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={{
           // @ts-expect-error - ReactMarkdown types are incompatible with our custom types
           code({ inline, className, children, ...props }: CodeProps) {
             const match = /language-(\w+)/.exec(className || "");
             const language = match ? match[1] : "";
 
-            // Check if the code block contains our highlight markers
-            const childrenStr = String(children).replace(/\n$/, "");
-            if (inline && childrenStr.includes("HIGHLIGHT_START")) {
-              // For inline code, we can use the mark tag
-              const parts = childrenStr.split(
-                /(HIGHLIGHT_START|HIGHLIGHT_END)/g
-              );
-              let isHighlight = false;
-              const elements = parts
-                .map((part, index) => {
-                  if (part === "HIGHLIGHT_START") {
-                    isHighlight = true;
-                    return null;
-                  } else if (part === "HIGHLIGHT_END") {
-                    isHighlight = false;
-                    return null;
-                  } else if (isHighlight) {
-                    return <mark key={index}>{part}</mark>;
-                  } else {
-                    return part;
-                  }
-                })
-                .filter(Boolean);
-
-              return (
-                <code className={className} {...props}>
-                  {elements}
-                </code>
-              );
-            }
-
+            // Simple code block rendering without syntax highlighting
             if (!inline && language) {
-              // For code blocks, we'll just remove the markers and let syntax highlighting work
-              const cleanedCode = String(children)
-                .replace(/HIGHLIGHT_START/g, "")
-                .replace(/HIGHLIGHT_END/g, "");
-
               return (
-                <SyntaxHighlighter
-                  language={language}
-                  style={customCodeStyle as SyntaxHighlighterProps["style"]}
-                  PreTag="div"
-                  className="rounded-md"
-                  useInlineStyles={true}
-                  wrapLines={true}
-                  wrapLongLines={true}
-                  customStyle={{
-                    backgroundColor: "transparent",
-                    padding: "0",
-                    margin: "0",
-                  }}
-                  codeTagProps={{
-                    style: {
-                      backgroundColor: "transparent",
-                      color: "inherit",
-                    },
-                  }}
-                  {...props}
-                >
-                  {cleanedCode}
-                </SyntaxHighlighter>
+                <pre className="rounded-md p-4 bg-muted/30 overflow-auto">
+                  <code className={className} {...props}>
+                    {String(children).replace(/\n$/, "")}
+                  </code>
+                </pre>
               );
             }
 
@@ -346,65 +230,69 @@ const MarkdownWithHighlight: React.FC<{
               </code>
             );
           },
-          // @ts-expect-error - ReactMarkdown types are incompatible with our custom types
-          p({ children, ...props }: ParagraphProps) {
-            // Process our custom highlight markers
-            if (
-              typeof children === "string" &&
-              (children.includes("HIGHLIGHT_START") ||
-                (Array.isArray(children) &&
-                  children.some(
-                    (child) =>
-                      typeof child === "string" &&
-                      child.includes("HIGHLIGHT_START")
-                  )))
-            ) {
-              // For string content, split by our markers and process
-              const processContent = (content: string) => {
-                const parts = content.split(/(HIGHLIGHT_START|HIGHLIGHT_END)/g);
-                let isHighlight = false;
-                return parts
-                  .map((part, index) => {
-                    if (part === "HIGHLIGHT_START") {
-                      isHighlight = true;
-                      return null;
-                    } else if (part === "HIGHLIGHT_END") {
-                      isHighlight = false;
-                      return null;
-                    } else if (isHighlight) {
-                      return <mark key={index}>{part}</mark>;
-                    } else {
-                      return part;
-                    }
-                  })
-                  .filter(Boolean);
-              };
-
-              // Handle both string and array children
-              if (typeof children === "string") {
-                return <p {...props}>{processContent(children)}</p>;
-              } else if (Array.isArray(children)) {
-                const processedChildren = (children as ReactNode[]).map(
-                  (child: ReactNode) => {
-                    if (
-                      typeof child === "string" &&
-                      child.includes("HIGHLIGHT_START")
-                    ) {
-                      return processContent(child);
-                    }
-                    return child;
-                  }
-                );
-                return <p {...props}>{processedChildren}</p>;
-              }
-            }
-
-            return <p {...props}>{children}</p>;
-          },
         }}
       >
-        {processedContent}
+        {content}
       </ReactMarkdown>
+    </div>
+  );
+};
+
+// ChatBubble component to render individual messages as chat bubbles
+const ChatBubble: React.FC<{
+  message: Message;
+  index: number;
+  highlightedContent?: string;
+}> = ({ message, highlightedContent }) => {
+  let alignmentClass = "";
+  let bubbleBg = "";
+  let icon = null;
+
+  switch (message.role) {
+    case "assistant":
+      alignmentClass = "justify-start";
+      bubbleBg = "bg-blue-50 dark:bg-blue-900/30";
+      icon = <Bot className="h-4 w-4" />;
+      break;
+    case "user":
+      alignmentClass = "justify-end";
+      bubbleBg = "bg-green-50 dark:bg-green-900/30";
+      icon = <User className="h-4 w-4" />;
+      break;
+    case "system":
+      alignmentClass = "justify-center";
+      bubbleBg = "bg-gray-200 dark:bg-gray-800";
+      icon = <Info className="h-4 w-4" />;
+      break;
+    default:
+      alignmentClass = "justify-start";
+      bubbleBg = "bg-gray-50 dark:bg-gray-900";
+  }
+
+  return (
+    <div className={`flex ${alignmentClass} my-2`}>
+      <div
+        className={`relative max-w-[97%] rounded-lg p-3 ${bubbleBg} shadow-sm`}
+      >
+        <div className="flex items-center mb-2">
+          {icon}
+          <span className="ml-1 text-xs font-semibold">
+            {message.role.toUpperCase()}
+          </span>
+        </div>
+        <HighlightedContent
+          content={message.content}
+          highlightedContent={highlightedContent}
+        />
+        <div className="absolute top-2 right-2">
+          <CopyButton
+            text={message.content}
+            showText={false}
+            size="xs"
+            successMessage={`${message.role} message copied`}
+          />
+        </div>
+      </div>
     </div>
   );
 };
@@ -414,146 +302,16 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   model,
   usage,
   messages = [],
-  highlight,
   score,
+  highlight,
 }) => {
   const createdDate = new Date(created);
 
-  // Function to render message content with highlighting if available
-  const renderContent = (message: Message) => {
-    // Check if the message content already contains highlight markers
-    if (
-      message.content.includes("HIGHLIGHT_START") &&
-      message.content.includes("HIGHLIGHT_END")
-    ) {
-      return (
-        <MarkdownWithHighlight content={message.content} isHighlighted={true} />
-      );
-    }
-
-    // Check if we have highlighted content for this message from the API
-    const hasHighlight =
-      highlight &&
-      highlight["messages.content"] &&
-      Array.isArray(highlight["messages.content"]) &&
-      highlight["messages.content"].some(
-        (h) =>
-          typeof h === "string" &&
-          h.includes(`<em>`) &&
-          message.content.includes(h.replace(/<\/?em>/g, ""))
-      );
-
-    // If we have highlighted content, use it
-    if (hasHighlight && highlight?.["messages.content"]) {
-      // Find the highlight that matches this message
-      const matchingHighlight = highlight["messages.content"].find(
-        (h) =>
-          typeof h === "string" &&
-          message.content.includes(h.replace(/<\/?em>/g, ""))
-      );
-
-      if (matchingHighlight) {
-        return (
-          <MarkdownWithHighlight
-            content={matchingHighlight}
-            isHighlighted={true}
-          />
-        );
-      }
-    }
-
-    // Otherwise use the original content
-    return <MarkdownWithHighlight content={message.content} />;
-  };
-
-  // Function to generate the full conversation text for copying
+  // Generate full conversation text for copying
   const getFullConversationText = () => {
     return messages
       .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
       .join("\n\n");
-  };
-
-  // Function to render a message based on its role
-  const renderMessage = (message: Message, index: number) => {
-    switch (message.role) {
-      case "system":
-        return (
-          <div
-            key={`message-${index}`}
-            className="relative space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-secondary/30"
-          >
-            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-              <Badge
-                variant="outline"
-                className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
-              >
-                <Info className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                System
-              </Badge>
-              <CopyButton
-                text={message.content}
-                className="absolute top-2 right-2 z-10 message-copy-btn"
-                showText={false}
-                size="xs"
-                successMessage="System message copied"
-              />
-            </div>
-            {renderContent(message)}
-          </div>
-        );
-      case "user":
-        return (
-          <div
-            key={`message-${index}`}
-            className="relative space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-muted/30"
-          >
-            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-              <Badge
-                variant="secondary"
-                className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
-              >
-                <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                User
-              </Badge>
-              <CopyButton
-                text={message.content}
-                className="absolute top-2 right-2 z-10 message-copy-btn"
-                showText={false}
-                size="xs"
-                successMessage="User message copied"
-              />
-            </div>
-            {renderContent(message)}
-          </div>
-        );
-      case "assistant":
-        return (
-          <div
-            key={`message-${index}`}
-            className="relative space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-primary/5"
-          >
-            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-              <Badge
-                variant="default"
-                className="mr-2 px-1.5 sm:px-2 py-0 sm:py-0.5 text-xs"
-              >
-                <Bot className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                Assistant
-              </Badge>
-              <CopyButton
-                text={message.content}
-                className="absolute top-2 right-2 z-10 message-copy-btn"
-                showText={false}
-                size="xs"
-                successMessage="Assistant message copied"
-              />
-            </div>
-            {renderContent(message)}
-          </div>
-        );
-      default:
-        return null;
-    }
   };
 
   return (
@@ -609,8 +367,17 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       </CardHeader>
       <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4 pb-3 sm:pb-6">
         <div className="space-y-2 sm:space-y-4">
-          {/* Render messages in their original order */}
-          {messages.map((message, index) => renderMessage(message, index))}
+          {messages.map((message, index) => {
+            const highlightedContent = highlight?.["messages.content"]?.[index];
+            return (
+              <ChatBubble
+                key={`message-${index}`}
+                message={message}
+                index={index}
+                highlightedContent={highlightedContent}
+              />
+            );
+          })}
         </div>
       </CardContent>
     </Card>
