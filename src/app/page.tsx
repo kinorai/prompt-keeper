@@ -46,10 +46,6 @@ interface SearchHit {
       finish_reason?: string;
     }>;
   };
-  highlight?: {
-    model?: string[];
-    "messages.content"?: string[];
-  };
 }
 interface MappedSearchResult {
   id: string;
@@ -65,10 +61,6 @@ interface MappedSearchResult {
     content: string;
     finish_reason?: string;
   }>;
-  highlight?: {
-    model?: string[];
-    "messages.content"?: string[];
-  };
   score?: number;
 }
 
@@ -210,7 +202,6 @@ function HomeContent() {
         console.log("First result:", {
           id: firstResult._id,
           source: firstResult._source,
-          highlight: firstResult.highlight,
         });
 
         // Check if the first result has messages
@@ -228,7 +219,6 @@ function HomeContent() {
             model: hit._source?.model || "Unknown",
             usage: hit._source?.usage || undefined,
             messages: hit._source?.messages || [],
-            highlight: hit.highlight,
             score: hit._score,
           }),
         ) || [];

@@ -133,33 +133,6 @@ export async function POST(req: NextRequest) {
         sort: [{ timestamp: "desc" }],
         size,
         from,
-        highlight: {
-          fields: {
-            model: {},
-            "messages.content": {
-              number_of_fragments: 0,
-              pre_tags: ["<em>"],
-              post_tags: ["</em>"],
-              highlight_query: {
-                nested: {
-                  path: "messages",
-                  query: {
-                    bool: {
-                      should: [
-                        {
-                          match: {
-                            "messages.content": query,
-                          },
-                        },
-                      ],
-                    },
-                  },
-                },
-              },
-            },
-          },
-          require_field_match: true,
-        },
         _source: true,
       },
     });
@@ -184,7 +157,6 @@ export async function POST(req: NextRequest) {
         score: firstResult._score,
         model: firstResult._source?.model,
         messageCount: firstResult._source?.messages?.length || 0,
-        highlight: firstResult.highlight,
       });
     }
 
