@@ -291,32 +291,9 @@
   @apply max-w-full h-auto rounded-md my-4;
 }
 
-/* Add specific styles for code blocks to ensure they're not white/highlighted */
-.prose pre code {
-  @apply bg-transparent text-foreground;
-  color: inherit;
-}
-
-/* Ensure syntax highlighting doesn't override our theme */
-.prose .token {
-  background: transparent !important;
-}
-
-/* Highlighted content styles */
-mark,
-em {
-  @apply bg-primary/10 dark:bg-primary/20 px-1 py-0.5 rounded not-italic;
-}
-
 .prose mark,
 .prose em {
   @apply bg-primary/10 dark:bg-primary/20 px-1 py-0.5 rounded not-italic;
-}
-
-/* Ensure highlighted code blocks look good */
-.prose pre mark,
-.prose pre em {
-  @apply bg-primary/10 dark:bg-primary/20 px-0.5 py-0 rounded-sm;
 }
 
 /* Style for the floating theme toggle */
