@@ -13,10 +13,7 @@ import { useState, useEffect, useRef, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import type { SyntaxHighlighterProps } from "react-syntax-highlighter";
 import { toast } from "sonner";
-import { CSSProperties } from "react";
 // Define custom types for ReactMarkdown components
 interface CodeProps {
   inline?: boolean;
@@ -30,52 +27,6 @@ interface ParagraphProps {
   [key: string]: unknown;
 }
 
-// Define a custom style for syntax highlighting that respects the theme
-const customCodeStyle: { [key: string]: CSSProperties } = {
-  // Minimal styling that respects the theme
-  'code[class*="language-"]': {
-    color: "inherit",
-    background: "transparent",
-    fontFamily: "var(--font-mono, monospace)",
-    fontSize: "inherit",
-    textAlign: "left",
-    whiteSpace: "pre",
-    wordSpacing: "normal",
-    wordBreak: "normal",
-    wordWrap: "normal",
-    lineHeight: "1.5",
-    tabSize: "2",
-    hyphens: "none",
-  },
-  'pre[class*="language-"]': {
-    color: "inherit",
-    background: "transparent",
-    fontFamily: "var(--font-mono, monospace)",
-    fontSize: "inherit",
-    textAlign: "left",
-    whiteSpace: "pre",
-    wordSpacing: "normal",
-    wordBreak: "normal",
-    wordWrap: "normal",
-    lineHeight: "1.5",
-    tabSize: "2",
-    hyphens: "none",
-    margin: "0",
-    padding: "0",
-    overflow: "auto",
-  },
-  // Minimal token styling
-  ".token": {
-    background: "transparent !important",
-  },
-  ".token.comment": { color: "hsl(var(--muted-foreground))" },
-  ".token.string": { color: "inherit" },
-  ".token.keyword": { color: "inherit" },
-  ".token.function": { color: "inherit" },
-  ".token.number": { color: "inherit" },
-  ".token.operator": { color: "inherit" },
-  ".token.punctuation": { color: "inherit" },
-};
 
 interface Message {
   role: string;
@@ -93,17 +44,13 @@ export interface ConversationCardProps {
     completion_tokens?: number;
   };
   messages: Message[];
-  highlight?: {
-    model?: string[];
-    "messages.content"?: string[];
-  };
   score?: number;
 }
 
 // Helper function to copy text to clipboard
 const copyToClipboard = (
   text: string,
-  successMessage: string = "Copied to clipboard",
+  successMessage: string = "Copied to clipboard"
 ) => {
   navigator.clipboard
     .writeText(text)
@@ -152,7 +99,7 @@ const CopyButton = ({
       className={cn(
         "flex items-center justify-center gap-1 bg-muted/50 hover:bg-muted/80",
         sizeClasses[size],
-        className,
+        className
       )}
     >
       {isCopied ? (
@@ -169,10 +116,9 @@ const CopyButton = ({
   );
 };
 
-const MarkdownWithHighlight: React.FC<{
+const MarkdownContent: React.FC<{
   content: string;
-  isHighlighted?: boolean;
-}> = ({ content, isHighlighted = false }) => {
+}> = ({ content }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -246,26 +192,6 @@ const MarkdownWithHighlight: React.FC<{
     });
   }, [content]);
 
-  // Process highlighted content to preserve markdown formatting
-  let processedContent = content;
-
-  // First check if content already contains our markers directly
-  if (
-    content.includes("HIGHLIGHT_START") &&
-    content.includes("HIGHLIGHT_END")
-  ) {
-    // No need to process further, the content already has our markers
-    console.debug("Direct highlight markers found and processed");
-  }
-  // Check for <em> tags from OpenSearch highlighting
-  else if (isHighlighted && content.includes("<em>")) {
-    // Replace <em> tags with a custom marker that won't interfere with markdown
-    // Make sure we handle the case where the text might already contain our markers
-    processedContent = content
-      .replace(/<em>/g, "HIGHLIGHT_START")
-      .replace(/<\/em>/g, "HIGHLIGHT_END");
-  }
-
   return (
     <div ref={containerRef} className="prose dark:prose-invert max-w-none">
       <ReactMarkdown
@@ -276,67 +202,14 @@ const MarkdownWithHighlight: React.FC<{
             const match = /language-(\w+)/.exec(className || "");
             const language = match ? match[1] : "";
 
-            // Check if the code block contains our highlight markers
-            const childrenStr = String(children).replace(/\n$/, "");
-            if (inline && childrenStr.includes("HIGHLIGHT_START")) {
-              // For inline code, we can use the mark tag
-              const parts = childrenStr.split(
-                /(HIGHLIGHT_START|HIGHLIGHT_END)/g,
-              );
-              let isHighlight = false;
-              const elements = parts
-                .map((part, index) => {
-                  if (part === "HIGHLIGHT_START") {
-                    isHighlight = true;
-                    return null;
-                  } else if (part === "HIGHLIGHT_END") {
-                    isHighlight = false;
-                    return null;
-                  } else if (isHighlight) {
-                    return <mark key={index}>{part}</mark>;
-                  } else {
-                    return part;
-                  }
-                })
-                .filter(Boolean);
-
-              return (
-                <code className={className} {...props}>
-                  {elements}
-                </code>
-              );
-            }
-
+            // Simple code block rendering without syntax highlighting
             if (!inline && language) {
-              // For code blocks, we'll just remove the markers and let syntax highlighting work
-              const cleanedCode = String(children)
-                .replace(/HIGHLIGHT_START/g, "")
-                .replace(/HIGHLIGHT_END/g, "");
-
               return (
-                <SyntaxHighlighter
-                  language={language}
-                  style={customCodeStyle as SyntaxHighlighterProps["style"]}
-                  PreTag="div"
-                  className="rounded-md"
-                  useInlineStyles={true}
-                  wrapLines={true}
-                  wrapLongLines={true}
-                  customStyle={{
-                    backgroundColor: "transparent",
-                    padding: "0",
-                    margin: "0",
-                  }}
-                  codeTagProps={{
-                    style: {
-                      backgroundColor: "transparent",
-                      color: "inherit",
-                    },
-                  }}
-                  {...props}
-                >
-                  {cleanedCode}
-                </SyntaxHighlighter>
+                <pre className="rounded-md p-4 bg-muted/30 overflow-auto">
+                  <code className={className} {...props}>
+                    {String(children).replace(/\n$/, "")}
+                  </code>
+                </pre>
               );
             }
 
@@ -346,64 +219,9 @@ const MarkdownWithHighlight: React.FC<{
               </code>
             );
           },
-          // @ts-expect-error - ReactMarkdown types are incompatible with our custom types
-          p({ children, ...props }: ParagraphProps) {
-            // Process our custom highlight markers
-            if (
-              typeof children === "string" &&
-              (children.includes("HIGHLIGHT_START") ||
-                (Array.isArray(children) &&
-                  children.some(
-                    (child) =>
-                      typeof child === "string" &&
-                      child.includes("HIGHLIGHT_START"),
-                  )))
-            ) {
-              // For string content, split by our markers and process
-              const processContent = (content: string) => {
-                const parts = content.split(/(HIGHLIGHT_START|HIGHLIGHT_END)/g);
-                let isHighlight = false;
-                return parts
-                  .map((part, index) => {
-                    if (part === "HIGHLIGHT_START") {
-                      isHighlight = true;
-                      return null;
-                    } else if (part === "HIGHLIGHT_END") {
-                      isHighlight = false;
-                      return null;
-                    } else if (isHighlight) {
-                      return <mark key={index}>{part}</mark>;
-                    } else {
-                      return part;
-                    }
-                  })
-                  .filter(Boolean);
-              };
-
-              // Handle both string and array children
-              if (typeof children === "string") {
-                return <p {...props}>{processContent(children)}</p>;
-              } else if (Array.isArray(children)) {
-                const processedChildren = (children as ReactNode[]).map(
-                  (child: ReactNode) => {
-                    if (
-                      typeof child === "string" &&
-                      child.includes("HIGHLIGHT_START")
-                    ) {
-                      return processContent(child);
-                    }
-                    return child;
-                  },
-                );
-                return <p {...props}>{processedChildren}</p>;
-              }
-            }
-
-            return <p {...props}>{children}</p>;
-          },
         }}
       >
-        {processedContent}
+        {content}
       </ReactMarkdown>
     </div>
   );
@@ -414,57 +232,9 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   model,
   usage,
   messages = [],
-  highlight,
   score,
 }) => {
   const createdDate = new Date(created);
-
-  // Function to render message content with highlighting if available
-  const renderContent = (message: Message) => {
-    // Check if the message content already contains highlight markers
-    if (
-      message.content.includes("HIGHLIGHT_START") &&
-      message.content.includes("HIGHLIGHT_END")
-    ) {
-      return (
-        <MarkdownWithHighlight content={message.content} isHighlighted={true} />
-      );
-    }
-
-    // Check if we have highlighted content for this message from the API
-    const hasHighlight =
-      highlight &&
-      highlight["messages.content"] &&
-      Array.isArray(highlight["messages.content"]) &&
-      highlight["messages.content"].some(
-        (h) =>
-          typeof h === "string" &&
-          h.includes(`<em>`) &&
-          message.content.includes(h.replace(/<\/?em>/g, "")),
-      );
-
-    // If we have highlighted content, use it
-    if (hasHighlight && highlight?.["messages.content"]) {
-      // Find the highlight that matches this message
-      const matchingHighlight = highlight["messages.content"].find(
-        (h) =>
-          typeof h === "string" &&
-          message.content.includes(h.replace(/<\/?em>/g, "")),
-      );
-
-      if (matchingHighlight) {
-        return (
-          <MarkdownWithHighlight
-            content={matchingHighlight}
-            isHighlighted={true}
-          />
-        );
-      }
-    }
-
-    // Otherwise use the original content
-    return <MarkdownWithHighlight content={message.content} />;
-  };
 
   // Function to generate the full conversation text for copying
   const getFullConversationText = () => {
@@ -498,7 +268,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 successMessage="System message copied"
               />
             </div>
-            {renderContent(message)}
+            <MarkdownContent content={message.content} />
           </div>
         );
       case "user":
@@ -523,7 +293,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 successMessage="User message copied"
               />
             </div>
-            {renderContent(message)}
+            <MarkdownContent content={message.content} />
           </div>
         );
       case "assistant":
@@ -548,7 +318,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 successMessage="Assistant message copied"
               />
             </div>
-            {renderContent(message)}
+            <MarkdownContent content={message.content} />
           </div>
         );
       default:
