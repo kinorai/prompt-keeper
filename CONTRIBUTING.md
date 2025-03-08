@@ -69,7 +69,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 2. Install dependencies: `npm install`
 3. Copy `.env.example` to `.env` and configure as needed
 4. Start the development server: `npm run dev`
-5. Start OpenSearch using Docker Compose: `docker-compose up -d opensearch`
+5. Start OpenSearch using Docker Compose: `docker-compose up -d`
 
 ## Testing
 
