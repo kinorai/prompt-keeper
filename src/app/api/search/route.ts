@@ -134,6 +134,21 @@ export async function POST(req: NextRequest) {
         size,
         from,
         _source: true,
+        highlight: {
+          fields: {
+            "messages.content": {
+              pre_tags: ["<mark>"],
+              post_tags: ["</mark>"],
+              fragment_size: 150,
+              number_of_fragments: 0
+            },
+            model: {
+              pre_tags: ["<mark>"],
+              post_tags: ["</mark>"]
+            }
+          },
+          require_field_match: false
+        }
       },
     });
 
