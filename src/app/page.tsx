@@ -311,7 +311,7 @@ function HomeContent() {
       >
         <div className="container pb-4 sm:py-6">
           {/* Desktop search bar and filters */}
-          <div className="hidden sm:block sticky top-0 z-10 bg-background/80 backdrop-blur-sm pb-4">
+          <div className="hidden sm:block sticky top-0 z-10 bg-background/80 backdrop-blur-xs pb-4">
             <div className="space-y-3">
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
@@ -447,7 +447,7 @@ function HomeContent() {
                   <div className="flex flex-col gap-1.5">
                     <span className="text-sm font-medium">Search Mode</span>
                     <Select value={searchMode} onValueChange={setSearchMode}>
-                      <SelectTrigger className="w-[160px] h-9 rounded-lg border-muted-foreground/20 bg-background shadow-sm">
+                      <SelectTrigger className="w-[160px] h-9 rounded-lg border-muted-foreground/20 bg-background shadow-xs">
                         <SelectValue placeholder="Search mode" />
                       </SelectTrigger>
                       <SelectContent>

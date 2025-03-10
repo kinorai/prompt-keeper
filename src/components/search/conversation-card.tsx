@@ -272,7 +272,7 @@ const ChatBubble: React.FC<{
   return (
     <div className={`flex ${alignmentClass} my-2`}>
       <div
-        className={`relative max-w-[97%] rounded-lg p-3 ${bubbleBg} shadow-sm`}
+        className={`relative max-w-[97%] rounded-lg p-3 ${bubbleBg} shadow-xs`}
       >
         <div className="flex items-center mb-2">
           {icon}

@@ -67,7 +67,7 @@ export function SearchBar({
       <div className={`flex gap-2 ${isCompact ? "w-auto" : "sm:w-auto"}`}>
         {!isCompact && (
           <Select value={searchMode} onValueChange={onSearchModeChange}>
-            <SelectTrigger className="w-full sm:w-[140px] h-10 sm:h-11 rounded-full border-muted-foreground/20 bg-background shadow-sm">
+            <SelectTrigger className="w-full sm:w-[140px] h-10 sm:h-11 rounded-full border-muted-foreground/20 bg-background shadow-xs">
               <SelectValue placeholder="Search mode" />
             </SelectTrigger>
             <SelectContent>
