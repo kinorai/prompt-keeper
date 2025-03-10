@@ -29,7 +29,7 @@ jobs:
         run: npm ci --force
       
       - name: Install TypeDoc
-        run: npm install --no-save typedoc
+        run: npm install --force --no-save typedoc
       
       - name: Generate API documentation
         run: npx typedoc --entryPointStrategy expand --out docs/api src
