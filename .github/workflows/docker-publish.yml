@@ -9,15 +9,17 @@ jobs:
   versioning:
     name: Versioning
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       new_version: ${{ steps.get_version.outputs.version }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Bump version and push tag
         id: tag_version
         uses: anothrNick/github-tag-action@1.71.0
@@ -25,21 +27,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: false
           DEFAULT_BUMP: minor
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Update package.json version
         run: |
           npm version ${{ steps.tag_version.outputs.new_tag }} --no-git-tag-version
-      
+
       - name: Get version from package.json
         id: get_version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-      
+
       - name: Commit package.json changes
         run: |
           git config --local user.email "action@github.com"
