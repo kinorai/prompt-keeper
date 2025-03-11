@@ -88,7 +88,7 @@ def generate_fake_document() -> Dict[str, Any]:
     #     hours=random.randint(0, 23),
     #     minutes=random.randint(0, 59)
     # )
-    
+
     # Generate messages
     topic = random.choice(TOPICS)
     prompt_template = random.choice(PROMPT_TEMPLATES)
@@ -98,26 +98,26 @@ def generate_fake_document() -> Dict[str, Any]:
         action=fake.sentence(),
         old=random.choice(TOPICS)
     )
-    
+
     messages = [
         {"role": "user", "content": user_message}
     ]
-    
+
     # Sometimes add a system message
     if random.random() < 0.3:
         messages.insert(0, {
             "role": "system",
             "content": f"You are an expert in {topic} and related technologies."
         })
-    
+
     # Generate response
     response_content = generate_mock_response()
-    
+
     # Calculate fake token counts
     prompt_tokens = len(" ".join(msg["content"] for msg in messages).split())
     completion_tokens = len(response_content.split())
     total_tokens = prompt_tokens + completion_tokens
-    
+
     # Create document
     return {
         "timestamp": timestamp.isoformat(),
@@ -153,20 +153,20 @@ def bulk_generator(num_documents: int):
 async def generate_fake_data(num_documents: int, batch_size: int = 200):  # Reduced default batch size
     """Generate and index fake data in batches"""
     total_batches = (num_documents + batch_size - 1) // batch_size
-    
+
     with tqdm.tqdm(total=num_documents, desc="Generating documents") as pbar:
         for batch_num in range(total_batches):
             current_batch_size = min(batch_size, num_documents - batch_num * batch_size)
-            
+
             try:
                 # Generate batch
                 batch_data = list(bulk_generator(current_batch_size))
-                
+
                 # Split into smaller chunks if needed (max 1MB per chunk)
                 chunk_size = 100  # Even smaller chunks
                 for i in range(0, len(batch_data), chunk_size):
                     chunk = batch_data[i:i + chunk_size]
-                    
+
                     # Add retry logic
                     max_retries = 3
                     retry_count = 0
@@ -182,14 +182,14 @@ async def generate_fake_data(num_documents: int, batch_size: int = 200):  # Redu
                                 max_backoff=600,
                                 raise_on_exception=False
                             )
-                            
+
                             pbar.update(len(chunk))
                             print(f"\rBatch {batch_num + 1}/{total_batches} - Chunk {i//chunk_size + 1}: {success} succeeded, {len(failed) if failed else 0} failed")
-                            
+
                             # Add small delay between chunks
                             await asyncio.sleep(0.1)
                             break
-                            
+
                         except Exception as e:
                             retry_count += 1
                             if retry_count == max_retries:
@@ -197,7 +197,7 @@ async def generate_fake_data(num_documents: int, batch_size: int = 200):  # Redu
                                 break
                             print(f"\nRetrying chunk {i//chunk_size + 1} (attempt {retry_count + 1})...")
                             await asyncio.sleep(2 ** retry_count)  # Exponential backoff
-                
+
             except Exception as e:
                 print(f"\nError processing batch {batch_num + 1}: {str(e)}")
                 continue
@@ -209,9 +209,9 @@ def main():
     parser.add_argument('--batch-size', type=int, default=200,
                       help='Batch size for bulk indexing (default: 200)')
     args = parser.parse_args()
-    
+
     print(f"Generating {args.num_documents:,} fake documents...")
-    
+
     try:
         # Configure OpenSearch index settings for bulk indexing
         index_settings = {
@@ -221,9 +221,9 @@ def main():
             }
         }
         opensearch_client.indices.put_settings(body=index_settings, index=OPENSEARCH_INDEX)
-        
+
         asyncio.run(generate_fake_data(args.num_documents, args.batch_size))
-        
+
         # Restore index settings after bulk indexing
         restore_settings = {
             "index": {
@@ -232,12 +232,12 @@ def main():
             }
         }
         opensearch_client.indices.put_settings(body=restore_settings, index=OPENSEARCH_INDEX)
-        
+
         print("\nDone!")
-        
+
     except Exception as e:
         print(f"\nError: {str(e)}")
         raise
 
 if __name__ == "__main__":
-    main() 
+    main()

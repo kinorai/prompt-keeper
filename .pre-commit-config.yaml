@@ -1,0 +1,34 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+    -   id: trailing-whitespace
+        exclude: ^chart/
+    -   id: end-of-file-fixer
+        exclude: ^chart/
+    -   id: check-yaml
+        exclude: ^chart/
+    -   id: check-added-large-files
+        exclude: ^chart/
+-   repo: local
+    hooks:
+    -   id: npm-lint
+        name: Run ESLint
+        entry: npm run lint
+        language: system
+        pass_filenames: false
+        exclude: ^chart/
+    -   id: npm-tsc
+        name: Run TypeScript compiler
+        entry: npm run tsc
+        language: system
+        pass_filenames: false
+        exclude: ^chart/
+    -   id: prettier
+        name: Run Prettier
+        entry: npx prettier --write .
+        language: system
+        pass_filenames: false
+        exclude: ^chart/
