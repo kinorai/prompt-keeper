@@ -6,10 +6,10 @@ Prompt Keeper - Design Architecture Template (DAT)
 
 1. OVERVIEW
 
-• Purpose:  
+• Purpose:
  Create an open-source LLM API proxy that is OpenAI compatible, while also providing a rich user interface to search and analyze historical LLM conversations. The system intercepts API calls, forwards them to LiteLLM for processing, and stores the resulting conversation data in OpenSearch.
 
-• Target Audience:  
+• Target Audience:
  Technical users such as developers, data scientists, and integrators working with LLM APIs who need to review, filter, and reuse past prompt and response data.
 
 • Primary Goals:
@@ -102,7 +102,7 @@ B. Architecture Diagram
 │
 ▼
 [Next.js Server - API Routes] ←→ [OpenSearch (Conversation Store)]
-│  
+│
  ▼
 [LiteLLM Proxy]
 │
@@ -175,8 +175,8 @@ Mapping Structure:
 }
 ```
 
-C. Indexing Considerations:  
- • The nested types for usage details and messages enable more granular querying (e.g., filtering based on specific token counts or message content).  
+C. Indexing Considerations:
+ • The nested types for usage details and messages enable more granular querying (e.g., filtering based on specific token counts or message content).
  • Additional fields can be added or adjusted depending on iterative requirements or optimization needs.
 
 ──────────────────────────────────────── 6. SECURITY & AUTHENTICATION

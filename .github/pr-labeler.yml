@@ -32,4 +32,4 @@ tests:
   - '**/*.test.*'
   - '**/*.spec.*'
   - 'jest.config.js'
-  - 'jest.setup.ts' 
+  - 'jest.setup.ts'

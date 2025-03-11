@@ -24,12 +24,12 @@ model_list:
           def validate_configuration(config: Dict[str, Any]) -> bool:
               """Validate the provided configuration"""
               print("Validating configuration parameters...")
-              
+
               required_fields = ['api_key', 'endpoint', 'model_version']
               for field in required_fields:
                   if field not in config:
                       raise ValueError(f"Missing required field: {field}")
-              
+
               return True
 
           def setup_logging():
@@ -46,10 +46,10 @@ model_list:
                   # Validate input
                   if not isinstance(data, dict):
                       raise TypeError("Input must be a dictionary")
-                      
+
                   # Process the request
                   result = perform_operation(data)
-                  
+
                   return {"status": "success", "data": result}
               except Exception as e:
                   return {"status": "error", "message": str(e)}
@@ -84,4 +84,3 @@ model_list:
         api_base: https://exampleopenaiendpoint-production.up.railway.app/
 general_settings:
 store_model_in_db: false
-
