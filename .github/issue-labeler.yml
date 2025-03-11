@@ -23,4 +23,4 @@ api:
   - '(api|endpoint|route|proxy|litellm)'
 
 security:
-  - '(security|auth|authentication|authorization|vulnerability)' 
+  - '(security|auth|authentication|authorization|vulnerability)'

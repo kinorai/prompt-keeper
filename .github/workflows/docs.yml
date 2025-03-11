@@ -14,33 +14,33 @@ jobs:
   build-and-deploy-docs:
     name: Build and Deploy Documentation
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci --force
-      
+
       - name: Install TypeDoc
         run: npm install --force --no-save typedoc
-      
+
       - name: Generate API documentation
         run: npx typedoc --entryPointStrategy expand --out docs/api src
-      
+
       - name: Update README badges
         run: |
           sed -i 's/\!\[CI\]\([^)]*\)/\!\[CI\]\(https:\/\/github.com\/${{ github.repository }}\/actions\/workflows\/ci.yml\/badge.svg\)/g' README.md
           sed -i 's/\!\[Security\]\([^)]*\)/\!\[Security\]\(https:\/\/github.com\/${{ github.repository }}\/actions\/workflows\/security.yml\/badge.svg\)/g' README.md
-      
+
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: docs
-          branch: gh-pages 
+          branch: gh-pages
