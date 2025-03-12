@@ -7,9 +7,6 @@ export async function POST() {
     return NextResponse.json({ message: "Index initialized successfully" });
   } catch (error) {
     console.error("Failed to initialize index:", error);
-    return NextResponse.json(
-      { error: "Failed to initialize index" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to initialize index" }, { status: 500 });
   }
 }

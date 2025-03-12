@@ -30,14 +30,7 @@ export function LogoutButton() {
   };
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={handleLogout}
-      disabled={isLoading}
-      title="Logout"
-      aria-label="Logout"
-    >
+    <Button variant="ghost" size="icon" onClick={handleLogout} disabled={isLoading} title="Logout" aria-label="Logout">
       <LogOut className="h-5 w-5" />
     </Button>
   );

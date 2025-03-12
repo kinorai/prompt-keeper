@@ -36,9 +36,7 @@ describe("Init API Route", () => {
 
   it("should return error message when index initialization fails", async () => {
     // Mock failed index initialization
-    (initializeIndex as jest.Mock).mockRejectedValueOnce(
-      new Error("Initialization error"),
-    );
+    (initializeIndex as jest.Mock).mockRejectedValueOnce(new Error("Initialization error"));
 
     // Call the API route handler
     const response = await POST();

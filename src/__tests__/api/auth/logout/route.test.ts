@@ -24,9 +24,7 @@ describe("Auth Logout API Route", () => {
 
     // Verify that the auth cookie was deleted
     const cookies = response.cookies.getAll();
-    const authCookie = cookies.find(
-      (cookie) => cookie.name === AUTH_COOKIE_NAME,
-    );
+    const authCookie = cookies.find((cookie) => cookie.name === AUTH_COOKIE_NAME);
 
     // In Next.js, when a cookie is deleted, it's still in the list but with an empty value and expired
     if (authCookie) {

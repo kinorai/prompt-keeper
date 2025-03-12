@@ -83,9 +83,7 @@ describe("Models API Route", () => {
 
   it("should return 500 error when fetch throws an exception", async () => {
     // Setup the fetch mock to throw an error
-    (global.fetch as jest.Mock).mockRejectedValueOnce(
-      new Error("Network error"),
-    );
+    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error("Network error"));
 
     // Create a mock request
     const req = new NextRequest("http://localhost/api/models");
