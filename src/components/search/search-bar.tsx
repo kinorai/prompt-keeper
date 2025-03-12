@@ -1,13 +1,7 @@
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
 interface SearchBarProps {
@@ -34,9 +28,7 @@ export function SearchBar({
   return (
     <div
       className={`flex w-full ${
-        isCompact
-          ? "flex-row items-center gap-2"
-          : "flex-col gap-3 sm:flex-row sm:items-center"
+        isCompact ? "flex-row items-center gap-2" : "flex-col gap-3 sm:flex-row sm:items-center"
       }`}
     >
       <div className="relative flex-1">

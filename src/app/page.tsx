@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  Suspense,
-  useMemo,
-} from "react";
+import { useEffect, useState, useRef, useCallback, Suspense, useMemo } from "react";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilters } from "@/components/search/search-filters";
 import { ConversationCard } from "@/components/search/conversation-card";
@@ -18,22 +11,9 @@ import debounce from "lodash.debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LogoutButton } from "@/components/logout-button";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 // Define the types for our search results
 interface SearchHit {
@@ -89,21 +69,15 @@ function HomeContent() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
-  const [searchMode, setSearchMode] = useState(
-    searchParams.get("mode") || "fuzzy",
-  );
+  const [searchMode, setSearchMode] = useState(searchParams.get("mode") || "fuzzy");
   const [timeRange, setTimeRange] = useState(searchParams.get("time") || "1y");
-  const [resultsSize, setResultsSize] = useState(
-    parseInt(searchParams.get("size") || "10"),
-  );
+  const [resultsSize, setResultsSize] = useState(parseInt(searchParams.get("size") || "10"));
   const [fuzzyConfig, setFuzzyConfig] = useState({
     fuzziness: searchParams.get("fuzziness") || "AUTO",
     prefixLength: parseInt(searchParams.get("prefix") || "2"),
   });
 
-  const [searchResults, setSearchResults] = useState<
-    MappedSearchResult[] | null
-  >(null);
+  const [searchResults, setSearchResults] = useState<MappedSearchResult[] | null>(null);
   const [searchMetadata, setSearchMetadata] = useState<{
     total: number;
     took: number;
@@ -157,16 +131,7 @@ function HomeContent() {
     }
 
     router.replace(`${pathname}?${params.toString()}`);
-  }, [
-    query,
-    searchMode,
-    timeRange,
-    resultsSize,
-    fuzzyConfig,
-    searchParams,
-    router,
-    pathname,
-  ]);
+  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, searchParams, router, pathname]);
 
   const handleSearch = useCallback(async () => {
     if (query.length < 3 && query.length > 0) return;
@@ -255,14 +220,7 @@ function HomeContent() {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [
-    query,
-    searchMode,
-    timeRange,
-    resultsSize,
-    fuzzyConfig,
-    updateSearchParams,
-  ]);
+  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, updateSearchParams]);
 
   // Create a memoized debounced function for search
   const debouncedSearch = useMemo(() => {
@@ -287,17 +245,12 @@ function HomeContent() {
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
       if (e.key.length === 1 && e.key.match(/[a-zA-Z0-9]/)) {
         setQuery(e.key);
-        const searchInput = document.querySelector(
-          'input[type="text"]',
-        ) as HTMLInputElement;
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
         if (searchInput) {
           searchInput.focus();
         }
@@ -317,10 +270,7 @@ function HomeContent() {
   return (
     <div className="flex flex-col h-screen">
       {/* Main content area with results */}
-      <div
-        ref={resultsContainerRef}
-        className="flex-1 overflow-y-auto pb-16 sm:pb-0 main-content"
-      >
+      <div ref={resultsContainerRef} className="flex-1 overflow-y-auto pb-16 sm:pb-0 main-content">
         <div className="container pb-4 sm:py-6">
           {/* Desktop search bar and filters */}
           <div className="hidden sm:block sticky top-0 z-10 bg-background/80 backdrop-blur-xs pb-4">
@@ -382,9 +332,7 @@ function HomeContent() {
                 <div className="bg-muted/30 p-4 rounded-full mb-4">
                   <MessageSquare className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-2">
-                  No conversations found
-                </h3>
+                <h3 className="text-lg sm:text-xl font-semibold mb-2">No conversations found</h3>
                 <p className="text-muted-foreground max-w-md">
                   {query
                     ? "Try adjusting your search or filters to find what you're looking for."
@@ -408,9 +356,7 @@ function HomeContent() {
                 <div className="bg-muted/30 p-4 rounded-full mb-4">
                   <Search className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-2">
-                  Search your conversations
-                </h3>
+                <h3 className="text-lg sm:text-xl font-semibold mb-2">Search your conversations</h3>
                 <p className="text-muted-foreground max-w-md">
                   Enter a search term to find conversations from your history.
                 </p>
@@ -440,20 +386,14 @@ function HomeContent() {
             </div>
             <Sheet>
               <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-full"
-                >
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full">
                   <Settings className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
                 <SheetHeader className="mb-4">
                   <SheetTitle>Search Settings</SheetTitle>
-                  <SheetDescription>
-                    Adjust your search filters and preferences
-                  </SheetDescription>
+                  <SheetDescription>Adjust your search filters and preferences</SheetDescription>
                 </SheetHeader>
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex flex-col gap-1.5">

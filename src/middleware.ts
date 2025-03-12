@@ -2,24 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME, verifyApiKey, verifyToken } from "./lib/auth";
 
 // LiteLLM API routes that should use LiteLLM authentication
-const LITELLM_ROUTES = [
-  "/api/chat/completions",
-  "/api/completions",
-  "/api/models",
-];
+const LITELLM_ROUTES = ["/api/chat/completions", "/api/completions", "/api/models"];
 
 export async function middleware(request: NextRequest) {
   // Set CORS headers
   const response = NextResponse.next();
   response.headers.set("Access-Control-Allow-Origin", "*");
-  response.headers.set(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS",
-  );
-  response.headers.set(
-    "Access-Control-Allow-Headers",
-    "Content-Type, X-Prompt-Keeper-API-Key, Authorization",
-  );
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, X-Prompt-Keeper-API-Key, Authorization");
 
   // Handle preflight requests
   if (request.method === "OPTIONS") {
@@ -27,10 +17,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Skip authentication for login page and API
-  if (
-    request.nextUrl.pathname === "/login" ||
-    request.nextUrl.pathname === "/api/auth/login"
-  ) {
+  if (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/api/auth/login") {
     return response;
   }
 

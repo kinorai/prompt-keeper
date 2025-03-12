@@ -1,19 +1,8 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Calendar, Filter, SlidersHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -27,10 +16,7 @@ interface SearchFiltersProps {
   searchMode: string;
   onTimeRangeChange: (value: string) => void;
   onResultsSizeChange: (value: number) => void;
-  onFuzzyConfigChange: (config: {
-    fuzziness: string;
-    prefixLength: number;
-  }) => void;
+  onFuzzyConfigChange: (config: { fuzziness: string; prefixLength: number }) => void;
   alwaysExpanded?: boolean;
 }
 
@@ -103,9 +89,7 @@ export function SearchFilters({
                 step={1}
                 className="w-full"
               />
-              <span className="text-sm font-medium w-12 text-center">
-                {resultsSize}
-              </span>
+              <span className="text-sm font-medium w-12 text-center">{resultsSize}</span>
             </div>
           </div>
 
@@ -115,9 +99,7 @@ export function SearchFilters({
                 <Label className="text-sm font-medium">Fuzziness</Label>
                 <Select
                   value={fuzzyConfig.fuzziness}
-                  onValueChange={(value) =>
-                    onFuzzyConfigChange({ ...fuzzyConfig, fuzziness: value })
-                  }
+                  onValueChange={(value) => onFuzzyConfigChange({ ...fuzzyConfig, fuzziness: value })}
                 >
                   <SelectTrigger className="w-full h-9 rounded-lg bg-background">
                     <SelectValue />
@@ -216,9 +198,7 @@ export function SearchFilters({
                   step={1}
                   className="w-full"
                 />
-                <span className="text-sm font-medium w-12 text-center">
-                  {resultsSize}
-                </span>
+                <span className="text-sm font-medium w-12 text-center">{resultsSize}</span>
               </div>
             </div>
 
@@ -228,9 +208,7 @@ export function SearchFilters({
                   <Label className="text-sm font-medium">Fuzziness</Label>
                   <Select
                     value={fuzzyConfig.fuzziness}
-                    onValueChange={(value) =>
-                      onFuzzyConfigChange({ ...fuzzyConfig, fuzziness: value })
-                    }
+                    onValueChange={(value) => onFuzzyConfigChange({ ...fuzzyConfig, fuzziness: value })}
                   >
                     <SelectTrigger className="w-full h-9 sm:h-10 rounded-lg bg-background">
                       <SelectValue />

@@ -5,5 +5,4 @@
 # Ignore Markdown files
 *.md
 
-# Ignore JSON files
-*.json
+/chart
