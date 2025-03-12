@@ -3,12 +3,7 @@ import { Copy, Bot, User, Clock, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useEffect, useRef, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -50,10 +45,7 @@ export interface ConversationCardProps {
 }
 
 // Helper function to copy text to clipboard
-const copyToClipboard = (
-  text: string,
-  successMessage: string = "Copied to clipboard",
-) => {
+const copyToClipboard = (text: string, successMessage: string = "Copied to clipboard") => {
   navigator.clipboard
     .writeText(text)
     .then(() => {
@@ -104,16 +96,8 @@ const CopyButton = ({
         className,
       )}
     >
-      {isCopied ? (
-        <Check className="h-3.5 w-3.5" />
-      ) : (
-        <Copy className="h-3.5 w-3.5" />
-      )}
-      {showText && (
-        <span className="hidden sm:inline text-xs">
-          {isCopied ? "Copied" : "Copy"}
-        </span>
-      )}
+      {isCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {showText && <span className="hidden sm:inline text-xs">{isCopied ? "Copied" : "Copy"}</span>}
     </Button>
   );
 };
@@ -147,8 +131,7 @@ const MarkdownContent: React.FC<{
       // Create copy button
       const copyButton = document.createElement("button");
       copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
-      copyButton.className =
-        "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
+      copyButton.className = "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
       copyButton.title = "Copy code";
 
       // Add click event to copy code
@@ -156,13 +139,11 @@ const MarkdownContent: React.FC<{
         const code = codeBlock.textContent || "";
         navigator.clipboard.writeText(code).then(() => {
           copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>`;
-          copyButton.className =
-            "p-1 rounded-md bg-green-500/20 hover:bg-green-500/30 text-green-500";
+          copyButton.className = "p-1 rounded-md bg-green-500/20 hover:bg-green-500/30 text-green-500";
 
           setTimeout(() => {
             copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
-            copyButton.className =
-              "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
+            copyButton.className = "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
           }, 2000);
         });
       });
@@ -175,8 +156,7 @@ const MarkdownContent: React.FC<{
     });
 
     // Process inline code
-    const inlineCodes =
-      containerRef.current.querySelectorAll("code:not(pre code)");
+    const inlineCodes = containerRef.current.querySelectorAll("code:not(pre code)");
     inlineCodes.forEach((inlineCode) => {
       const codeElement = inlineCode as HTMLElement;
       codeElement.style.cursor = "pointer";
@@ -271,19 +251,12 @@ const ChatBubble: React.FC<{
 
   return (
     <div className={`flex ${alignmentClass} my-2`}>
-      <div
-        className={`relative max-w-[97%] rounded-lg p-3 ${bubbleBg} shadow-xs`}
-      >
+      <div className={`relative max-w-[97%] rounded-lg p-3 ${bubbleBg} shadow-xs`}>
         <div className="flex items-center mb-2">
           {icon}
-          <span className="ml-1 text-xs font-semibold">
-            {message.role.toUpperCase()}
-          </span>
+          <span className="ml-1 text-xs font-semibold">{message.role.toUpperCase()}</span>
         </div>
-        <HighlightedContent
-          content={message.content}
-          highlightedContent={highlightedContent}
-        />
+        <HighlightedContent content={message.content} highlightedContent={highlightedContent} />
         <div className="absolute top-2 right-2">
           <CopyButton
             text={message.content}
@@ -309,9 +282,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 
   // Generate full conversation text for copying
   const getFullConversationText = () => {
-    return messages
-      .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
-      .join("\n\n");
+    return messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n");
   };
 
   return (
@@ -319,10 +290,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-2 sm:px-6 pt-2 sm:pt-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
           <div className="flex items-center flex-wrap gap-1 sm:gap-2 mb-0.5 sm:mb-0">
-            <Badge
-              variant="outline"
-              className="font-medium text-xs sm:text-sm py-0.5"
-            >
+            <Badge variant="outline" className="font-medium text-xs sm:text-sm py-0.5">
               {model}
             </Badge>
             {usage?.total_tokens !== undefined && (
@@ -349,20 +317,14 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
               </Tooltip>
             </TooltipProvider>
             {score && (
-              <Badge
-                variant="outline"
-                className="bg-primary/10 font-medium text-xs sm:text-sm py-0.5"
-              >
+              <Badge variant="outline" className="bg-primary/10 font-medium text-xs sm:text-sm py-0.5">
                 Score: {score.toFixed(2)}
               </Badge>
             )}
           </div>
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
-          <CopyButton
-            text={getFullConversationText()}
-            successMessage="Conversation copied to clipboard"
-          />
+          <CopyButton text={getFullConversationText()} successMessage="Conversation copied to clipboard" />
         </div>
       </CardHeader>
       <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4 pb-3 sm:pb-6">

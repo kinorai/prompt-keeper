@@ -7,20 +7,14 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     if (!username || !password) {
-      return NextResponse.json(
-        { message: "Username and password are required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ message: "Username and password are required" }, { status: 400 });
     }
 
     // Verify credentials
     const authResult = await verifyCredentials(username, password);
 
     if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { message: authResult.message || "Authentication failed" },
-        { status: 401 },
-      );
+      return NextResponse.json({ message: authResult.message || "Authentication failed" }, { status: 401 });
     }
 
     // Create JWT token
@@ -43,9 +37,6 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json(
-      { message: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

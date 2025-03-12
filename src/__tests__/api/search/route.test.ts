@@ -58,9 +58,7 @@ describe("Search API Route", () => {
     };
 
     // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(
-      mockSearchResults,
-    );
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
     // Create a mock request with search parameters
     const req = new NextRequest("http://localhost/api/search", {
@@ -131,9 +129,7 @@ describe("Search API Route", () => {
     };
 
     // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(
-      mockSearchResults,
-    );
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
     // Create a mock request with fuzzy search parameters
     const req = new NextRequest("http://localhost/api/search", {
@@ -204,9 +200,7 @@ describe("Search API Route", () => {
     };
 
     // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(
-      mockSearchResults,
-    );
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
     // Create a mock request with regex search parameters
     const req = new NextRequest("http://localhost/api/search", {
@@ -267,9 +261,7 @@ describe("Search API Route", () => {
     };
 
     // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(
-      mockSearchResults,
-    );
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
     // Create a mock request with custom time range
     const req = new NextRequest("http://localhost/api/search", {
@@ -335,9 +327,7 @@ describe("Search API Route", () => {
     };
 
     // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(
-      mockSearchResults,
-    );
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
     // Create a mock request with no query
     const req = new NextRequest("http://localhost/api/search", {
@@ -392,9 +382,7 @@ describe("Search API Route", () => {
     };
 
     // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(
-      mockSearchResults,
-    );
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
     // Create a mock request with custom time range object
     const req = new NextRequest("http://localhost/api/search", {
@@ -460,9 +448,7 @@ describe("Search API Route", () => {
     };
 
     // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(
-      mockSearchResults,
-    );
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
     // Create a mock request with invalid time range
     const req = new NextRequest("http://localhost/api/search", {
@@ -516,9 +502,7 @@ describe("Search API Route", () => {
     };
 
     // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(
-      mockSearchResults,
-    );
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
     // Create a mock request with partial time range object
     const req = new NextRequest("http://localhost/api/search", {
@@ -555,9 +539,7 @@ describe("Search API Route", () => {
 
   it("should return empty results with error status when OpenSearch throws an error", async () => {
     // Setup the OpenSearch client mock to throw an error
-    (opensearchClient.search as jest.Mock).mockRejectedValueOnce(
-      new Error("OpenSearch error"),
-    );
+    (opensearchClient.search as jest.Mock).mockRejectedValueOnce(new Error("OpenSearch error"));
 
     // Create a mock request
     const req = new NextRequest("http://localhost/api/search", {
