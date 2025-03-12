@@ -151,9 +151,7 @@ function formatStreamToResponse(chunks: StreamChunk[]): FormattedResponse {
 }
 
 // Add this helper function to sanitize messages
-function sanitizeMessage(message: {
-  content: string | { type: string; text: string }[];
-}) {
+function sanitizeMessage(message: { content: string | { type: string; text: string }[] }) {
   // If message is a simple string content
   if (typeof message.content === "string") {
     return message;
@@ -173,23 +171,14 @@ function sanitizeMessage(message: {
   return message;
 }
 
-async function storeConversation(
-  requestMessages: Message[],
-  response: FormattedResponse,
-  latency: number,
-) {
+async function storeConversation(requestMessages: Message[], response: FormattedResponse, latency: number) {
   try {
     // Sanitize all messages before storing
     const sanitizedRequestMessages = requestMessages.map(sanitizeMessage);
-    const sanitizedResponseMessages = response.choices.map((choice) =>
-      sanitizeMessage(choice.message),
-    );
+    const sanitizedResponseMessages = response.choices.map((choice) => sanitizeMessage(choice.message));
 
     // Combine sanitized messages
-    const allMessages = [
-      ...sanitizedRequestMessages,
-      ...sanitizedResponseMessages,
-    ];
+    const allMessages = [...sanitizedRequestMessages, ...sanitizedResponseMessages];
 
     // Generate conversation hash based on the initial messages
     const conversationHash = generateConversationHash(requestMessages);
@@ -240,8 +229,7 @@ async function storeConversation(
           console.debug("[OpenSearch] Found existing conversation", {
             hash: conversationHash,
             id: existingId,
-            existingMessageCount:
-              existingConversation._source?.messages?.length || 0,
+            existingMessageCount: existingConversation._source?.messages?.length || 0,
             updatingToMessageCount: allMessages.length,
           });
 
@@ -266,16 +254,10 @@ async function storeConversation(
           });
           return;
         } else {
-          console.debug(
-            "[OpenSearch] No existing conversation found with hash",
-            conversationHash,
-          );
+          console.debug("[OpenSearch] No existing conversation found with hash", conversationHash);
         }
       } catch (searchError) {
-        console.error(
-          "[OpenSearch] Error searching for existing conversation:",
-          searchError,
-        );
+        console.error("[OpenSearch] Error searching for existing conversation:", searchError);
         // Continue to create a new document if search fails
       }
     }
@@ -341,10 +323,7 @@ export async function POST(req: NextRequest) {
         statusText: response.statusText,
         error: await response.text(),
       });
-      return NextResponse.json(
-        { error: await response.text() },
-        { status: response.status },
-      );
+      return NextResponse.json({ error: await response.text() }, { status: response.status });
     }
 
     const latency = Date.now() - startTime;
@@ -355,10 +334,7 @@ export async function POST(req: NextRequest) {
 
       const reader = response.body?.getReader();
       if (!reader) {
-        return NextResponse.json(
-          { error: "No reader available" },
-          { status: 500 },
-        );
+        return NextResponse.json({ error: "No reader available" }, { status: 500 });
       }
 
       (async () => {
@@ -372,11 +348,7 @@ export async function POST(req: NextRequest) {
             if (done) {
               // Stream is complete, now we can store the conversation
               const formattedResponse = formatStreamToResponse(chunks);
-              await storeConversation(
-                requestMessages,
-                formattedResponse,
-                latency,
-              );
+              await storeConversation(requestMessages, formattedResponse, latency);
               break;
             }
 
@@ -430,9 +402,6 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error("[API Error]", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

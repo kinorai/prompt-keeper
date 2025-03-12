@@ -111,18 +111,14 @@ describe("Auth Login API Route", () => {
 
     // Verify that the auth cookie was set
     const cookies = response.cookies.getAll();
-    const authCookie = cookies.find(
-      (cookie) => cookie.name === AUTH_COOKIE_NAME,
-    );
+    const authCookie = cookies.find((cookie) => cookie.name === AUTH_COOKIE_NAME);
     expect(authCookie).toBeDefined();
     expect(authCookie?.value).toBe("mock-jwt-token");
   });
 
   it("should return 500 if an error occurs during authentication", async () => {
     // Mock an error during authentication
-    (verifyCredentials as jest.Mock).mockRejectedValueOnce(
-      new Error("Authentication error"),
-    );
+    (verifyCredentials as jest.Mock).mockRejectedValueOnce(new Error("Authentication error"));
 
     // Create a mock request
     const req = new NextRequest("http://localhost/api/auth/login", {

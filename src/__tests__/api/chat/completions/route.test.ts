@@ -51,8 +51,7 @@ class MockTransformStream {
   }
 }
 
-global.TransformStream =
-  MockTransformStream as unknown as typeof TransformStream;
+global.TransformStream = MockTransformStream as unknown as typeof TransformStream;
 
 // Mock TextDecoder
 class MockTextDecoder {
@@ -232,9 +231,7 @@ describe("Chat Completions API Route", () => {
       start(controller) {
         // Send each chunk as a server-sent event
         mockStreamChunks.forEach((chunk) => {
-          controller.enqueue(
-            new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`),
-          );
+          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`));
         });
         controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
         controller.close();
@@ -337,9 +334,7 @@ describe("Chat Completions API Route", () => {
     };
 
     // Setup the fetch mock to throw an error
-    (global.fetch as jest.Mock).mockRejectedValueOnce(
-      new Error("Network error"),
-    );
+    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error("Network error"));
 
     // Create a mock request
     const req = new NextRequest("http://localhost/api/chat/completions", {
@@ -525,9 +520,7 @@ describe("Chat Completions API Route", () => {
     });
 
     // Setup the OpenSearch client mock to throw an error
-    (opensearchClient.index as jest.Mock).mockRejectedValueOnce(
-      new Error("OpenSearch error"),
-    );
+    (opensearchClient.index as jest.Mock).mockRejectedValueOnce(new Error("OpenSearch error"));
 
     // Create a mock request
     const req = new NextRequest("http://localhost/api/chat/completions", {
@@ -590,9 +583,7 @@ describe("Chat Completions API Route", () => {
     });
 
     // Setup the OpenSearch search mock to throw an error
-    (opensearchClient.search as jest.Mock).mockRejectedValueOnce(
-      new Error("Search error"),
-    );
+    (opensearchClient.search as jest.Mock).mockRejectedValueOnce(new Error("Search error"));
 
     // Setup the OpenSearch index mock to succeed
     (opensearchClient.index as jest.Mock).mockResolvedValueOnce({
@@ -628,9 +619,7 @@ describe("Chat Completions API Route", () => {
     const mockReadable = new ReadableStream({
       start(controller) {
         // Send invalid data that won't parse as JSON
-        controller.enqueue(
-          new TextEncoder().encode("data: {invalid-json}\n\n"),
-        );
+        controller.enqueue(new TextEncoder().encode("data: {invalid-json}\n\n"));
         controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -832,8 +821,7 @@ describe("Chat Completions API Route", () => {
             }),
             expect.objectContaining({
               role: "assistant",
-              content:
-                "This is a response to multiple text parts and an image.",
+              content: "This is a response to multiple text parts and an image.",
             }),
           ]),
         }),
@@ -908,9 +896,7 @@ describe("Chat Completions API Route", () => {
               const chunk = validChunks[index++];
               return Promise.resolve({
                 done: false,
-                value: new TextEncoder().encode(
-                  `data: ${JSON.stringify(chunk)}\n\n`,
-                ),
+                value: new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`),
               });
             } else {
               return Promise.resolve({
@@ -1102,10 +1088,7 @@ describe("Chat Completions API Route", () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verify that the error was logged
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[Stream Processing Error]",
-      expect.any(Error),
-    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith("[Stream Processing Error]", expect.any(Error));
 
     // Restore console.error
     consoleErrorSpy.mockRestore();

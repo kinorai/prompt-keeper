@@ -14,19 +14,13 @@ export async function GET(req: NextRequest) {
     });
 
     if (!response.ok) {
-      return NextResponse.json(
-        { error: await response.text() },
-        { status: response.status },
-      );
+      return NextResponse.json({ error: await response.text() }, { status: response.status });
     }
 
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error("[Models API Error]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

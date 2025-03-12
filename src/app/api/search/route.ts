@@ -3,14 +3,7 @@ import opensearchClient, { PROMPT_KEEPER_INDEX } from "@/lib/opensearch";
 
 export async function POST(req: NextRequest) {
   try {
-    const {
-      query,
-      searchMode = "keyword",
-      timeRange,
-      size = 20,
-      from = 0,
-      fuzzyConfig,
-    } = await req.json();
+    const { query, searchMode = "keyword", timeRange, size = 20, from = 0, fuzzyConfig } = await req.json();
 
     console.log("[Search API] Request:", {
       query,
@@ -105,11 +98,7 @@ export async function POST(req: NextRequest) {
           range.gte = "now-1y";
           break;
         default:
-          if (
-            typeof timeRange === "object" &&
-            timeRange.start &&
-            timeRange.end
-          ) {
+          if (typeof timeRange === "object" && timeRange.start && timeRange.end) {
             range.gte = timeRange.start;
             range.lte = timeRange.end;
           }
@@ -156,9 +145,7 @@ export async function POST(req: NextRequest) {
 
     console.log("[Search API] Response:", {
       total:
-        typeof response.body.hits.total === "number"
-          ? response.body.hits.total
-          : response.body.hits.total?.value || 0,
+        typeof response.body.hits.total === "number" ? response.body.hits.total : response.body.hits.total?.value || 0,
       hits: response.body.hits.hits.length,
       took: response.body.took,
       searchTime,
