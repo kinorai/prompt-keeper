@@ -98,9 +98,9 @@ export function SearchFilters({
               <Slider
                 value={[resultsSize]}
                 onValueChange={([value]) => onResultsSizeChange(value)}
-                min={10}
+                min={1}
                 max={100}
-                step={10}
+                step={1}
                 className="w-full"
               />
               <span className="text-sm font-medium w-12 text-center">
@@ -211,9 +211,9 @@ export function SearchFilters({
                 <Slider
                   value={[resultsSize]}
                   onValueChange={([value]) => onResultsSizeChange(value)}
-                  min={10}
+                  min={1}
                   max={100}
-                  step={10}
+                  step={1}
                   className="w-full"
                 />
                 <span className="text-sm font-medium w-12 text-center">

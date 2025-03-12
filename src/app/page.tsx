@@ -94,7 +94,7 @@ function HomeContent() {
   );
   const [timeRange, setTimeRange] = useState(searchParams.get("time") || "1y");
   const [resultsSize, setResultsSize] = useState(
-    parseInt(searchParams.get("size") || "20"),
+    parseInt(searchParams.get("size") || "10"),
   );
   const [fuzzyConfig, setFuzzyConfig] = useState({
     fuzziness: searchParams.get("fuzziness") || "AUTO",
@@ -282,6 +282,7 @@ function HomeContent() {
     return () => {
       debouncedSearch.cancel();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
   useEffect(() => {
