@@ -24,11 +24,14 @@ jobs:
       - name: Install dependencies
         run: npm ci --force
 
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Check formatting
+        run: npx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
 
       - name: Run linting
         run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
 
       - name: Run tests
         run: npm run test
