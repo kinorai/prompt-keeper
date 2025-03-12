@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, Suspense } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  Suspense,
+  useMemo,
+} from "react";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilters } from "@/components/search/search-filters";
 import { ConversationCard } from "@/components/search/conversation-card";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, Search, MessageSquare, Settings } from "lucide-react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useDebounce } from "../hooks/use-debounce";
+import debounce from "lodash.debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LogoutButton } from "@/components/logout-button";
@@ -93,8 +100,6 @@ function HomeContent() {
     fuzziness: searchParams.get("fuzziness") || "AUTO",
     prefixLength: parseInt(searchParams.get("prefix") || "2"),
   });
-
-  const debouncedQuery = useDebounce(query, 300);
 
   const [searchResults, setSearchResults] = useState<
     MappedSearchResult[] | null
@@ -259,19 +264,25 @@ function HomeContent() {
     updateSearchParams,
   ]);
 
+  // Create a memoized debounced function for search
+  const debouncedSearch = useMemo(() => {
+    return debounce((searchValue: string) => {
+      if (searchValue.length >= 3 || searchValue.length === 0) {
+        console.debug("Debounced search triggered with:", searchValue);
+        handleSearch();
+      }
+    }, 600);
+  }, [handleSearch]);
+
+  // Apply the debounced search when query changes
   useEffect(() => {
-    if (debouncedQuery.length >= 3 || debouncedQuery.length === 0) {
-      handleSearch();
-    }
-  }, [
-    debouncedQuery,
-    searchMode,
-    timeRange,
-    resultsSize,
-    fuzzyConfig.fuzziness,
-    fuzzyConfig.prefixLength,
-    handleSearch,
-  ]);
+    debouncedSearch(query);
+
+    // Cleanup the debounced function on unmount
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [query]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
