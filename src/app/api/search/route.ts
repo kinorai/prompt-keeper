@@ -119,7 +119,8 @@ export async function POST(req: NextRequest) {
       index: PROMPT_KEEPER_INDEX,
       body: {
         query: queryBody,
-        sort: [{ timestamp: "desc" }],
+        // Sort by score first when a query is provided, otherwise sort by timestamp
+        sort: query ? [{ _score: "desc" }, { timestamp: "desc" }] : [{ timestamp: "desc" }],
         size,
         from,
         _source: true,

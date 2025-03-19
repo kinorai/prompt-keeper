@@ -1,12 +1,14 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
 repos:
-# -   repo: local
-#     hooks:
-#       - id: commit-lint
-#         name: commit-lint
-#         entry: ./scripts/commit-lint.sh
-#         language: script
+-   repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v3.2.0
     hooks:
