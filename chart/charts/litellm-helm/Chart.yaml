@@ -1,5 +1,5 @@
 apiVersion: v2
-appVersion: v1.61.11-nightly
+appVersion: v1.63.7-nightly
 dependencies:
 - condition: db.deployStandalone
   name: postgresql
@@ -12,4 +12,4 @@ dependencies:
 description: Call all LLM APIs using the OpenAI format
 name: litellm-helm
 type: application
-version: 0.1.616
+version: 0.1.635

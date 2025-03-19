@@ -152,7 +152,7 @@ db:
 
   # Use the Postgres Helm chart to create a single node, stand alone postgres
   #  instance.  See the "postgresql" top level key for additional configuration.
-  deployStandalone: true
+  deployStandalone: false # WARN: let this be false, could not find a way to override it
 
 # Settings for Bitnami postgresql chart (if db.deployStandalone is true, ignored
 #  otherwise)
@@ -187,6 +187,7 @@ migrationJob:
   backoffLimit: 4 # Backoff limit for Job restarts
   disableSchemaUpdate: false # Skip schema migrations for specific environments. When True, the job will exit with code 0.
   annotations: {}
+  ttlSecondsAfterFinished: 120
 
 # Additional environment variables to be added to the deployment
 envVars: {
