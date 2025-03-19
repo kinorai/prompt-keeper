@@ -36,8 +36,8 @@ jobs:
 
       - name: Update README badges
         run: |
-          sed -i 's/\!\[CI\]\([^)]*\)/\!\[CI\]\(https:\/\/github.com\/${{ github.repository }}\/actions\/workflows\/ci.yml\/badge.svg\)/g' README.md
-          sed -i 's/\!\[Security\]\([^)]*\)/\!\[Security\]\(https:\/\/github.com\/${{ github.repository }}\/actions\/workflows\/security.yml\/badge.svg\)/g' README.md
+          sed -i 's|!\[CI\](.*)|![CI](https://github.com/${{ github.repository }}/actions/workflows/ci.yml/badge.svg)|g' README.md
+          sed -i 's|!\[Security\](.*)|![Security](https://github.com/${{ github.repository }}/actions/workflows/security.yml/badge.svg)|g' README.md
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4

@@ -47,7 +47,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add package.json
-          git commit -m "Bump version to ${{ steps.get_version.outputs.version }}"
+          git commit -m "chore: bump version to ${{ steps.get_version.outputs.version }}"
           git push
 
   build-and-push:

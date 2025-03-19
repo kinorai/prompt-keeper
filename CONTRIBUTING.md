@@ -46,7 +46,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ## Development Workflow
 
-1. Fork the repository
+1. [Fork the repository](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project)
 2. Clone your fork: `git clone https://github.com/your-username/prompt-keeper.git`
 3. Create a new branch: `git checkout -b my-feature-branch`
 4. Make your changes
@@ -69,7 +69,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 2. Install dependencies: `npm install`
 3. Copy `.env.example` to `.env` and configure as needed
 4. Start the development server: `npm run dev`
-5. Start OpenSearch using Docker Compose: `docker-compose up -d`
+5. Start OpenSearch, litellm and open-webui using Docker Compose: `docker-compose up -f docker-compose.local.yml -d`
 
 ## Testing
 
@@ -77,14 +77,33 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 - Run tests in watch mode: `npm run test:watch`
 - Generate test coverage: `npm run test:coverage`
 
-## Style Guides
+## Commit Message Guidelines
 
-### Git Commit Messages
+### Types
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc)
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+- `perf`: A code change that improves performance
+- `test`: Adding missing tests or correcting existing tests
+- `build`: Changes that affect the build system or external dependencies
+- `ci`: Changes to our CI configuration files and scripts
+- `chore`: Other changes that don't modify src or test files
+- `revert`: Reverts a previous commit
 
-- Use the present tense ("Add feature" not "Added feature")
-- Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
+#### Examples
+- `feat: add search functionality to navbar`
+- `fix: prevent search crash for empty query strings`
+- `docs(contributing): update contribution guidelines`
+- `refactor(auth): simplify authentication flow`
+
+Additional guidelines:
+- Use the present tense ("add feature" not "added feature")
+- Use the imperative mood ("move cursor to..." not "moves cursor to...")
 - Limit the first line to 72 characters or less
-- Reference issues and pull requests liberally after the first line
+- Reference issues and pull requests in the footer, e.g., `Fixes #123`
+- Use `BREAKING CHANGE:` in the footer to indicate breaking API changes
 
 ### TypeScript Style Guide
 

@@ -24,6 +24,16 @@ jobs:
       - name: Install dependencies
         run: npm ci --force
 
+      - name: Check commit messages
+        run: |
+          chmod u+x scripts/commit-lint.sh
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin ${{ github.base_ref }}
+            git log --format=%B origin/${{ github.base_ref }}..HEAD | while read line; do
+              echo "$line" | scripts/commit-lint.sh -
+            done
+          fi
+
       - name: Check formatting
         run: npx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
 

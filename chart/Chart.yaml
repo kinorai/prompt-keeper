@@ -16,11 +16,9 @@ dependencies:
 - name: litellm-helm
   alias: litellm
   condition: litellm.enabled
-  repository: oci://ghcr.io/berriai/litellm-helm
-  version: 0.1.616
+  version: 0.1.635
 - name: opensearch
   condition: opensearch.enabled
-  repository: https://charts.bitnami.com/bitnami
   version: 1.5.4
 description: A common powered chart template. This can be useful for small projects
   that don't have their own chart.
