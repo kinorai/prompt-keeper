@@ -14,6 +14,29 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Fetch all history for pull requests to properly check commits
+          fetch-depth: 0
+
+      # Ensure we have all the commits in the PR
+      - name: Fetch all history for PR
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --prune
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          echo "Commits in PR:"
+          git log --oneline ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+          git log --oneline
+
+      - name: Fetch all history for PR
+        if: github.event_name == 'pull_request'
+        run: |
+          git log --oneline
+
+      - name: Check commit messages
+        uses: webiny/action-conventional-commits@v1.3.0
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -23,16 +46,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --force
-
-      - name: Check commit messages
-        run: |
-          chmod u+x scripts/commit-lint.sh
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git fetch origin ${{ github.base_ref }}
-            git log --format=%B origin/${{ github.base_ref }}..HEAD | while read line; do
-              echo "$line" | scripts/commit-lint.sh -
-            done
-          fi
 
       - name: Check formatting
         run: npx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
