@@ -126,7 +126,6 @@ function HomeContent() {
   }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, searchParams, router, pathname]);
 
   const handleSearch = useCallback(async () => {
-    // if (query.length < 3 && query.length > 0) return;
     updateSearchParams();
 
     setLoading(true);
