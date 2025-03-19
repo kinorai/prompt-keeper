@@ -98,7 +98,6 @@ describe("Search API Route", () => {
           sort: expect.any(Array),
           size: 10,
           from: 0,
-          highlight: expect.any(Object),
         }),
       }),
     );

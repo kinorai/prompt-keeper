@@ -25,11 +25,6 @@ export interface Message {
   finish_reason?: string;
 }
 
-interface Highlight {
-  "messages.content"?: string[];
-  model?: string[];
-}
-
 export interface ConversationCardProps {
   id: string;
   created: string;
@@ -41,7 +36,6 @@ export interface ConversationCardProps {
   };
   messages: Message[];
   score?: number;
-  highlight?: Highlight;
 }
 
 // Helper function to copy text to clipboard
@@ -100,14 +94,6 @@ const CopyButton = ({
       {showText && <span className="hidden sm:inline text-xs">{isCopied ? "Copied" : "Copy"}</span>}
     </Button>
   );
-};
-
-// Component to render content with OpenSearch highlights
-const HighlightedContent: React.FC<{
-  content: string;
-  highlightedContent?: string;
-}> = ({ content, highlightedContent }) => {
-  return <MarkdownContent content={highlightedContent || content} />;
 };
 
 const MarkdownContent: React.FC<{
@@ -222,8 +208,7 @@ const MarkdownContent: React.FC<{
 const ChatBubble: React.FC<{
   message: Message;
   index: number;
-  highlightedContent?: string;
-}> = ({ message, highlightedContent }) => {
+}> = ({ message }) => {
   let alignmentClass = "";
   let bubbleBg = "";
   let icon = null;
@@ -256,7 +241,7 @@ const ChatBubble: React.FC<{
           {icon}
           <span className="ml-1 text-xs font-semibold">{message.role.toUpperCase()}</span>
         </div>
-        <HighlightedContent content={message.content} highlightedContent={highlightedContent} />
+        <MarkdownContent content={message.content} />
         <div className="absolute top-2 right-2">
           <CopyButton
             text={message.content}
@@ -270,14 +255,7 @@ const ChatBubble: React.FC<{
   );
 };
 
-export const ConversationCard: React.FC<ConversationCardProps> = ({
-  created,
-  model,
-  usage,
-  messages = [],
-  score,
-  highlight,
-}) => {
+export const ConversationCard: React.FC<ConversationCardProps> = ({ created, model, usage, messages = [], score }) => {
   const createdDate = new Date(created);
 
   // Generate full conversation text for copying
@@ -329,17 +307,9 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       </CardHeader>
       <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4 pb-3 sm:pb-6">
         <div className="space-y-2 sm:space-y-4">
-          {messages.map((message, index) => {
-            const highlightedContent = highlight?.["messages.content"]?.[index];
-            return (
-              <ChatBubble
-                key={`message-${index}`}
-                message={message}
-                index={index}
-                highlightedContent={highlightedContent}
-              />
-            );
-          })}
+          {messages.map((message, index) => (
+            <ChatBubble key={`message-${index}`} message={message} index={index} />
+          ))}
         </div>
       </CardContent>
     </Card>

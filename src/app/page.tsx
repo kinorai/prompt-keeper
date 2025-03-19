@@ -33,10 +33,6 @@ interface SearchHit {
       finish_reason?: string;
     }>;
   };
-  highlight?: {
-    "messages.content"?: string[];
-    model?: string[];
-  };
 }
 interface MappedSearchResult {
   id: string;
@@ -53,10 +49,6 @@ interface MappedSearchResult {
     finish_reason?: string;
   }>;
   score?: number;
-  highlight?: {
-    "messages.content"?: string[];
-    model?: string[];
-  };
 }
 
 // Create a separate component that uses useSearchParams
@@ -134,7 +126,7 @@ function HomeContent() {
   }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, searchParams, router, pathname]);
 
   const handleSearch = useCallback(async () => {
-    if (query.length < 3 && query.length > 0) return;
+    // if (query.length < 3 && query.length > 0) return;
     updateSearchParams();
 
     setLoading(true);
@@ -198,7 +190,6 @@ function HomeContent() {
             usage: hit._source?.usage || undefined,
             messages: hit._source?.messages || [],
             score: hit._score,
-            highlight: hit.highlight,
           }),
         ) || [];
 
@@ -225,10 +216,8 @@ function HomeContent() {
   // Create a memoized debounced function for search
   const debouncedSearch = useMemo(() => {
     return debounce((searchValue: string) => {
-      if (searchValue.length >= 3 || searchValue.length === 0) {
-        console.debug("Debounced search triggered with:", searchValue);
-        handleSearch();
-      }
+      console.debug("Debounced search triggered with:", searchValue);
+      handleSearch();
     }, 600);
   }, [handleSearch]);
 
