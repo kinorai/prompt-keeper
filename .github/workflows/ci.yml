@@ -21,12 +21,23 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      # First try to restore the cache
+      - name: Restore node_modules cache
+        id: cache-node-modules-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+      # Only run npm ci if cache doesn't exist
       - name: Install dependencies
+        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
         run: npm ci --force
 
-      # Cache the node_modules directory for other jobs
-      - name: Cache node_modules
-        uses: actions/cache@v3
+      # Save the cache if we had to install dependencies
+      - name: Save node_modules cache
+        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
@@ -50,7 +61,7 @@ jobs:
 
       # Restore cached node_modules
       - name: Restore node_modules
-        uses: actions/cache@v3
+        uses: actions/cache/restore@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
@@ -82,8 +93,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -93,7 +102,7 @@ jobs:
 
       # Restore cached node_modules
       - name: Restore node_modules
-        uses: actions/cache@v3
+        uses: actions/cache/restore@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
@@ -109,8 +118,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -120,7 +127,7 @@ jobs:
 
       # Restore cached node_modules
       - name: Restore node_modules
-        uses: actions/cache@v3
+        uses: actions/cache/restore@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
