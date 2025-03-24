@@ -7,36 +7,43 @@ on:
     branches: [main]
 
 jobs:
+  commitlint:
+    name: Lint Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install commitlint
+        run: |
+          npm install --no-save @commitlint/{cli,config-conventional}
+
+      - name: Validate current commit (last commit) with commitlint
+        if: github.event_name == 'push'
+        run: npx commitlint --last --verbose
+
+      - name: Validate PR commits with commitlint
+        if: github.event_name == 'pull_request'
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
+    needs: commitlint
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Fetch all history for pull requests to properly check commits
           fetch-depth: 0
-
-      # Ensure we have all the commits in the PR
-      - name: Fetch all history for PR
-        if: github.event_name == 'pull_request'
-        run: |
-          git fetch --prune
-          git fetch origin ${{ github.event.pull_request.base.ref }}
-          echo "Commits in PR:"
-          git log --oneline ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
-          git log --oneline
-
-      - name: Fetch all history for PR
-        if: github.event_name == 'pull_request'
-        run: |
-          git log --oneline
-
-      - name: Check commit messages
-        uses: webiny/action-conventional-commits@v1.3.0
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
