@@ -65,26 +65,33 @@ jobs:
     name: Docker Image Scan
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'  # Only run on main branch pushes and scheduled runs
+    needs: dependency-scan  # Ensure this runs after dependency scan
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          context: .
-          push: false
-          load: true
-          tags: prompt-keeper:test
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull Docker image
+        run: docker pull kinorai/prompt-keeper:latest
+
+      - name: Run Docker Scout
+        uses: docker/scout-action@v1
+        with:
+          command: quickview,cves,recommendations
+          image: kinorai/prompt-keeper:latest
+          dockerhub-user: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub-password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: prompt-keeper:test
+          image-ref: kinorai/prompt-keeper:latest
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
