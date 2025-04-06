@@ -1,35 +1,53 @@
-# PR labeler configuration
-# Add labels based on file changes
-
+# Add 'frontend' label to any changes in frontend files
 frontend:
-  - 'src/app/**/*'
-  - 'src/components/**/*'
-  - 'src/lib/hooks/**/*'
-  - 'src/styles/**/*'
+  - src/app/**/*
+  - '!src/app/api/**/*'
+  - src/components/**/*
+  - src/lib/hooks/**/*
+  - src/styles/**/*
+  - src/**/*.css
 
-api:
-  - 'src/app/api/**/*'
-  - 'src/lib/api/**/*'
+# Add 'backend' label to any change in backend files
+backend:
+  - src/api/**/*
+  - src/lib/**/*
+  - src/server/**/*
 
-opensearch:
-  - 'src/lib/opensearch/**/*'
-
+# Add 'documentation' label to any change in documentation
 documentation:
   - '**/*.md'
-  - 'docs/**/*'
+  - docs/**/*
 
+# Add 'dependencies' label to any change in package files
 dependencies:
-  - 'package.json'
-  - 'package-lock.json'
+  - package.json
+  - package-lock.json
+  - yarn.lock
+  - pnpm-lock.yaml
 
+# Add 'configuration' label to any change in config files
 configuration:
-  - '*.config.*'
-  - '.github/**/*'
-  - 'docker-compose.yml'
-  - 'Dockerfile'
+  - '*.js'
+  - '*.ts'
+  - '*.json'
+  - '*ignore'
+  - '*.yaml'
+  - '*.yml'
+  - .env*
+  - .github/**/*
 
-tests:
-  - '**/*.test.*'
-  - '**/*.spec.*'
-  - 'jest.config.js'
-  - 'jest.setup.ts'
+# Add 'test' label to any change in test files
+test:
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.spec.ts'
+  - '**/*.spec.tsx'
+  - src/__tests__/**/*
+  - jest.config.js
+  - jest.setup.ts
+
+# Add 'security' label to any change in security-related files
+security:
+  - '**/security/**/*'
+  - '**/auth/**/*'
+  - src/middleware.ts
