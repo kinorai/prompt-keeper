@@ -40,8 +40,16 @@ jobs:
     name: Triage Pull Requests
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Label PRs
         uses: actions/labeler@v4
         with:
