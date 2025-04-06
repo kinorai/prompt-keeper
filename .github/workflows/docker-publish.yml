@@ -3,61 +3,59 @@ name: Docker Build and Publish
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 env:
   REGISTRY_IMAGE: kinorai/prompt-keeper
 
 jobs:
-  # versioning:
-  #   name: Versioning
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
-  #   outputs:
-  #     new_version: ${{ steps.get_version.outputs.version }}
+  versioning:
+    name: Versioning
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.get_version.outputs.version }}
 
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  #     - name: Bump version and push tag
-  #       id: tag_version
-  #       uses: anothrNick/github-tag-action@1.71.0
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         WITH_V: false
-  #         DEFAULT_BUMP: minor
+      - name: Bump version and push tag
+        id: tag_version
+        uses: anothrNick/github-tag-action@1.71.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: false
+          DEFAULT_BUMP: minor
 
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-  #     - name: Update package.json version
-  #       run: |
-  #         npm version ${{ steps.tag_version.outputs.new_tag }} --no-git-tag-version
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.tag_version.outputs.new_tag }} --no-git-tag-version
 
-  #     - name: Get version from package.json
-  #       id: get_version
-  #       run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      - name: Get version from package.json
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-  #     - name: Commit package.json changes
-  #       run: |
-  #         git config --local user.email "action@github.com"
-  #         git config --local user.name "GitHub Action"
-  #         git add package.json
-  #         git commit -m "chore: bump version to ${{ steps.get_version.outputs.version }}"
-  #         git push
+      - name: Commit package.json changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json
+          git commit -m "chore: bump version to ${{ steps.get_version.outputs.version }}"
+          git push
 
   build:
     name: Build Platform-Specific Images
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    # needs: versioning
+    needs: versioning
     strategy:
       fail-fast: false
       matrix:
@@ -102,10 +100,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ env.REGISTRY_IMAGE }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
-          # build-args: |
-          #   BUILDKIT_INLINE_CACHE=1
-          # cache-from: type=gha,scope=buildkit-${{ matrix.platform }}
-          # cache-to: type=gha,mode=max,scope=buildkit-${{ matrix.platform }}
+          cache-from: type=gha,scope=buildkit-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=buildkit-${{ matrix.platform }}
 
       - name: Export digest
         run: |
@@ -150,7 +146,7 @@ jobs:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
             type=raw,value=latest
-            type=raw,value=0.8.0
+            type=raw,value=${{ needs.versioning.outputs.new_version }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
