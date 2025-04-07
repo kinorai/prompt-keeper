@@ -256,12 +256,20 @@ function HomeContent() {
   }, [searchResults]);
 
   return (
-    <div className="flex flex-col h-screen">
+    <div
+      className="flex flex-col h-screen"
+      style={
+        {
+          "--search-filters-height": "110px",
+          "--search-filters-height-mobile": "60px",
+        } as React.CSSProperties
+      }
+    >
       {/* Main content area with results */}
       <div ref={resultsContainerRef} className="flex-1 overflow-y-auto pb-16 sm:pb-0 main-content">
         <div className="container pb-4 sm:py-6">
           {/* Desktop search bar and filters */}
-          <div className="hidden sm:block sticky top-0 z-10 bg-background/80 backdrop-blur-xs pb-4">
+          <div className="hidden sm:block sticky top-0 z-20 bg-background/80 backdrop-blur-xs pb-2">
             <div className="space-y-3">
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
@@ -288,7 +296,7 @@ function HomeContent() {
           </div>
 
           {/* Search results */}
-          <div className="mt-2 sm:mt-4">
+          <div className="mt-0 sm:mt-2">
             {/* Search metadata - only visible on desktop */}
             {searchMetadata && (
               <div className="hidden sm:block text-sm text-muted-foreground mb-3 sm:mb-4">
@@ -332,8 +340,8 @@ function HomeContent() {
             {/* Results */}
             {!loading && searchResults && searchResults.length > 0 && (
               <div className="space-y-3 sm:space-y-6">
-                {searchResults.map((result) => (
-                  <ConversationCard key={result.id} {...result} />
+                {searchResults.map((result, index) => (
+                  <ConversationCard key={result.id} {...result} rank={index + 1} />
                 ))}
               </div>
             )}
