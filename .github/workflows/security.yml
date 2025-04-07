@@ -23,11 +23,29 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      # First try to restore the cache
+      - name: Restore node_modules cache
+        id: cache-node-modules-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+      # Only run npm ci if cache doesn't exist
       - name: Install dependencies
+        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
         run: npm ci --force
 
+      # Save the cache if we had to install dependencies
+      - name: Save node_modules cache
+        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
       - name: Run npm audit
-        run: npm audit --omit=dev
+        run: npm audit --omit=dev --audit-level=high
 
   # codeql-analysis:
   #   name: CodeQL Analysis
@@ -52,8 +70,26 @@ jobs:
   #         node-version: '20'
   #         cache: 'npm'
 
+  #     # First try to restore the cache
+  #     - name: Restore node_modules cache
+  #       id: cache-node-modules-restore
+  #       uses: actions/cache/restore@v4
+  #       with:
+  #         path: node_modules
+  #         key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+  #     # Only run npm ci if cache doesn't exist
   #     - name: Install dependencies
+  #       if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
   #       run: npm ci --force
+
+  #     # Save the cache if we had to install dependencies
+  #     - name: Save node_modules cache
+  #       if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
+  #       uses: actions/cache/save@v4
+  #       with:
+  #         path: node_modules
+  #         key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
 
   #     - name: Build application
   #       run: npm run build
