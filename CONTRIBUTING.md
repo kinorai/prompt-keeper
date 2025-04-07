@@ -43,6 +43,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
   4. Parent directory modules
   5. Same directory modules
 - Avoid platform-dependent code
+- Ensure all pre-commit checks pass before submitting
 
 ## Development Workflow
 
@@ -62,6 +63,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 - Node.js (v20 or later)
 - npm (v10 or later)
 - Docker and Docker Compose (for running OpenSearch locally)
+- pre-commit (for Git hook management)
 
 ### Installation
 
@@ -70,6 +72,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 3. Copy `.env.example` to `.env` and configure as needed
 4. Start the development server: `npm run dev`
 5. Start OpenSearch, litellm and open-webui using Docker Compose: `docker-compose up -f docker-compose.local.yml -d`
+6. Install pre-commit hooks: `pre-commit install`
 
 ## Testing
 
@@ -78,6 +81,14 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 - Generate test coverage: `npm run test:coverage`
 
 ## Commit Message Guidelines
+
+We follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification for our commit messages:
+
+- Structured format: `<type>[optional scope]: <description>`
+- Makes commit history readable and automatically generates changelogs
+- Communicates nature of changes to teammates and the public
+- Triggers build and publish processes
+- Makes it easier for people to contribute to the project
 
 ### Types
 - `feat`: A new feature
