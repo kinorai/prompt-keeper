@@ -36,6 +36,7 @@ export interface ConversationCardProps {
   };
   messages: Message[];
   score?: number;
+  rank?: number; // Add rank property
 }
 
 // Helper function to copy text to clipboard
@@ -255,19 +256,45 @@ const ChatBubble: React.FC<{
   );
 };
 
-export const ConversationCard: React.FC<ConversationCardProps> = ({ created, model, usage, messages = [], score }) => {
+export const ConversationCard: React.FC<ConversationCardProps> = ({
+  created,
+  model,
+  usage,
+  messages = [],
+  score,
+  rank,
+}) => {
   const createdDate = new Date(created);
+  const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
 
   // Generate full conversation text for copying
   const getFullConversationText = () => {
     return messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n");
   };
 
+  // Function to handle the header click, using the passed handler if available
+  const handleHeaderClick = () => {
+    if (cardRef.current) {
+      // Fallback to simple scrollIntoView if no handler is provided
+      cardRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: window.innerWidth >= 640 ? "center" : "start",
+      });
+    }
+  };
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-2 sm:px-6 pt-2 sm:pt-4">
+    <Card ref={cardRef} className="w-full relative">
+      <CardHeader
+        className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-2 sm:px-6 pt-2 sm:pt-4 sticky top-[-8px] sm:top-[calc(var(--search-filters-height,_120px)-24px)] z-[5] bg-background/95 backdrop-blur-sm border-b cursor-pointer rounded-t-lg"
+        onClick={handleHeaderClick}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
           <div className="flex items-center flex-wrap gap-1 sm:gap-2 mb-0.5 sm:mb-0">
+            {rank !== undefined && (
+              <Badge variant="secondary" className="font-medium text-xs sm:text-sm py-0.5">
+                #{rank}
+              </Badge>
+            )}
             <Badge variant="outline" className="font-medium text-xs sm:text-sm py-0.5">
               {model}
             </Badge>
