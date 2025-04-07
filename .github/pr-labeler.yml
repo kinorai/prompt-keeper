@@ -1,53 +1,53 @@
 # Add 'frontend' label to any changes in frontend files
 frontend:
-  - src/app/**/*
-  - '!src/app/api/**/*'
-  - src/components/**/*
-  - src/lib/hooks/**/*
-  - src/styles/**/*
-  - src/**/*.css
+- src/app/**/*
+- '!src/app/api/**/*'
+- src/components/**/*
+- src/lib/hooks/**/*
+- src/styles/**/*
+- src/**/*.css
 
 # Add 'backend' label to any change in backend files
 backend:
-  - src/api/**/*
-  - src/lib/**/*
-  - src/server/**/*
+- src/api/**/*
+- src/lib/**/*
+- src/server/**/*
 
 # Add 'documentation' label to any change in documentation
 documentation:
-  - '**/*.md'
-  - docs/**/*
+- '**/*.md'
+- docs/**/*
 
 # Add 'dependencies' label to any change in package files
 dependencies:
-  - package.json
-  - package-lock.json
-  - yarn.lock
-  - pnpm-lock.yaml
+- package.json
+- package-lock.json
+- yarn.lock
+- pnpm-lock.yaml
 
 # Add 'configuration' label to any change in config files
 configuration:
-  - '*.js'
-  - '*.ts'
-  - '*.json'
-  - '*ignore'
-  - '*.yaml'
-  - '*.yml'
-  - .env*
-  - .github/**/*
+- '*.js'
+- '*.ts'
+- '*.json'
+- '*ignore'
+- '*.yaml'
+- '*.yml'
+- .env*
+- .github/**/*
 
 # Add 'test' label to any change in test files
 test:
-  - '**/*.test.ts'
-  - '**/*.test.tsx'
-  - '**/*.spec.ts'
-  - '**/*.spec.tsx'
-  - src/__tests__/**/*
-  - jest.config.js
-  - jest.setup.ts
+- '**/*.test.ts'
+- '**/*.test.tsx'
+- '**/*.spec.ts'
+- '**/*.spec.tsx'
+- src/__tests__/**/*
+- jest.config.js
+- jest.setup.ts
 
 # Add 'security' label to any change in security-related files
 security:
-  - '**/security/**/*'
-  - '**/auth/**/*'
-  - src/middleware.ts
+- '**/security/**/*'
+- '**/auth/**/*'
+- src/middleware.ts

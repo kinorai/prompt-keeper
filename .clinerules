@@ -37,7 +37,10 @@ Prompt Keeper - Design Architecture Template (DAT)
    - Sections
      - search input and filters
        - the search bar should be above and take the full screen with search mode on the right, all other filters should be below the search bar
-       - with multiple mods (fuzzy, regex, keyword, ...)
+       - with multiple modes
+         - fuzzy | order by score
+         - regex | order by date desc
+         - keyword | order by date desc
        - search should start after 3 characters with an optional button search
        - filters
          - timerange 1h, 1day, 1month, 1y, all time, custom (date picker ?)
