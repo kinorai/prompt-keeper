@@ -6,8 +6,8 @@ import { NextRequest } from "next/server";
 // Secret key for JWT signing and verification
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
-// Token expiration time (24 hours)
-const EXPIRATION_TIME = "24h";
+// Token expiration time (60 days)
+const EXPIRATION_TIME = "60d";
 
 // Cookie name for storing the JWT token
 export const AUTH_COOKIE_NAME = "prompt-keeper-auth";
