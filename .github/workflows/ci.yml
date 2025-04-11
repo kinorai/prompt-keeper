@@ -32,7 +32,7 @@ jobs:
       # Only run npm ci if cache doesn't exist
       - name: Install dependencies
         if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
-        run: npm ci --force
+        run: npm ci --prefer-offline --no-audit
 
       # Save the cache if we had to install dependencies
       - name: Save node_modules cache
