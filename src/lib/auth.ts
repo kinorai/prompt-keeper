@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
 // Secret key for JWT signing and verification
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "prompt-keeper-default-secret-key");
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 // Token expiration time (24 hours)
 const EXPIRATION_TIME = "24h";
