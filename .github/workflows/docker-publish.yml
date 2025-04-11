@@ -118,6 +118,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+      - versioning
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
