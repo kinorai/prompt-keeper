@@ -11,25 +11,15 @@
 
 ## How to Install 🚀
 
-1. Download the docker-compose.yml file:
+1. Download the docker-compose.yml and .env:
    ```bash
    curl -O https://raw.githubusercontent.com/kinorai/prompt-keeper/main/docker-compose.yml
+   curl -o .env https://raw.githubusercontent.com/kinorai/prompt-keeper/main/.env.example
    ```
 
-2. Create the `.env` file with your preferred settings:
-   ```
-   # Authentication
-   AUTH_USERNAME=admin
-   AUTH_PASSWORD_HASH=$$6$$xyz$$WwFC0nTow5jwJwMYeOZItipYgZidye/O7Z2kxRP3cPttku.GHre0y/51bO2uJlRjQwLNRddSA5fuJG5X1F8Dd1 # "admin" generated with `openssl passwd -apr1`
-   PROMPT_KEEPER_API_KEY=your_api_key
-
-   # OpenSearch Configuration
-   OPENSEARCH_URL=http://opensearch:9200
-   OPENSEARCH_USERNAME=admin
-   OPENSEARCH_PASSWORD=admin
-
-   # LiteLLM Configuration
-   LITELLM_MASTER_KEY=your_litellm_key
+2. Generate a secure password hash for the admin user and add it to the .env file:
+   ```bash
+   htpasswd -bnBC 12 "" "your_password_here" | tr -d ':\n'
    ```
 
 3. Start the services:
@@ -41,8 +31,8 @@
 
 ### Available Docker Tags
 
-- `kinorai/prompt-keeper:latest` - Latest stable release
-- `kinorai/prompt-keeper:x.y.z` - Specific version (e.g., 0.1.0)
+- `kinorai/prompt-keeper:latest` - Latest release
+- `kinorai/prompt-keeper:x.y.z` - Specific version (see [releases page](https://github.com/kinorai/prompt-keeper/releases) for available versions)
 
 ## LiteLLM Integration 🔄
 
