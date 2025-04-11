@@ -68,7 +68,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 ### Installation
 
 1. Clone the repository
-2. Install dependencies: `npm install`
+2. Install dependencies: `npm ci`
 3. Copy `.env.example` to `.env` and configure as needed
 4. Start the development server: `npm run dev`
 5. Start OpenSearch, litellm and open-webui using Docker Compose: `docker-compose up -f docker-compose.local.yml -d`

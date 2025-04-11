@@ -28,7 +28,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: false
-          DEFAULT_BUMP: minor
+          DEFAULT_BUMP: patch
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
