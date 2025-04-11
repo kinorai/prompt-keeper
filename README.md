@@ -32,7 +32,7 @@
 ### Available Docker Tags
 
 - `kinorai/prompt-keeper:latest` - Latest release
-- `kinorai/prompt-keeper:x.y.z` - Specific version (see [releases page](https://github.com/kinorai/prompt-keeper/releases) for available versions)
+- `kinorai/prompt-keeper:vx.y.z` - Specific version (see [releases page](https://github.com/kinorai/prompt-keeper/releases) for available versions)
 
 ## LiteLLM Integration 🔄
 
