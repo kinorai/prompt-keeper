@@ -1,33 +1,19 @@
-# name: Release Management
+name: GitHub Release
 
-# on:
-#   push:
-#     tags:
-#       - v*
+on:
+  push:
+    tags:
+      - "v*.*.*"
 
-# permissions:
-#   contents: write
-#   pull-requests: write
-#   issues: write
-
-# jobs:
-#   release-please:
-#     name: Release Please
-#     runs-on: ubuntu-latest
-#     outputs:
-#       release_created: ${{ steps.release.outputs.release_created }}
-#       tag_name: ${{ steps.release.outputs.tag_name }}
-#       version: ${{ steps.release.outputs.version }}
-#       major: ${{ steps.release.outputs.major }}
-#       minor: ${{ steps.release.outputs.minor }}
-#       patch: ${{ steps.release.outputs.patch }}
-
-#     steps:
-#       - name: Run Release Please
-#         id: release
-#         uses: googleapis/release-please-action@v4
-#         with:
-#           token: ${{ secrets.GITHUB_TOKEN }}
-#           release-type: node
-
-# use https://github.com/marketplace/actions/gh-release
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          skip-on-empty: false
