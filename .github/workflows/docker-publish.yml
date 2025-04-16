@@ -3,8 +3,6 @@ name: Docker Build and Publish
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 env:
   REGISTRY_IMAGE: kinorai/prompt-keeper
@@ -16,7 +14,8 @@ jobs:
     permissions:
       contents: write
     outputs:
-      new_version: ${{ steps.tag_version.outputs.new_tag }}
+      skipped: ${{ steps.versioning.outputs.skipped }}
+      version: ${{ steps.versioning.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -24,31 +23,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Bump version and push tag
-        id: tag_version
-        uses: anothrNick/github-tag-action@1.71.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          DEFAULT_BUMP: patch
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Conventional Changelog Action
+        id: versioning
+        uses: TriPSs/conventional-changelog-action@v5
         with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Update package.json version
-        run: |
-          npm version ${{ steps.tag_version.outputs.new_tag }} --no-git-tag-version
-
-      - name: Commit package.json changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add package.json
-          git commit -m "chore: bump version to ${{ steps.tag_version.outputs.new_tag }}"
-          git push
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Build Platform-Specific Images
@@ -145,7 +124,7 @@ jobs:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
             type=raw,value=latest
-            type=raw,value=${{ needs.versioning.outputs.new_version }}
+            type=raw,value=${{ needs.versioning.outputs.version }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
