@@ -1,4 +1,8 @@
-# 0.1.0 (2025-04-16)
+## [0.1.1](https://github.com/kinorai/prompt-keeper/compare/v0.1.0...v0.1.1) (2025-04-17)
+
+
+
+# [0.1.0](https://github.com/kinorai/prompt-keeper/compare/801ab4b26dd3ec7078b204ffad79ad80d01433c9...v0.1.0) (2025-04-16)
 
 
 ### Bug Fixes
