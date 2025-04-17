@@ -16,4 +16,3 @@ jobs:
         with:
           generate_release_notes: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          skip-on-empty: false
