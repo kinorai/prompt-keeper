@@ -28,12 +28,12 @@ jobs:
         uses: TriPSs/conventional-changelog-action@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          skip-on-empty: false
 
   build:
     name: Build Platform-Specific Images
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     needs: versioning
+    if: needs.versioning.outputs.skipped != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -125,7 +125,7 @@ jobs:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
             type=raw,value=latest
-            type=raw,value=${{ needs.versioning.outputs.version }}
+            type=raw,value=v${{ needs.versioning.outputs.version }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
