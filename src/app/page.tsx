@@ -282,6 +282,7 @@ function HomeContent() {
                   />
                 </div>
                 <ThemeToggle />
+                <LogoutButton />
               </div>
               <SearchFilters
                 timeRange={timeRange}

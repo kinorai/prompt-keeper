@@ -42,7 +42,7 @@ describe("Auth Login API Route", () => {
 
   it("should return 401 if credentials are invalid", async () => {
     // Mock failed authentication
-    (verifyCredentials as jest.Mock).mockResolvedValueOnce({
+    (verifyCredentials as jest.Mock).mockReturnValueOnce({
       success: false,
       message: "Invalid username or password",
     });
@@ -77,11 +77,11 @@ describe("Auth Login API Route", () => {
   it("should return 200 and set auth cookie if credentials are valid", async () => {
     // Mock successful authentication
     const mockUser = { username: "testuser" };
-    (verifyCredentials as jest.Mock).mockResolvedValueOnce({
+    (verifyCredentials as jest.Mock).mockReturnValueOnce({
       success: true,
       user: mockUser,
     });
-    (createToken as jest.Mock).mockResolvedValueOnce("mock-jwt-token");
+    (createToken as jest.Mock).mockResolvedValueOnce("mock-jwt-token"); // createToken remains async
 
     // Create a mock request with valid credentials
     const req = new NextRequest("http://localhost/api/auth/login", {
@@ -118,7 +118,9 @@ describe("Auth Login API Route", () => {
 
   it("should return 500 if an error occurs during authentication", async () => {
     // Mock an error during authentication
-    (verifyCredentials as jest.Mock).mockRejectedValueOnce(new Error("Authentication error"));
+    (verifyCredentials as jest.Mock).mockImplementationOnce(() => {
+      throw new Error("Authentication error");
+    });
 
     // Create a mock request
     const req = new NextRequest("http://localhost/api/auth/login", {
