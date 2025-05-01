@@ -1,4 +1,4 @@
-import { compare } from "bcryptjs";
+import md5crypt from "apache-md5";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
@@ -24,12 +24,13 @@ export interface AuthResult {
   user?: User;
 }
 
-// Verify username and password against environment variables
-export async function verifyCredentials(username: string, password: string): Promise<AuthResult> {
+// Verify username and password against environment variables using APR1-MD5
+export function verifyCredentials(username: string, password: string): AuthResult {
   const envUsername = process.env.AUTH_USERNAME;
   const envPasswordHash = process.env.AUTH_PASSWORD_HASH;
 
   if (!envUsername || !envPasswordHash) {
+    console.error("Authentication environment variables (AUTH_USERNAME, AUTH_PASSWORD_HASH) not configured.");
     return {
       success: false,
       message: "Authentication is not configured",
@@ -43,26 +44,21 @@ export async function verifyCredentials(username: string, password: string): Pro
     };
   }
 
-  try {
-    const passwordMatches = await compare(password, envPasswordHash);
-    if (!passwordMatches) {
-      return {
-        success: false,
-        message: "Invalid username or password",
-      };
-    }
+  // Verify password using APR1-MD5
+  // The apache-md5 library expects the password first, then the full hash string (which includes the salt)
+  const passwordMatches = md5crypt(password, envPasswordHash) === envPasswordHash;
 
-    return {
-      success: true,
-      user: { username },
-    };
-  } catch (error) {
-    console.error("Error verifying credentials:", error);
+  if (!passwordMatches) {
     return {
       success: false,
-      message: "Authentication error",
+      message: "Invalid username or password",
     };
   }
+
+  return {
+    success: true,
+    user: { username },
+  };
 }
 
 // Create a JWT token for the authenticated user
