@@ -74,6 +74,40 @@ describe("Auth Login API Route", () => {
     expect(createToken).not.toHaveBeenCalled();
   });
 
+  it("should return 401 with default message if credentials are invalid and no message is provided", async () => {
+    // Mock failed authentication without a specific message
+    (verifyCredentials as jest.Mock).mockReturnValueOnce({
+      success: false,
+      // No message property
+    });
+
+    // Create a mock request
+    const req = new NextRequest("http://localhost/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        username: "nouser",
+        password: "nopass",
+      }),
+    });
+
+    // Call the API route handler
+    const response = await POST(req);
+
+    // Verify the response
+    expect(response).toBeInstanceOf(NextResponse);
+    expect(response.status).toBe(401);
+
+    // Parse the response JSON
+    const responseData = await response.json();
+    expect(responseData).toEqual({
+      message: "Authentication failed", // Default message
+    });
+
+    // Verify that verifyCredentials was called
+    expect(verifyCredentials).toHaveBeenCalledWith("nouser", "nopass");
+    expect(createToken).not.toHaveBeenCalled();
+  });
+
   it("should return 200 and set auth cookie if credentials are valid", async () => {
     // Mock successful authentication
     const mockUser = { username: "testuser" };
