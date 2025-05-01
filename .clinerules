@@ -272,3 +272,7 @@ Debug
 - Do not add any debug code or files, just use console.debug
 
 Follow Next.js docs for Data Fetching, Rendering, and Routing.
+
+IMPORTANT:
+- try to fix things at the cause, not the symptom.
+- when you delete code, check if dependencies are not needed anymore.

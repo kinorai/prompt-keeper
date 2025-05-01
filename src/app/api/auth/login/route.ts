@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify credentials
-    const authResult = await verifyCredentials(username, password);
+    const authResult = verifyCredentials(username, password);
 
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ message: authResult.message || "Authentication failed" }, { status: 401 });
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       path: "/",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24 * 60, // 60 days (2 months)
       sameSite: "strict",
     });
 
