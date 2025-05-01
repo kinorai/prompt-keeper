@@ -12,7 +12,7 @@ services:
       - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-admin}
       - LITELLM_URL=http://litellm:4000
       - AUTH_USERNAME=${AUTH_USERNAME:-admin}
-      - AUTH_PASSWORD_HASH=$$apr1$$susTdnQG$$5tpqNJpm0y231Vfl5zJjm/ # "admin" generated with `openssl passwd -apr1`
+      - AUTH_PASSWORD_HASH=${AUTH_PASSWORD_HASH} # Must be in .env
       - PROMPT_KEEPER_API_KEY=${PROMPT_KEEPER_API_KEY:-your_api_key}
     depends_on:
       - opensearch
@@ -24,7 +24,7 @@ services:
     image: opensearchproject/opensearch:2
     environment:
       - OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME:-admin}
-      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-admin}
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD:-admin}
       - discovery.type=single-node
       - plugins.security.disabled=true
       - bootstrap.memory_lock=true

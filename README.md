@@ -17,9 +17,12 @@
    curl -o .env https://raw.githubusercontent.com/kinorai/prompt-keeper/main/.env.example
    ```
 
-2. Generate a secure password hash for the admin user and add it to the .env file:
+2. Generate a secure, salted APR1-MD5 password hash for the admin user and add it to the `.env` file. For example:
    ```bash
-   htpasswd -bnBC 12 "" "your_password_here" | tr -d ':\n'
+   # Option 1: Automatically generate a strong random salt
+   SALT=$(openssl rand -hex 8)
+   # Generate APR1-MD5 hash with your salt
+   openssl passwd -apr1 -salt "$SALT" "your_password_here"
    ```
 
 3. Start the services:
@@ -51,9 +54,10 @@ Prompt Keeper uses three authentication methods:
 
 1.  **UI Authentication**: Username and password-based authentication for the web interface.
 
-    -   Set `AUTH_USERNAME` and `AUTH_PASSWORD_HASH` in your `.env` file.
-    -   Use the `openssl passwd` command to generate a secure password hash.
-    -   Example: `openssl passwd -apr1`
+    -   Set the following environment variables in your `.env` file:
+        -   `AUTH_USERNAME`: The desired username for the UI login.
+        -   `AUTH_PASSWORD_HASH`: The APR1-MD5 hash of the desired password. Generate this using the openssl command shown in the installation steps (e.g., `SALT=$(openssl rand -hex 8) && openssl passwd -apr1 -salt "$SALT" "your_password_here"`).
+        -   `JWT_SECRET`: A long, random, secret string used for signing session tokens.
 
 2.  **LiteLLM API Authentication**: For LLM API routes (`/api/chat/completions`, `/api/completions`, `/api/models`).
 
