@@ -1,3 +1,12 @@
+# [0.4.0](https://github.com/kinorai/prompt-keeper/compare/v0.3.0...v0.4.0) (2025-05-15)
+
+
+### Features
+
+* empty search returns latest conversations ([4fc7eaa](https://github.com/kinorai/prompt-keeper/commit/4fc7eaaf11b204b1546e7ebf035ac2ce5c369d91))
+
+
+
 # [0.3.0](https://github.com/kinorai/prompt-keeper/compare/v0.2.0...v0.3.0) (2025-05-15)
 
 
