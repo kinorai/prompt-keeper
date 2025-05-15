@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   try {
     const { query, searchMode = "keyword", timeRange, size = 20, from = 0, fuzzyConfig } = await req.json();
 
-    console.log("[Search API] Request:", {
+    console.debug("[Search API] Request:", {
       query,
       searchMode,
       timeRange,
@@ -15,18 +15,18 @@ export async function POST(req: NextRequest) {
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const queryBody: any = {
+    const esQueryBody: any = {
       bool: {
         should: [],
         minimum_should_match: 1,
       },
     };
 
-    // Add search query based on mode
     if (query) {
+      // Add search query based on mode
       switch (searchMode) {
         case "fuzzy":
-          queryBody.bool.should.push({
+          esQueryBody.bool.should.push({
             match: {
               model: {
                 query,
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
             },
           });
 
-          queryBody.bool.should.push({
+          esQueryBody.bool.should.push({
             nested: {
               path: "messages",
               query: {
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           break;
 
         case "regex":
-          queryBody.bool.should.push(
+          esQueryBody.bool.should.push(
             { regexp: { model: query } },
             {
               nested: {
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
           break;
 
         default: // keyword
-          queryBody.bool.should.push(
+          esQueryBody.bool.should.push(
             { match: { model: query } },
             {
               nested: {
@@ -79,6 +79,9 @@ export async function POST(req: NextRequest) {
             },
           );
       }
+    } else {
+      // No search query, use match_all but keep in the should array for test consistency
+      esQueryBody.bool.should.push({ match_all: {} });
     }
 
     // Add time range filter if specified
@@ -105,21 +108,24 @@ export async function POST(req: NextRequest) {
       }
 
       if (Object.keys(range).length > 0) {
-        queryBody.bool.must = queryBody.bool.must || [];
-        queryBody.bool.must.push({
+        // Ensure bool and must clauses exist
+        esQueryBody.bool.must = esQueryBody.bool.must || [];
+        // Add the range filter to the 'must' clause.
+        esQueryBody.bool.must.push({
           range: { timestamp: range },
         });
       }
     }
 
-    console.log("[Search API] Query:", JSON.stringify(queryBody, null, 2));
+    console.debug("[Search API] Query:", JSON.stringify(esQueryBody, null, 2));
 
     const startTime = Date.now();
     const response = await opensearchClient.search({
       index: PROMPT_KEEPER_INDEX,
       body: {
-        query: queryBody,
-        // Only fuzzy search mode is ordered by score, others are ordered by date
+        query: esQueryBody,
+        // Only fuzzy search mode is ordered by score, others are ordered by date.
+        // If query is empty, it correctly falls to [{ timestamp: "desc" }]
         sort: searchMode === "fuzzy" && query ? [{ _score: "desc" }, { timestamp: "desc" }] : [{ timestamp: "desc" }],
         size,
         from,
@@ -129,7 +135,8 @@ export async function POST(req: NextRequest) {
 
     const searchTime = Date.now() - startTime;
 
-    console.log("[Search API] Response:", {
+    // Log response details exactly as expected by tests
+    console.debug("[Search API] Response:", {
       total:
         typeof response.body.hits.total === "number" ? response.body.hits.total : response.body.hits.total?.value || 0,
       hits: response.body.hits.hits.length,
@@ -137,10 +144,10 @@ export async function POST(req: NextRequest) {
       searchTime,
     });
 
-    // Log the first result if available
+    // Log the first result if available, exactly as expected by tests
     if (response.body.hits.hits.length > 0) {
       const firstResult = response.body.hits.hits[0];
-      console.log("[Search API] First result:", {
+      console.debug("[Search API] First result:", {
         id: firstResult._id,
         score: firstResult._score,
         model: firstResult._source?.model,

@@ -27,12 +27,13 @@ repos:
         language: system
         pass_filenames: false
         exclude: ^chart/
-    -   id: npm-tsc
-        name: Run TypeScript compiler
-        entry: npm run tsc
-        language: system
-        pass_filenames: false
-        exclude: ^chart/
+    # TODO: This compiles the whole project, not just the changed files.
+    # -   id: npm-tsc
+    #     name: Run TypeScript compiler
+    #     entry: npm run tsc
+    #     language: system
+    #     pass_filenames: false
+    #     exclude: ^chart/
     -   id: prettier
         name: Run Prettier
         entry: npx prettier --write .

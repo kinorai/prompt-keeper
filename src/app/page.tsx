@@ -130,7 +130,7 @@ function HomeContent() {
 
     setLoading(true);
     try {
-      console.log("Sending search request with:", {
+      console.debug("Sending search request with:", {
         query,
         searchMode,
         timeRange,
@@ -155,7 +155,7 @@ function HomeContent() {
       const data = await response.json();
 
       // Debug: Log the search results structure
-      console.log("Search API response:", JSON.stringify(data, null, 2));
+      console.debug("Search API response:", JSON.stringify(data, null, 2));
 
       // Check if we have valid search results
       if (!data?.hits?.hits) {
@@ -168,14 +168,14 @@ function HomeContent() {
       // Debug: Log the first result if available
       if (data.hits.hits.length > 0) {
         const firstResult = data.hits.hits[0];
-        console.log("First result:", {
+        console.debug("First result:", {
           id: firstResult._id,
           source: firstResult._source,
         });
 
         // Check if the first result has messages
         if (firstResult._source?.messages) {
-          console.log("First result messages:", firstResult._source.messages);
+          console.debug("First result messages:", firstResult._source.messages);
         }
       }
 
@@ -192,7 +192,7 @@ function HomeContent() {
           }),
         ) || [];
 
-      console.log("Mapped results:", mappedResults);
+      console.debug("Mapped results:", mappedResults);
 
       // Safely handle the search results
       setSearchResults(mappedResults);
@@ -214,17 +214,37 @@ function HomeContent() {
 
   // Create a memoized debounced function for search
   const debouncedSearch = useMemo(() => {
-    return debounce((searchValue: string) => {
-      console.debug("Debounced search triggered with:", searchValue);
+    return debounce(() => {
+      console.debug("Debounced search triggered for query:", query);
       handleSearch();
     }, 600);
-  }, [handleSearch]);
+  }, [handleSearch, query]);
 
-  // Apply the debounced search when query changes
+  // Initial load search: Fetch latest entries if query is initially empty
   useEffect(() => {
-    debouncedSearch(query);
+    if (initialLoad) {
+      console.debug("[HomeContent] Initial load detected. Current query:", query);
+      // On initial load, if query is empty (or not from URL persisting a specific search),
+      // handleSearch will send an empty query, which the backend now treats as 'fetch latest'.
+      handleSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLoad]);
 
-    // Cleanup the debounced function on unmount
+  // Apply the debounced search when query changes, respecting 3-char minimum unless query is empty
+  useEffect(() => {
+    if (!initialLoad) {
+      // Only apply debounced search after initial load has completed
+      if (query.length === 0 || query.length >= 3) {
+        console.debug(`Query is now '${query}', scheduling debounced search.`);
+        debouncedSearch();
+      } else {
+        console.debug(`Query is '${query}' (1-2 chars), cancelling pending debounced search.`);
+        debouncedSearch.cancel();
+      }
+    }
+
+    // Cleanup the debounced function on unmount or when dependencies change
     return () => {
       debouncedSearch.cancel();
     };
@@ -251,7 +271,7 @@ function HomeContent() {
 
   useEffect(() => {
     if (searchResults && searchResults.length > 0) {
-      console.log("Rendering search results:", searchResults);
+      console.debug("Rendering search results:", searchResults);
     }
   }, [searchResults]);
 
