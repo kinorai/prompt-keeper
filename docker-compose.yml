@@ -8,23 +8,26 @@ services:
       - LOG_LEVEL=info
       - OPENSEARCH_URL=http://opensearch:9200
       - OPENSEARCH_INDEX=prompt-keeper
-      - OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME:-admin}
-      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-admin}
+      - OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME}
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
       - LITELLM_URL=http://litellm:4000
-      - AUTH_USERNAME=${AUTH_USERNAME:-admin}
-      - AUTH_PASSWORD_HASH=${AUTH_PASSWORD_HASH} # Must be in .env
-      - PROMPT_KEEPER_API_KEY=${PROMPT_KEEPER_API_KEY:-your_api_key}
+      - AUTH_USERNAME=${AUTH_USERNAME}
+      - AUTH_PASSWORD_HASH=${AUTH_PASSWORD_HASH}
+      - JWT_SECRET=${JWT_SECRET}
+      - PROMPT_KEEPER_API_KEY=${PROMPT_KEEPER_API_KEY}
     depends_on:
-      - opensearch
-      - litellm
+      opensearch:
+        condition: service_healthy
+      litellm:
+        condition: service_started
     networks:
       - prompt-keeper-net
 
   opensearch:
     image: opensearchproject/opensearch:2
     environment:
-      - OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME:-admin}
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD:-admin}
+      - OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME}
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD}
       - discovery.type=single-node
       - plugins.security.disabled=true
       - bootstrap.memory_lock=true
@@ -42,18 +45,25 @@ services:
       - "9200:9200"
     networks:
       - prompt-keeper-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health?local=true || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   litellm:
     image: ghcr.io/berriai/litellm:main-stable
     ports:
       - "4000:4000"
     environment:
-      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-your_master_key}
       - PORT=4000
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-your_openai_api_key}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-your_anthropic_api_key}
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-your_deepseek_api_key}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-your_gemini_api_key}
+    env_file:
+      - .env
+    command:
+      - "--config=/app/config.litellm.yaml"
+    volumes:
+      - ./config.litellm.yaml:/app/config.litellm.yaml
     networks:
       - prompt-keeper-net
 
