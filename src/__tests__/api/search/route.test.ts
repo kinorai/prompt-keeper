@@ -646,8 +646,8 @@ describe("Search API Route", () => {
     };
     (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
-    // Spy on console.log
-    const consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+    // Spy on console.debug
+    const consoleDebugSpy = jest.spyOn(console, "debug").mockImplementation();
 
     const req = new NextRequest("http://localhost/api/search", {
       method: "POST",
@@ -659,10 +659,10 @@ describe("Search API Route", () => {
     const responseData = await response.json();
     expect(responseData.hits.total).toBe(1); // Check if the number is passed correctly
 
-    // Verify console log uses the number directly
-    expect(consoleLogSpy).toHaveBeenCalledWith("[Search API] Response:", expect.objectContaining({ total: 1 }));
+    // Verify console debug uses the number directly
+    expect(consoleDebugSpy).toHaveBeenCalledWith("[Search API] Response:", expect.objectContaining({ total: 1 }));
 
-    consoleLogSpy.mockRestore();
+    consoleDebugSpy.mockRestore();
   });
 
   it("should handle OpenSearch hits missing _source", async () => {
@@ -678,8 +678,8 @@ describe("Search API Route", () => {
     };
     (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
-    // Spy on console.log
-    const consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+    // Spy on console.debug
+    const consoleDebugSpy = jest.spyOn(console, "debug").mockImplementation();
 
     const req = new NextRequest("http://localhost/api/search", {
       method: "POST",
@@ -691,13 +691,13 @@ describe("Search API Route", () => {
     const responseData = await response.json();
     expect(responseData.hits.hits[0]._source).toBeUndefined();
 
-    // Verify console log handles missing _source gracefully (should log undefined/0)
-    expect(consoleLogSpy).toHaveBeenCalledWith(
+    // Verify console debug handles missing _source gracefully (should log undefined/0)
+    expect(consoleDebugSpy).toHaveBeenCalledWith(
       "[Search API] First result:",
       expect.objectContaining({ id: "no-source-id", model: undefined, messageCount: 0 }),
     );
 
-    consoleLogSpy.mockRestore();
+    consoleDebugSpy.mockRestore();
   });
 
   it("should handle OpenSearch hits with _source but missing messages", async () => {
@@ -713,8 +713,8 @@ describe("Search API Route", () => {
     };
     (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
-    // Spy on console.log
-    const consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+    // Spy on console.debug
+    const consoleDebugSpy = jest.spyOn(console, "debug").mockImplementation();
 
     const req = new NextRequest("http://localhost/api/search", {
       method: "POST",
@@ -726,12 +726,12 @@ describe("Search API Route", () => {
     const responseData = await response.json();
     expect(responseData.hits.hits[0]._source.messages).toBeUndefined();
 
-    // Verify console log handles missing messages gracefully (should log 0)
-    expect(consoleLogSpy).toHaveBeenCalledWith(
+    // Verify console debug handles missing messages gracefully (should log 0)
+    expect(consoleDebugSpy).toHaveBeenCalledWith(
       "[Search API] First result:",
       expect.objectContaining({ id: "no-messages-id", model: "gpt-test", messageCount: 0 }),
     );
 
-    consoleLogSpy.mockRestore();
+    consoleDebugSpy.mockRestore();
   });
 });
