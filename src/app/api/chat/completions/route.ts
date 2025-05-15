@@ -4,8 +4,8 @@ import crypto from "crypto";
 
 // Constants
 const CONFIG = {
-  LITELLM_URL: process.env.LITELLM_URL || "http://localhost:4000",
-  REQUEST_TIMEOUT: 120000,
+  LITELLM_URL: process.env.LITELLM_URL,
+  REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT || 240000, // 4 minutes because LLM can take a while
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
   CORS_METHODS: process.env.CORS_METHODS || "GET, POST, OPTIONS",
   CORS_HEADERS: process.env.CORS_HEADERS || "*",
@@ -314,7 +314,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: forwardHeaders,
       body: requestBody,
-      signal: AbortSignal.timeout(CONFIG.REQUEST_TIMEOUT),
+      signal: AbortSignal.timeout(Number(CONFIG.REQUEST_TIMEOUT)),
     });
 
     if (!response.ok) {
