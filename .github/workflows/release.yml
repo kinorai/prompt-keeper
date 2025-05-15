@@ -3,10 +3,10 @@ name: GitHub Release
 on:
   push:
     tags:
-      - v*
+      - "v*.*.*"
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
