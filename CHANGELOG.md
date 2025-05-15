@@ -1,3 +1,13 @@
+# [0.3.0](https://github.com/kinorai/prompt-keeper/compare/v0.2.0...v0.3.0) (2025-05-15)
+
+
+### Features
+
+* docker compose with apr1 ([d47b821](https://github.com/kinorai/prompt-keeper/commit/d47b8218635e352c32e717e2c4c4e40585402b9d))
+* refacto auth with md5 ([3edfd0b](https://github.com/kinorai/prompt-keeper/commit/3edfd0b09197b1bf10f8200f0f21ce0f00ab35b1))
+
+
+
 # [0.2.0](https://github.com/kinorai/prompt-keeper/compare/v0.1.4...v0.2.0) (2025-04-18)
 
 
@@ -8,10 +18,6 @@
 
 
 ## [0.1.4](https://github.com/kinorai/prompt-keeper/compare/v0.1.3...v0.1.4) (2025-04-17)
-
-
-
-## [0.1.2](https://github.com/kinorai/prompt-keeper/compare/v0.1.1...v0.1.2) (2025-04-17)
 
 
 
