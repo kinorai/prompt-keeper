@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const CONFIG = {
-  LITELLM_URL: process.env.LITELLM_URL || "https://api.openai.com/",
+  LITELLM_URL: process.env.LITELLM_URL,
   REQUEST_TIMEOUT: 30000,
 };
 

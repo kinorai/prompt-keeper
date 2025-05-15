@@ -9,6 +9,8 @@ const client = new Client({
   ssl: {
     rejectUnauthorized: false,
   },
+  maxRetries: 3,
+  requestTimeout: 30000,
 });
 
 export const PROMPT_KEEPER_INDEX = "prompt-keeper";

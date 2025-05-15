@@ -15,14 +15,12 @@
    ```bash
    curl -O https://raw.githubusercontent.com/kinorai/prompt-keeper/main/docker-compose.yml
    curl -o .env https://raw.githubusercontent.com/kinorai/prompt-keeper/main/.env.example
+   curl -o config.litellm.yaml https://raw.githubusercontent.com/kinorai/prompt-keeper/main/files/config.example.litellm.yaml
    ```
 
 2. Generate a secure, salted APR1-MD5 password hash for the admin user and add it to the `.env` file. For example:
    ```bash
-   # Option 1: Automatically generate a strong random salt
-   SALT=$(openssl rand -hex 8)
-   # Generate APR1-MD5 hash with your salt
-   openssl passwd -apr1 -salt "$SALT" "your_password_here"
+   SALT=$(openssl rand -hex 8) openssl passwd -apr1 -salt "$SALT" "your_password_here" | sed 's/\$/\\$/g'
    ```
 
 3. Start the services:
@@ -48,6 +46,16 @@ Prompt Keeper uses [LiteLLM](https://docs.litellm.ai/docs/) as its LLM routing l
 
 All LLM requests through Prompt Keeper are routed via LiteLLM, allowing you to use any LLM provider supported by LiteLLM while maintaining a consistent interface and comprehensive conversation history.
 
+### LiteLLM Configuration File 🎛️
+
+Prompt Keeper uses a LiteLLM YAML config file — by default it looks for `config.litellm.yaml` in the project root. To customize:
+
+1. Edit `config.litellm.yaml`:
+   - **model_list**: array of provider entries:
+     - `model_name`: pattern matching LiteLLM API requests.
+     - `litellm_params`: settings passed to LiteLLM (e.g. `model`, `api_key`, `api_base`, `provider`, `mock_response`, etc.).
+   - **general_settings**: top-level settings (e.g., `store_model_in_db: false`).
+
 ## Authentication 🔒
 
 Prompt Keeper uses three authentication methods:
@@ -56,7 +64,7 @@ Prompt Keeper uses three authentication methods:
 
     -   Set the following environment variables in your `.env` file:
         -   `AUTH_USERNAME`: The desired username for the UI login.
-        -   `AUTH_PASSWORD_HASH`: The APR1-MD5 hash of the desired password. Generate this using the openssl command shown in the installation steps (e.g., `SALT=$(openssl rand -hex 8) && openssl passwd -apr1 -salt "$SALT" "your_password_here"`).
+        -   `AUTH_PASSWORD_HASH`: The APR1-MD5 hash of the desired password. Generate this using the openssl command shown in the installation steps (e.g., `SALT=$(openssl rand -hex 8) openssl passwd -apr1 -salt "$SALT" "your_password_here" | sed 's/\$/\\$/g'`).
         -   `JWT_SECRET`: A long, random, secret string used for signing session tokens.
 
 2.  **LiteLLM API Authentication**: For LLM API routes (`/api/chat/completions`, `/api/completions`, `/api/models`).

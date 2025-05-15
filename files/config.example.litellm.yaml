@@ -1,0 +1,108 @@
+model_list:
+    - model_name: "openai/*"
+      litellm_params:
+        model: openai/*
+        api_key: os.environ/OPENAI_API_KEY
+    - model_name: "anthropic/*"
+      litellm_params:
+        model: anthropic/*
+        api_key: os.environ/ANTHROPIC_API_KEY
+    - model_name: "deepseek/*"
+      litellm_params:
+        model: deepseek/*
+        api_key: os.environ/DEEPSEEK_API_KEY
+    - model_name: "gemini/*"
+      litellm_params:
+        model: gemini/*
+        api_key: os.environ/GEMINI_API_KEY
+    - model_name: openrouter/*
+      litellm_params:
+        api_base: https://openrouter.ai/api/v1
+        api_key: os.environ/OPENROUTER_API_KEY
+        model: openrouter/*
+    - model_name: fake-model
+      litellm_params:
+        model: openai/fake-model
+        provider: openai
+        mock_response: |
+          Here's a comprehensive response to help you with your implementation:
+
+          1. First, make sure to check your configuration thoroughly
+          2. Validate all input parameters and data types
+          3. Test the integration extensively with various test cases
+          4. Document any changes made in detail
+          5. Set up proper error handling
+          6. Implement logging for debugging
+          7. Add input validation checks
+          8. Create unit tests for core functionality
+          9. Set up monitoring and alerts
+          10. Plan for scalability considerations
+          11. `inline code` should be highlighted
+
+          Here's a sample implementation to get you started:
+
+          ```python
+          def validate_configuration(config: Dict[str, Any]) -> bool:
+              """Validate the provided configuration"""
+              print("Validating configuration parameters...")
+
+              required_fields = ['api_key', 'endpoint', 'model_version']
+              for field in required_fields:
+                  if field not in config:
+                      raise ValueError(f"Missing required field: {field}")
+
+              return True
+
+          def setup_logging():
+              """Configure logging for the application"""
+              logging.basicConfig(
+                  level=logging.INFO,
+                  format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+              )
+              return logging.getLogger(__name__)
+
+          def process_request(data: Dict[str, Any]) -> Dict[str, Any]:
+              """Process incoming requests with proper error handling"""
+              try:
+                  # Validate input
+                  if not isinstance(data, dict):
+                      raise TypeError("Input must be a dictionary")
+
+                  # Process the request
+                  result = perform_operation(data)
+
+                  return {"status": "success", "data": result}
+              except Exception as e:
+                  return {"status": "error", "message": str(e)}
+          ```
+
+          For proper monitoring, consider implementing these metrics:
+
+          1. Request latency
+          2. Error rates
+          3. System resource usage
+          4. API endpoint health
+          5. Database connection status
+
+          Additional considerations for production deployment:
+
+          1. Set up CI/CD pipelines
+          2. Implement automated testing
+          3. Configure proper security measures
+          4. Plan for disaster recovery
+          5. Document API endpoints
+
+          Remember to follow these best practices:
+
+          1. Use semantic versioning
+          2. Keep dependencies updated
+          3. Implement proper security measures
+          4. Follow coding standards
+          5. Review code regularly
+
+          Let me know if you need any clarification on these points or would like more specific examples for your use case!
+        api_key: sk-1234
+        api_base: https://exampleopenaiendpoint-production.up.railway.app/
+
+general_settings:
+  store_model_in_db: false
