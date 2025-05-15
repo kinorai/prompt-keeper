@@ -29,9 +29,9 @@ services:
         target: runtime
     image: ghcr.io/berriai/litellm:main-stable
     volumes:
-      - ./files/config.dev.litellm.yaml:/app/config.dev.litellm.yaml
+      - ./files/config.local.litellm.yaml:/app/config.local.litellm.yaml
     command:
-      - "--config=/app/config.dev.litellm.yaml"
+      - "--config=/app/config.local.litellm.yaml"
     ports:
       - "4000:4000"
     env_file:
@@ -47,7 +47,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      - "WEBUI_SECRET_KEY="
+      - "WEBUI_SECRET_KEY=secret"
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
