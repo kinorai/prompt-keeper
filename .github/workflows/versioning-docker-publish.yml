@@ -1,7 +1,9 @@
+#https://github.com/orgs/community/discussions/26724
 name: Docker Build and Publish
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches: [main]
 
 env:
@@ -16,11 +18,12 @@ jobs:
     outputs:
       skipped: ${{ steps.versioning.outputs.skipped }}
       version: ${{ steps.versioning.outputs.version }}
-
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     steps:
-      - name: Checkout code
+      - name: Checkout main branch with full history
         uses: actions/checkout@v4
         with:
+          ref: 'main'
           fetch-depth: 0
 
       - name: Conventional Changelog Action
@@ -28,12 +31,13 @@ jobs:
         uses: TriPSs/conventional-changelog-action@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          skip-ci: false
 
   build:
     name: Build Platform-Specific Images
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     needs: versioning
-    if: needs.versioning.outputs.skipped != 'true'
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' && needs.versioning.outputs.skipped != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -101,6 +105,7 @@ jobs:
     needs:
       - build
       - versioning
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' && needs.versioning.outputs.skipped != 'true'
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
