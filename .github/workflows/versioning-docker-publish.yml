@@ -15,8 +15,8 @@ jobs:
     permissions:
       contents: write
     outputs:
-      skipped: ${{ steps.versioning.outputs.skipped }}
-      version: ${{ steps.versioning.outputs.version }}
+      skipped: ${{ steps.changelog.outputs.skipped }}
+      version: ${{ steps.changelog.outputs.tag }}
 
     steps:
       - name: Checkout main branch with full history
@@ -26,10 +26,20 @@ jobs:
           fetch-depth: 0
 
       - name: Conventional Changelog Action
-        id: versioning
+        id: changelog
         uses: TriPSs/conventional-changelog-action@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        if: ${{ steps.changelog.outputs.skipped == 'false' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+        with:
+          tag_name: ${{ steps.changelog.outputs.tag }}
+          release_name: ${{ steps.changelog.outputs.tag }}
+          body: ${{ steps.changelog.outputs.clean_changelog }}
 
   build:
     name: Build Platform-Specific Images
