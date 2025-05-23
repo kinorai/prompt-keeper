@@ -1,3 +1,12 @@
+# [0.6.0](https://github.com/kinorai/prompt-keeper/compare/v0.5.0...v0.6.0) (2025-05-23)
+
+
+### Features
+
+* use create-release action ([a05b446](https://github.com/kinorai/prompt-keeper/commit/a05b4469bc3a8fc26ab8dc191829c67bb05b7ae2))
+
+
+
 # [0.5.0](https://github.com/kinorai/prompt-keeper/compare/v0.4.0...v0.5.0) (2025-05-23)
 
 
