@@ -137,7 +137,7 @@ jobs:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
             type=raw,value=latest
-            type=raw,value=v${{ needs.versioning.outputs.version }}
+            type=raw,value=${{ needs.versioning.outputs.version }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
