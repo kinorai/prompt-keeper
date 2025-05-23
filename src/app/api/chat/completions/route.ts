@@ -5,7 +5,7 @@ import crypto from "crypto";
 // Constants
 const CONFIG = {
   LITELLM_URL: process.env.LITELLM_URL,
-  REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT || 240000, // 4 minutes because LLM can take a while
+  REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT || 300000, // 5 minutes because LLM can take a while
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
   CORS_METHODS: process.env.CORS_METHODS || "GET, POST, OPTIONS",
   CORS_HEADERS: process.env.CORS_HEADERS || "*",
