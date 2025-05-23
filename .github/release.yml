@@ -2,8 +2,6 @@ changelog:
   exclude:
     labels:
       - "ignore-for-release"
-    authors:
-      - "octocat" # You might want to change or remove this
   categories:
     - title: "Breaking Changes 🛠"
       labels:
