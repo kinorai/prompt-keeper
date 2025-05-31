@@ -278,12 +278,12 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       // Fallback to simple scrollIntoView if no handler is provided
       cardRef.current.scrollIntoView({
         behavior: "smooth",
-        block: window.innerWidth >= 640 ? "center" : "start",
+        block: "start",
       });
     }
   };
   return (
-    <Card ref={cardRef} className="w-full relative">
+    <Card ref={cardRef} className="w-full relative conversation-card">
       <CardHeader
         className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-2 sm:px-6 pt-2 sm:pt-4 sticky top-[-8px] sm:top-[calc(var(--search-filters-height,_120px)-24px)] z-[5] bg-background/95 backdrop-blur-sm border-b cursor-pointer rounded-t-lg"
         onClick={handleHeaderClick}
