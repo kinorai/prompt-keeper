@@ -7,7 +7,7 @@ const LITELLM_ROUTES = ["/api/chat/completions", "/api/completions", "/api/model
 export async function middleware(request: NextRequest) {
   // Set CORS headers
   const response = NextResponse.next();
-  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Origin", "https://prompt-keeper.valiere.uk, https://pk.valiere.uk");
   response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type, X-Prompt-Keeper-API-Key, Authorization");
 

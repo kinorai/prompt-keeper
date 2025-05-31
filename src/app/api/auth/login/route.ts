@@ -6,9 +6,24 @@ import {
   createRefreshToken,
   verifyCredentials,
 } from "@/lib/auth";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  interval: 60 * 1000, // 1 minute
+  allowedRequests: 5, // 5 requests per minute
+});
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
+    console.debug("ip: ", ip);
+    console.debug("request: ", request.headers);
+    const { isRateLimited } = limiter.check(ip);
+
+    if (isRateLimited) {
+      return NextResponse.json({ message: "Too many requests" }, { status: 429 });
+    }
+
     const { username, password } = await request.json();
 
     // Validate input
