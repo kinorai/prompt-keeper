@@ -86,8 +86,8 @@ Prompt Keeper - Design Architecture Template (DAT)
 
 • Backend & Proxy:
 
-- Next.js 15 API routes acting as middleware to forward API calls to LiteLLM.
-- LiteLLM v1.60.8 to handle LLM processing and ensure OpenAI compatibility.
+- Next.js API routes acting as middleware to forward API calls to LiteLLM.
+- LiteLLM to handle LLM processing and ensure OpenAI compatibility.
 
 • Data Storage & Search:
 

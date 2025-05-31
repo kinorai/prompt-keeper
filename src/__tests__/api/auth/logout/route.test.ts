@@ -1,14 +1,15 @@
 import { POST } from "@/app/api/auth/logout/route";
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from "@/lib/auth";
 
 // Mock the auth library
 jest.mock("@/lib/auth", () => ({
   AUTH_COOKIE_NAME: "prompt-keeper-auth",
+  REFRESH_TOKEN_COOKIE_NAME: "prompt-keeper-refresh-token",
 }));
 
 describe("Auth Logout API Route", () => {
-  it("should return 200 and delete the auth cookie", async () => {
+  it("should return 200 and delete auth cookies", async () => {
     // Call the API route handler
     const response = await POST();
 
@@ -22,23 +23,23 @@ describe("Auth Logout API Route", () => {
       success: true,
     });
 
-    // Verify that the auth cookie was deleted
+    // Verify that cookies were deleted
     const cookies = response.cookies.getAll();
+
+    // Check auth cookie
     const authCookie = cookies.find((cookie) => cookie.name === AUTH_COOKIE_NAME);
+    expect(authCookie?.value).toBe("");
 
-    // In Next.js, when a cookie is deleted, it's still in the list but with an empty value and expired
-    if (authCookie) {
-      // Check if the cookie has been marked for deletion
-      // The cookie should have an empty value
-      expect(authCookie.value).toBe("");
+    // Check refresh token cookie
+    const refreshCookie = cookies.find((cookie) => cookie.name === REFRESH_TOKEN_COOKIE_NAME);
+    expect(refreshCookie?.value).toBe("");
 
-      // And if expires is a Date, it should be in the past
-      if (authCookie.expires instanceof Date) {
-        expect(authCookie.expires.getTime()).toBeLessThanOrEqual(Date.now());
-      }
-    } else {
-      // If the cookie isn't in the list at all, that's also acceptable
-      expect(true).toBe(true);
+    // Verify expiration if present
+    if (authCookie?.expires instanceof Date) {
+      expect(authCookie.expires.getTime()).toBeLessThanOrEqual(Date.now());
+    }
+    if (refreshCookie?.expires instanceof Date) {
+      expect(refreshCookie.expires.getTime()).toBeLessThanOrEqual(Date.now());
     }
   });
 });

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, createToken, verifyCredentials } from "@/lib/auth";
+import {
+  AUTH_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_NAME,
+  createToken,
+  createRefreshToken,
+  verifyCredentials,
+} from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,26 +17,38 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify credentials
-    const authResult = verifyCredentials(username, password);
+    const authResult = await verifyCredentials(username, password);
 
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ message: authResult.message || "Authentication failed" }, { status: 401 });
     }
 
-    // Create JWT token
-    const token = await createToken(authResult.user);
+    // Create tokens
+    const accessToken = await createToken(authResult.user);
+    const refreshToken = await createRefreshToken(authResult.user);
 
     // Create response
     const response = NextResponse.json({ success: true });
 
-    // Set cookie
+    // Set access token cookie
     response.cookies.set({
       name: AUTH_COOKIE_NAME,
-      value: token,
+      value: accessToken,
       httpOnly: true,
       path: "/",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 60, // 60 days (2 months)
+      maxAge: 60 * 15, // 15 minutes
+      sameSite: "strict",
+    });
+
+    // Set refresh token cookie
+    response.cookies.set({
+      name: REFRESH_TOKEN_COOKIE_NAME,
+      value: refreshToken,
+      httpOnly: true,
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
       sameSite: "strict",
     });
 

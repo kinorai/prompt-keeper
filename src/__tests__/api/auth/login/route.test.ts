@@ -1,11 +1,12 @@
 import { POST } from "@/app/api/auth/login/route";
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, createToken, verifyCredentials } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, createToken, createRefreshToken, verifyCredentials } from "@/lib/auth";
 
 // Mock the auth functions
 jest.mock("@/lib/auth", () => ({
   AUTH_COOKIE_NAME: "prompt-keeper-auth",
   createToken: jest.fn(),
+  createRefreshToken: jest.fn(),
   verifyCredentials: jest.fn(),
 }));
 
@@ -115,7 +116,8 @@ describe("Auth Login API Route", () => {
       success: true,
       user: mockUser,
     });
-    (createToken as jest.Mock).mockResolvedValueOnce("mock-jwt-token"); // createToken remains async
+    (createToken as jest.Mock).mockResolvedValueOnce("mock-jwt-token");
+    (createRefreshToken as jest.Mock).mockResolvedValueOnce("mock-refresh-token");
 
     // Create a mock request with valid credentials
     const req = new NextRequest("http://localhost/api/auth/login", {
@@ -142,6 +144,7 @@ describe("Auth Login API Route", () => {
     // Verify that auth functions were called with the correct parameters
     expect(verifyCredentials).toHaveBeenCalledWith("testuser", "correctpass");
     expect(createToken).toHaveBeenCalledWith(mockUser);
+    expect(createRefreshToken).toHaveBeenCalledWith(mockUser);
 
     // Verify that the auth cookie was set
     const cookies = response.cookies.getAll();

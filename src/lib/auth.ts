@@ -3,14 +3,17 @@ import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
-// Secret key for JWT signing and verification
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+// Secret keys for JWT signing and verification
+const ACCESS_TOKEN_SECRET = new TextEncoder().encode(process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET);
+const REFRESH_TOKEN_SECRET = new TextEncoder().encode(process.env.REFRESH_TOKEN_SECRET);
 
-// Token expiration time (60 days)
-const EXPIRATION_TIME = "60d";
+// Token expiration times
+const ACCESS_TOKEN_EXPIRATION = "15m"; // 15 minutes
+const REFRESH_TOKEN_EXPIRATION = "7d"; // 7 days
 
-// Cookie name for storing the JWT token
-export const AUTH_COOKIE_NAME = "prompt-keeper-auth";
+// Cookie names
+export const AUTH_COOKIE_NAME = "prompt-keeper-access-token";
+export const REFRESH_TOKEN_COOKIE_NAME = "prompt-keeper-refresh-token";
 
 // Interface for user data
 export interface User {
@@ -45,7 +48,6 @@ export function verifyCredentials(username: string, password: string): AuthResul
   }
 
   // Verify password using APR1-MD5
-  // The apache-md5 library expects the password first, then the full hash string (which includes the salt)
   const passwordMatches = md5crypt(password, envPasswordHash) === envPasswordHash;
 
   if (!passwordMatches) {
@@ -61,13 +63,22 @@ export function verifyCredentials(username: string, password: string): AuthResul
   };
 }
 
-// Create a JWT token for the authenticated user
+// Create an access token for the authenticated user
 export async function createToken(user: User): Promise<string> {
   return new SignJWT({ username: user.username })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(EXPIRATION_TIME)
-    .sign(JWT_SECRET);
+    .setExpirationTime(ACCESS_TOKEN_EXPIRATION)
+    .sign(ACCESS_TOKEN_SECRET);
+}
+
+// Create a refresh token for the authenticated user
+export async function createRefreshToken(user: User): Promise<string> {
+  return new SignJWT({ username: user.username })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(REFRESH_TOKEN_EXPIRATION)
+    .sign(REFRESH_TOKEN_SECRET);
 }
 
 // Verify API key from request header
@@ -82,13 +93,24 @@ export function verifyApiKey(request: NextRequest): boolean {
   return apiKey === envApiKey;
 }
 
-// Verify JWT token from cookies
+// Verify access token from cookies
 export async function verifyToken(token: string): Promise<User | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, ACCESS_TOKEN_SECRET);
     return { username: payload.username as string };
   } catch (error) {
     console.error("Error verifying token:", error);
+    return null;
+  }
+}
+
+// Verify refresh token
+export async function verifyRefreshToken(token: string): Promise<User | null> {
+  try {
+    const { payload } = await jwtVerify(token, REFRESH_TOKEN_SECRET);
+    return { username: payload.username as string };
+  } catch (error) {
+    console.error("Error verifying refresh token:", error);
     return null;
   }
 }
