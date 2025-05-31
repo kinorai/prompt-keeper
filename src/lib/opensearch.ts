@@ -7,7 +7,7 @@ const client = new Client({
     password: process.env.OPENSEARCH_PASSWORD || "",
   },
   ssl: {
-    rejectUnauthorized: false,
+    rejectUnauthorized: process.env.NODE_ENV === "production",
   },
   maxRetries: 3,
   requestTimeout: 30000,
