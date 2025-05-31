@@ -2,38 +2,36 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   AUTH_COOKIE_NAME,
   REFRESH_TOKEN_COOKIE_NAME,
+  verifyRefreshToken,
   createToken,
   createRefreshToken,
-  verifyCredentials,
 } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_NAME)?.value;
 
-    // Validate input
-    if (!username || !password) {
-      return NextResponse.json({ message: "Username and password are required" }, { status: 400 });
+    if (!refreshToken) {
+      return NextResponse.json({ message: "Refresh token is missing" }, { status: 401 });
     }
 
-    // Verify credentials
-    const authResult = await verifyCredentials(username, password);
-
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json({ message: authResult.message || "Authentication failed" }, { status: 401 });
+    // Verify refresh token
+    const user = await verifyRefreshToken(refreshToken);
+    if (!user) {
+      return NextResponse.json({ message: "Invalid or expired refresh token" }, { status: 401 });
     }
 
-    // Create tokens
-    const accessToken = await createToken(authResult.user);
-    const refreshToken = await createRefreshToken(authResult.user);
+    // Create new tokens
+    const newAccessToken = await createToken(user);
+    const newRefreshToken = await createRefreshToken(user);
 
     // Create response
     const response = NextResponse.json({ success: true });
 
-    // Set access token cookie
+    // Set new access token cookie
     response.cookies.set({
       name: AUTH_COOKIE_NAME,
-      value: accessToken,
+      value: newAccessToken,
       httpOnly: true,
       path: "/",
       secure: process.env.NODE_ENV === "production",
@@ -41,10 +39,10 @@ export async function POST(request: NextRequest) {
       sameSite: "strict",
     });
 
-    // Set refresh token cookie
+    // Set new refresh token cookie
     response.cookies.set({
       name: REFRESH_TOKEN_COOKIE_NAME,
-      value: refreshToken,
+      value: newRefreshToken,
       httpOnly: true,
       path: "/",
       secure: process.env.NODE_ENV === "production",
@@ -54,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Token refresh error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
