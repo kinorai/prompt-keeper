@@ -272,6 +272,11 @@
 
 /* Custom scrollbar */
 @media (min-width: 640px) {
+  /* Conversation card scroll behavior - desktop only */
+  .conversation-card {
+    scroll-margin-top: 102px;
+  }
+
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
