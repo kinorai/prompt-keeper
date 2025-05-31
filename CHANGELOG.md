@@ -1,4 +1,13 @@
-# 0.1.0 (2025-05-23)
+# [0.2.0](https://github.com/kinorai/prompt-keeper/compare/v0.1.0...v0.2.0) (2025-05-31)
+
+
+### Features
+
+* implement access and refresh token authentication with JWT support ([43bdac3](https://github.com/kinorai/prompt-keeper/commit/43bdac329317dbc0bceaedc9a0a07a9f36e75815))
+
+
+
+# [0.1.0](https://github.com/kinorai/prompt-keeper/compare/801ab4b26dd3ec7078b204ffad79ad80d01433c9...v0.1.0) (2025-05-23)
 
 
 ### Bug Fixes
