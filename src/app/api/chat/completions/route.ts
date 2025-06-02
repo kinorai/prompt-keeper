@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import opensearchClient, { PROMPT_KEEPER_INDEX } from "@/lib/opensearch";
 import crypto from "crypto";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("api:chat/completions");
 
 // Constants
 const CONFIG = {
   LITELLM_URL: process.env.LITELLM_URL,
-  REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT || 300000, // 5 minutes because LLM can take a while
+  REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT || 480000, // 8 minutes because LLM can take a while
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
   CORS_METHODS: process.env.CORS_METHODS || "GET, POST, OPTIONS",
   CORS_HEADERS: process.env.CORS_HEADERS || "*",
@@ -183,7 +186,7 @@ async function storeConversation(requestMessages: Message[], response: Formatted
     // Generate conversation hash based on the initial messages
     const conversationHash = generateConversationHash(requestMessages);
 
-    console.debug("[OpenSearch] Processing conversation", {
+    log.debug("[OpenSearch] Processing conversation", {
       messageCount: requestMessages.length,
       conversationHash,
       firstMessageRole: requestMessages[0]?.role || "none",
@@ -226,7 +229,7 @@ async function storeConversation(requestMessages: Message[], response: Formatted
           const existingConversation = hits[0];
           const existingId = existingConversation._id;
 
-          console.debug("[OpenSearch] Found existing conversation", {
+          log.debug("[OpenSearch] Found existing conversation", {
             hash: conversationHash,
             id: existingId,
             existingMessageCount: existingConversation._source?.messages?.length || 0,
@@ -249,15 +252,15 @@ async function storeConversation(requestMessages: Message[], response: Formatted
             },
           });
 
-          console.debug("[OpenSearch] Updated existing conversation", {
+          log.debug("[OpenSearch] Updated existing conversation", {
             id: existingId,
           });
           return;
         } else {
-          console.debug("[OpenSearch] No existing conversation found with hash", conversationHash);
+          log.debug("[OpenSearch] No existing conversation found with hash", conversationHash);
         }
       } catch (searchError) {
-        console.error("[OpenSearch] Error searching for existing conversation:", searchError);
+        log.error("[OpenSearch] Error searching for existing conversation:", searchError);
         // Continue to create a new document if search fails
       }
     }
@@ -278,13 +281,13 @@ async function storeConversation(requestMessages: Message[], response: Formatted
       },
     });
 
-    console.debug("[OpenSearch] Created new conversation", {
+    log.debug("[OpenSearch] Created new conversation", {
       id: indexResult.body._id,
       hash: conversationHash,
       messageCount: allMessages.length,
     });
   } catch (error) {
-    console.error("[OpenSearch Storage Error]", error);
+    log.error("[OpenSearch Storage Error]", error);
   }
 }
 
@@ -295,7 +298,7 @@ export async function POST(req: NextRequest) {
     const requestBody = await req.text();
     const parsedBody = JSON.parse(requestBody);
 
-    console.debug("[Incoming Chat Completions Request]", {
+    log.debug("[Incoming Chat Completions Request]", {
       method: req.method,
       url: req.url,
       headers: Object.fromEntries(req.headers.entries()),
@@ -318,7 +321,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error("[Chat Completions API Error]", {
+      log.error("[Chat Completions API Error]", {
         status: response.status,
         statusText: response.statusText,
         error: await response.text(),
@@ -371,7 +374,7 @@ export async function POST(req: NextRequest) {
                   const chunk: StreamChunk = JSON.parse(jsonStr);
                   chunks.push(chunk);
                 } catch (e) {
-                  console.error("[Stream Parse Error]", {
+                  log.error("[Stream Parse Error]", {
                     error: e,
                     line,
                     bufferState: buffer,
@@ -382,7 +385,7 @@ export async function POST(req: NextRequest) {
             }
           }
         } catch (error) {
-          console.error("[Stream Processing Error]", error);
+          log.error("[Stream Processing Error]", error);
         } finally {
           writer.close();
         }
@@ -401,7 +404,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(jsonResponse);
     }
   } catch (err) {
-    console.error("[API Error]", err);
+    log.error("[API Error]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
