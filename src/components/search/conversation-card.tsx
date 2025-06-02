@@ -8,6 +8,7 @@ import { useState, useEffect, useRef, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -173,7 +174,7 @@ const MarkdownContent: React.FC<{
     <div ref={containerRef} className="prose dark:prose-invert max-w-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
         components={{
           // @ts-expect-error - ReactMarkdown types are incompatible with our custom types
           code({ inline, className, children, ...props }: CodeProps) {
