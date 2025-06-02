@@ -6,6 +6,9 @@ import {
   createToken,
   createRefreshToken,
 } from "@/lib/auth";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("api:auth/refresh");
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Token refresh error:", error);
+    log.error("Token refresh error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
