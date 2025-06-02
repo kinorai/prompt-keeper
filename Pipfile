@@ -1,0 +1,15 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+opensearch-py = ">=2.0.0"
+opensearchpy = ">=2.0.0"
+faker = ">=20.0.0"
+tqdm = ">=4.64.0"
+
+[dev-packages]
+
+[requires]
+python_version = "3.13"
