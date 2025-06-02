@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import opensearchClient, { PROMPT_KEEPER_INDEX } from "@/lib/opensearch";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("api:search");
 
 export async function POST(req: NextRequest) {
   try {
     const { query, searchMode = "keyword", timeRange, size = 20, from = 0, fuzzyConfig } = await req.json();
 
-    console.debug("[Search API] Request:", {
+    log.debug("[Search API] Request:", {
       query,
       searchMode,
       timeRange,
@@ -117,7 +120,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.debug("[Search API] Query:", JSON.stringify(esQueryBody, null, 2));
+    log.debug("[Search API] Query:", JSON.stringify(esQueryBody, null, 2));
 
     const startTime = Date.now();
     const response = await opensearchClient.search({
@@ -136,7 +139,7 @@ export async function POST(req: NextRequest) {
     const searchTime = Date.now() - startTime;
 
     // Log response details exactly as expected by tests
-    console.debug("[Search API] Response:", {
+    log.debug("[Search API] Response:", {
       total:
         typeof response.body.hits.total === "number" ? response.body.hits.total : response.body.hits.total?.value || 0,
       hits: response.body.hits.hits.length,
@@ -147,7 +150,7 @@ export async function POST(req: NextRequest) {
     // Log the first result if available, exactly as expected by tests
     if (response.body.hits.hits.length > 0) {
       const firstResult = response.body.hits.hits[0];
-      console.debug("[Search API] First result:", {
+      log.debug("[Search API] First result:", {
         id: firstResult._id,
         score: firstResult._score,
         model: firstResult._source?.model,
@@ -164,7 +167,7 @@ export async function POST(req: NextRequest) {
       took: response.body.took || searchTime,
     });
   } catch (error) {
-    console.error("[Search API Error]", error);
+    log.error("[Search API Error]", error);
     // Return empty results on error
     return NextResponse.json(
       {

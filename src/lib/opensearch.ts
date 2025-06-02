@@ -1,4 +1,7 @@
 import { Client } from "@opensearch-project/opensearch";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("opensearch");
 
 const client = new Client({
   node: process.env.OPENSEARCH_URL || "http://localhost:9200",
@@ -23,7 +26,7 @@ export async function initializeIndex() {
     });
 
     if (!indexExists.body) {
-      console.log(`Creating index ${PROMPT_KEEPER_INDEX}...`);
+      log.info(`Creating index ${PROMPT_KEEPER_INDEX}...`);
       await client.indices.create({
         index: PROMPT_KEEPER_INDEX,
         body: {
@@ -70,7 +73,7 @@ export async function initializeIndex() {
           },
         },
       });
-      console.log(`Index ${PROMPT_KEEPER_INDEX} created successfully`);
+      log.info(`Index ${PROMPT_KEEPER_INDEX} created successfully`);
     } else {
       // If index already exists, update mapping to add new fields
       try {
@@ -89,19 +92,19 @@ export async function initializeIndex() {
             },
           },
         });
-        console.log(`Updated mapping for ${PROMPT_KEEPER_INDEX} to include conversation_hash and timestamp fields`);
+        log.info(`Updated mapping for ${PROMPT_KEEPER_INDEX} to include conversation_hash and timestamp fields`);
       } catch (mappingError) {
-        console.error("Failed to update OpenSearch mapping:", mappingError);
+        log.error("Failed to update OpenSearch mapping:", mappingError);
         // Continue even if mapping update fails, as it might already include these fields
       }
     }
   } catch (error) {
-    console.error("Failed to initialize OpenSearch index:", error);
+    log.error("Failed to initialize OpenSearch index:", error);
     throw error;
   }
 }
 
 // Call initializeIndex when the module is imported
-initializeIndex().catch(console.error);
+initializeIndex().catch((error) => log.error("Error initializing index:", error));
 
 export default client;

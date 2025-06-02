@@ -2,6 +2,9 @@ import md5crypt from "apache-md5";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("auth");
 
 // Secret keys for JWT signing and verification
 const ACCESS_TOKEN_SECRET = new TextEncoder().encode(process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET);
@@ -33,7 +36,7 @@ export function verifyCredentials(username: string, password: string): AuthResul
   const envPasswordHash = process.env.AUTH_PASSWORD_HASH;
 
   if (!envUsername || !envPasswordHash) {
-    console.error("Authentication environment variables (AUTH_USERNAME, AUTH_PASSWORD_HASH) not configured.");
+    log.error("Authentication environment variables (AUTH_USERNAME, AUTH_PASSWORD_HASH) not configured.");
     return {
       success: false,
       message: "Authentication is not configured",
@@ -99,7 +102,7 @@ export async function verifyToken(token: string): Promise<User | null> {
     const { payload } = await jwtVerify(token, ACCESS_TOKEN_SECRET);
     return { username: payload.username as string };
   } catch (error) {
-    console.error("Error verifying token:", error);
+    log.error("Error verifying token:", error);
     return null;
   }
 }
@@ -110,7 +113,7 @@ export async function verifyRefreshToken(token: string): Promise<User | null> {
     const { payload } = await jwtVerify(token, REFRESH_TOKEN_SECRET);
     return { username: payload.username as string };
   } catch (error) {
-    console.error("Error verifying refresh token:", error);
+    log.error("Error verifying refresh token:", error);
     return null;
   }
 }

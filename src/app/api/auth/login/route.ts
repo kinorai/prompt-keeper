@@ -7,6 +7,9 @@ import {
   verifyCredentials,
 } from "@/lib/auth";
 import rateLimit from "@/lib/rate-limit";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("api:auth/login");
 
 const limiter = rateLimit({
   interval: 60 * 1000, // 1 minute
@@ -16,9 +19,9 @@ const limiter = rateLimit({
 export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
-    console.debug("ip: ", ip);
-    console.debug("request: ", request.headers);
     const { isRateLimited } = limiter.check(ip);
+    log.debug("ip: ", ip);
+    log.debug("request: ", request.headers);
 
     if (isRateLimited) {
       return NextResponse.json({ message: "Too many requests" }, { status: 429 });
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Login error:", error);
+    log.error("Login error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
