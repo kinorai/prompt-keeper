@@ -20,7 +20,7 @@
 
 2. Generate a secure, salted APR1-MD5 password hash for the admin user and add it to the `.env` file. For example:
    ```bash
-   SALT=$(openssl rand -hex 8) openssl passwd -apr1 -salt "$SALT" "your_password_here" | sed 's/\$/\\$/g'
+   openssl passwd -apr1 "your_password_here" | sed 's/\$/\\$/g'
    ```
 
 3. Start the services:
@@ -64,7 +64,7 @@ Prompt Keeper uses three authentication methods:
 
     -   Set the following environment variables in your `.env` file:
         -   `AUTH_USERNAME`: The desired username for the UI login.
-        -   `AUTH_PASSWORD_HASH`: The APR1-MD5 hash of the desired password. Generate this using the openssl command shown in the installation steps (e.g., `SALT=$(openssl rand -hex 8) openssl passwd -apr1 -salt "$SALT" "your_password_here" | sed 's/\$/\\$/g'`).
+        -   `AUTH_PASSWORD_HASH`: The APR1-MD5 hash of the desired password. Generate this using the openssl command shown in the installation steps (e.g., `openssl passwd -apr1 "your_password_here" | sed 's/\$/\\$/g'`).
         -   `ACCESS_TOKEN_SECRET`: A long, random, secret string used for signing access tokens (15m expiry).
         -   `REFRESH_TOKEN_SECRET`: A long, random, secret string used for signing refresh tokens (7d expiry).
         -   `JWT_SECRET`: (Optional) Can be used as fallback for ACCESS_TOKEN_SECRET if not set.
@@ -83,6 +83,16 @@ Prompt Keeper uses three authentication methods:
         ```
         X-Prompt-Keeper-API-Key: your-api-key
         ```
+
+### CORS Configuration
+
+For browser-based access to the API (e.g., from a frontend application), you must configure the allowed origins. Set the `CORS_ORIGIN` environment variable in your `.env` file to a comma-separated list of allowed origins (without spaces). Example:
+
+```
+CORS_ORIGIN="example.com,another.com"
+```
+
+This ensures that only requests from these origins will be allowed by the browser.
 
 ## Contributing 🤝
 
