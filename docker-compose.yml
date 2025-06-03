@@ -3,20 +3,8 @@ services:
     image: kinorai/prompt-keeper:latest
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - LOG_LEVEL=info
-      - OPENSEARCH_URL=http://opensearch:9200
-      - OPENSEARCH_INDEX=prompt-keeper
-      - OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME}
-      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
-      - LITELLM_URL=http://litellm:4000
-      - AUTH_USERNAME=${AUTH_USERNAME}
-      - AUTH_PASSWORD_HASH=${AUTH_PASSWORD_HASH}
-      - JWT_SECRET=${JWT_SECRET}
-      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
-      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
-      - PROMPT_KEEPER_API_KEY=${PROMPT_KEEPER_API_KEY}
+    env_file:
+      - .env
     depends_on:
       opensearch:
         condition: service_healthy
@@ -28,12 +16,12 @@ services:
   opensearch:
     image: opensearchproject/opensearch:2
     environment:
-      - OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME}
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD}
-      - discovery.type=single-node
-      - plugins.security.disabled=true
-      - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD}
+      - OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME}
+      - plugins.security.disabled=true
     ulimits:
       memlock:
         soft: -1
