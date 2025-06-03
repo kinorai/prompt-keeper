@@ -10,8 +10,8 @@ const CONFIG = {
   LITELLM_URL: process.env.LITELLM_URL,
   REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT || 480000, // 8 minutes because LLM can take a while
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
-  CORS_METHODS: process.env.CORS_METHODS || "GET, POST, OPTIONS",
-  CORS_HEADERS: process.env.CORS_HEADERS || "*",
+  CORS_METHODS: process.env.CORS_METHODS || "GET, POST, OPTIONS, PUT, DELETE",
+  CORS_HEADERS: process.env.CORS_HEADERS || "Content-Type, Authorization, X-Prompt-Keeper-API-Key",
   CORS_MAX_AGE: process.env.CORS_MAX_AGE || "86400",
 };
 
