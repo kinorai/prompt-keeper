@@ -1,3 +1,0 @@
-opensearchpy>=2.0.0
-faker>=20.0.0
-tqdm>=4.64.0
