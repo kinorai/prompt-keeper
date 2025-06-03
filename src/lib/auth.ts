@@ -102,7 +102,7 @@ export async function verifyToken(token: string): Promise<User | null> {
     const { payload } = await jwtVerify(token, ACCESS_TOKEN_SECRET);
     return { username: payload.username as string };
   } catch (error) {
-    log.error("Error verifying token:", error);
+    log.error(error, "Error verifying token:");
     return null;
   }
 }
@@ -113,7 +113,7 @@ export async function verifyRefreshToken(token: string): Promise<User | null> {
     const { payload } = await jwtVerify(token, REFRESH_TOKEN_SECRET);
     return { username: payload.username as string };
   } catch (error) {
-    log.error("Error verifying refresh token:", error);
+    log.error(error, "Error verifying refresh token:");
     return null;
   }
 }

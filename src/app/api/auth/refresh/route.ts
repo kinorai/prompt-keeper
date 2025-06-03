@@ -32,9 +32,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({ success: true });
 
     // Set new access token cookie
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: newAccessToken,
+    response.cookies.set(AUTH_COOKIE_NAME, newAccessToken, {
       httpOnly: true,
       path: "/",
       secure: process.env.NODE_ENV === "production",
@@ -43,9 +41,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Set new refresh token cookie
-    response.cookies.set({
-      name: REFRESH_TOKEN_COOKIE_NAME,
-      value: newRefreshToken,
+    response.cookies.set(REFRESH_TOKEN_COOKIE_NAME, newRefreshToken, {
       httpOnly: true,
       path: "/",
       secure: process.env.NODE_ENV === "production",
@@ -55,7 +51,8 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    log.error("Token refresh error:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    log.error(error, "Token refresh error:");
+    const response = NextResponse.json({ message: "Token refresh failed" }, { status: 401 });
+    return response;
   }
 }
