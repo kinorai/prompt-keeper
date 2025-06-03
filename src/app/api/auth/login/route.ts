@@ -18,11 +18,11 @@ const limiter = rateLimit({
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
-    const { isRateLimited } = limiter.check(ip);
-    log.debug("ip: ", ip);
-    log.debug("request: ", request.headers);
+    const realIp = request.headers.get("x-real-ip");
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const ip = realIp || forwardedFor || "127.0.0.1"; // Fallback to localhost if no IP found
 
+    const { isRateLimited } = limiter.check(ip);
     if (isRateLimited) {
       return NextResponse.json({ message: "Too many requests" }, { status: 429 });
     }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const authResult = await verifyCredentials(username, password);
 
     if (!authResult.success || !authResult.user) {
-      return NextResponse.json({ message: authResult.message || "Authentication failed" }, { status: 401 });
+      return NextResponse.json({ error: "Login failed" }, { status: 401 });
     }
 
     // Create tokens
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    log.error("Login error:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    log.error(error, "Login error:");
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
