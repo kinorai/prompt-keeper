@@ -186,11 +186,7 @@ async function storeConversation(requestMessages: Message[], response: Formatted
     // Generate conversation hash based on the initial messages
     const conversationHash = generateConversationHash(requestMessages);
 
-    log.debug("[OpenSearch] Processing conversation", {
-      messageCount: requestMessages.length,
-      conversationHash,
-      firstMessageRole: requestMessages[0]?.role || "none",
-    });
+    log.debug(requestMessages, "[OpenSearch] Processing conversation");
 
     // If we have a valid hash and more than one message (likely a continuation)
     if (conversationHash && requestMessages.length > 1) {
@@ -229,12 +225,7 @@ async function storeConversation(requestMessages: Message[], response: Formatted
           const existingConversation = hits[0];
           const existingId = existingConversation._id;
 
-          log.debug("[OpenSearch] Found existing conversation", {
-            hash: conversationHash,
-            id: existingId,
-            existingMessageCount: existingConversation._source?.messages?.length || 0,
-            updatingToMessageCount: allMessages.length,
-          });
+          log.debug(existingConversation, "[OpenSearch] Found existing conversation");
 
           // Update the existing conversation with new messages
           await opensearchClient.update({
@@ -252,15 +243,13 @@ async function storeConversation(requestMessages: Message[], response: Formatted
             },
           });
 
-          log.debug("[OpenSearch] Updated existing conversation", {
-            id: existingId,
-          });
+          log.debug(existingConversation, "[OpenSearch] Updated existing conversation");
           return;
         } else {
-          log.debug("[OpenSearch] No existing conversation found with hash", conversationHash);
+          log.debug(conversationHash, "[OpenSearch] No existing conversation found with hash");
         }
       } catch (searchError) {
-        log.error("[OpenSearch] Error searching for existing conversation:", searchError);
+        log.error(searchError, "[OpenSearch] Error searching for existing conversation:");
         // Continue to create a new document if search fails
       }
     }
@@ -281,13 +270,9 @@ async function storeConversation(requestMessages: Message[], response: Formatted
       },
     });
 
-    log.debug("[OpenSearch] Created new conversation", {
-      id: indexResult.body._id,
-      hash: conversationHash,
-      messageCount: allMessages.length,
-    });
+    log.debug(indexResult, "[OpenSearch] Created new conversation");
   } catch (error) {
-    log.error("[OpenSearch Storage Error]", error);
+    log.error(error, "[OpenSearch Storage Error]");
   }
 }
 
@@ -298,14 +283,7 @@ export async function POST(req: NextRequest) {
     const requestBody = await req.text();
     const parsedBody = JSON.parse(requestBody);
 
-    log.debug("[Incoming Chat Completions Request]", {
-      method: req.method,
-      url: req.url,
-      headers: Object.fromEntries(req.headers.entries()),
-      body: JSON.stringify(parsedBody, null, 2), // Fully stringify the body with formatting
-      messages: JSON.stringify(parsedBody.messages, null, 2), // Explicitly stringify messages
-      timestamp: new Date().toISOString(),
-    });
+    log.debug(req, "[Incoming Chat Completions Request]");
 
     const forwardHeaders = new Headers(req.headers);
     skipHeaders.forEach((header) => forwardHeaders.delete(header));
@@ -321,11 +299,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!response.ok) {
-      log.error("[Chat Completions API Error]", {
-        status: response.status,
-        statusText: response.statusText,
-        error: await response.text(),
-      });
+      log.error(response, "[Chat Completions API Error]");
       return NextResponse.json({ error: await response.text() }, { status: response.status });
     }
 
@@ -373,19 +347,14 @@ export async function POST(req: NextRequest) {
                   const jsonStr = line.slice(6); // Remove 'data: ' prefix
                   const chunk: StreamChunk = JSON.parse(jsonStr);
                   chunks.push(chunk);
-                } catch (e) {
-                  log.error("[Stream Parse Error]", {
-                    error: e,
-                    line,
-                    bufferState: buffer,
-                    isLastLine: lines.indexOf(line) === lines.length - 1,
-                  });
+                } catch (error) {
+                  log.error(error, "[Stream Parse Error]");
                 }
               }
             }
           }
         } catch (error) {
-          log.error("[Stream Processing Error]", error);
+          log.error(error, "[Stream Processing Error]");
         } finally {
           writer.close();
         }
@@ -403,8 +372,8 @@ export async function POST(req: NextRequest) {
       await storeConversation(requestMessages, jsonResponse, latency);
       return NextResponse.json(jsonResponse);
     }
-  } catch (err) {
-    log.error("[API Error]", err);
+  } catch (error) {
+    log.error(error, "[API Error]");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

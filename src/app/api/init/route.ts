@@ -9,7 +9,10 @@ export async function POST() {
     await initializeIndex();
     return NextResponse.json({ message: "Index initialized successfully" });
   } catch (error) {
-    log.error("Failed to initialize index:", error);
-    return NextResponse.json({ error: "Failed to initialize index" }, { status: 500 });
+    log.error(error, "Failed to initialize index:");
+    return NextResponse.json(
+      { message: "Failed to initialize index", error: (error as Error).message },
+      { status: 500 },
+    );
   }
 }

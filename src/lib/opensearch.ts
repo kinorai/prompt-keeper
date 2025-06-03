@@ -94,17 +94,16 @@ export async function initializeIndex() {
         });
         log.info(`Updated mapping for ${PROMPT_KEEPER_INDEX} to include conversation_hash and timestamp fields`);
       } catch (mappingError) {
-        log.error("Failed to update OpenSearch mapping:", mappingError);
-        // Continue even if mapping update fails, as it might already include these fields
+        log.error(mappingError, "Failed to update OpenSearch mapping:");
       }
     }
   } catch (error) {
-    log.error("Failed to initialize OpenSearch index:", error);
+    log.error(error, "Failed to initialize OpenSearch index:");
     throw error;
   }
 }
 
 // Call initializeIndex when the module is imported
-initializeIndex().catch((error) => log.error("Error initializing index:", error));
+initializeIndex().catch((error) => log.error(error, "Error initializing index:"));
 
 export default client;
