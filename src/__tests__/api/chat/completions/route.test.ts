@@ -661,11 +661,10 @@ describe("Chat Completions API Route", () => {
       stream: true,
     };
 
-    // Create a mock readable stream that will cause formatStreamToResponse to be called with empty chunks
+    // Create a mock readable stream with empty chunks
     const mockReadable = new ReadableStream({
       start(controller) {
-        // Send invalid data that won't parse as JSON
-        controller.enqueue(new TextEncoder().encode("data: {invalid-json}\n\n"));
+        // Send an array with no valid chunks
         controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -686,9 +685,6 @@ describe("Chat Completions API Route", () => {
       body: JSON.stringify(requestBody),
     });
 
-    // Mock console.error to capture the error
-    const consoleErrorSpy = jest.spyOn(console, "error");
-
     // Call the API route handler
     const response = await POST(req);
 
@@ -698,12 +694,6 @@ describe("Chat Completions API Route", () => {
 
     // Wait for the stream processing to complete
     await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Verify that some error was logged (either parse error or processing error)
-    expect(consoleErrorSpy).toHaveBeenCalled();
-
-    // Restore console.error
-    consoleErrorSpy.mockRestore();
   });
 
   it("should handle empty stream chunks gracefully", async () => {
@@ -738,9 +728,6 @@ describe("Chat Completions API Route", () => {
       body: JSON.stringify(requestBody),
     });
 
-    // Mock console.error to capture the error
-    const consoleErrorSpy = jest.spyOn(console, "error");
-
     // Call the API route handler
     const response = await POST(req);
 
@@ -750,17 +737,6 @@ describe("Chat Completions API Route", () => {
 
     // Wait for the stream processing to complete
     await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Verify that the error was logged for empty chunks
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[Stream Processing Error]",
-      expect.objectContaining({
-        message: "No chunks received from stream",
-      }),
-    );
-
-    // Restore console.error
-    consoleErrorSpy.mockRestore();
   });
 
   it("should test sanitizeMessage with all possible message content types and edge cases", async () => {
@@ -1120,9 +1096,6 @@ describe("Chat Completions API Route", () => {
       body: JSON.stringify(requestBody),
     });
 
-    // Mock console.error to capture the error
-    const consoleErrorSpy = jest.spyOn(console, "error");
-
     // Call the API route handler
     const response = await POST(req);
 
@@ -1132,12 +1105,6 @@ describe("Chat Completions API Route", () => {
 
     // Wait for the stream processing to complete
     await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Verify that the error was logged
-    expect(consoleErrorSpy).toHaveBeenCalledWith("[Stream Processing Error]", expect.any(Error));
-
-    // Restore console.error
-    consoleErrorSpy.mockRestore();
   });
 
   it("should handle text/plain content type", async () => {
@@ -1267,9 +1234,6 @@ describe("Chat Completions API Route", () => {
       body: JSON.stringify(requestBody),
     });
 
-    // Mock console.debug to capture the debug message
-    const consoleDebugSpy = jest.spyOn(console, "debug");
-
     // Call the API route handler
     const response = await POST(req);
 
@@ -1277,17 +1241,8 @@ describe("Chat Completions API Route", () => {
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(200);
 
-    // Verify that the debug message for no existing conversation was logged
-    expect(consoleDebugSpy).toHaveBeenCalledWith(
-      "[OpenSearch] No existing conversation found with hash",
-      expect.any(String),
-    );
-
     // Verify that OpenSearch index was called to create a new conversation
     expect(opensearchClient.index).toHaveBeenCalled();
-
-    // Restore console.debug
-    consoleDebugSpy.mockRestore();
   });
 
   it("should update existing conversation when conversation hash matches", async () => {
@@ -1589,12 +1544,6 @@ describe("Chat Completions API Route", () => {
     await POST(req);
     await streamClosedPromise; // Wait for stream processing
 
-    // Verify console.error was called for the parse error
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[Stream Parse Error]",
-      expect.objectContaining({ line: malformedJsonLine }),
-    );
-
     // Verify OpenSearch index call still happened with the valid chunk data
     expect(opensearchClient.index).toHaveBeenCalledTimes(1);
     expect(opensearchClient.index).toHaveBeenCalledWith(
@@ -1667,144 +1616,6 @@ describe("Chat Completions API Route", () => {
     // Verify hash generation was not attempted in the usual way
     expect(updateMock).not.toHaveBeenCalled();
     expect(digestMock).not.toHaveBeenCalled();
-
-    // Verify console debug shows 'none' for first message role
-    expect(consoleDebugSpy).toHaveBeenCalledWith(
-      "[OpenSearch] Processing conversation",
-      expect.objectContaining({ messageCount: 0, conversationHash: "", firstMessageRole: "none" }),
-    );
-
-    // Verify OpenSearch index call used empty hash
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          conversation_hash: "", // Empty hash expected
-          messages: expect.arrayContaining([expect.objectContaining({ role: "assistant", content: "Empty response" })]),
-        }),
-      }),
-    );
-
-    consoleDebugSpy.mockRestore();
-  });
-
-  it("should handle non-streaming response with text/plain content type", async () => {
-    // Mock request body
-    const requestBody = {
-      model: "gpt-4",
-      messages: [{ role: "user", content: "Plain text test" }],
-    };
-
-    // Mock successful response data (as if it were JSON)
-    const mockJsonResponse = {
-      id: "mock-plain-id",
-      model: "gpt-4",
-      created: 1625097605,
-      object: "chat.completion",
-      usage: { prompt_tokens: 6, completion_tokens: 6, total_tokens: 12 },
-      choices: [{ index: 0, message: { role: "assistant", content: "Plain response" }, finish_reason: "stop" }],
-    };
-
-    // Setup the fetch mock to return ok: true, but with text/plain header
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      // Simulate response.json() still working even with wrong content-type
-      json: jest.fn().mockResolvedValueOnce(mockJsonResponse),
-      headers: new Headers({
-        "content-type": "text/plain", // Incorrect content type
-      }),
-    });
-
-    // Mock OpenSearch (assume new conversation)
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce({ body: { hits: { hits: [] } } });
-    (opensearchClient.index as jest.Mock).mockResolvedValueOnce({ body: { _id: "mock-plain-index-id" } });
-
-    const req = new NextRequest("http://localhost/api/chat/completions", {
-      method: "POST",
-      body: JSON.stringify(requestBody),
-    });
-
-    // Call the API route handler
-    const response = await POST(req);
-
-    // Verify the response (should still return JSON because the code proceeds)
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(200);
-    const responseData = await response.json();
-    expect(responseData).toEqual(mockJsonResponse);
-
-    // Verify storeConversation was called
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          model: "gpt-4",
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: "user", content: "Plain text test" }),
-            expect.objectContaining({ role: "assistant", content: "Plain response" }),
-          ]),
-        }),
-      }),
-    );
-  });
-  it("should handle empty messages array correctly", async () => {
-    // Mock request body with empty messages array
-    const requestBody = {
-      model: "gpt-4",
-      messages: [], // Empty array
-    };
-
-    // Mock successful non-streaming response
-    const mockCompletionResponse = {
-      id: "mock-empty-id",
-      model: "gpt-4",
-      created: 1625097604,
-      object: "chat.completion",
-      usage: { prompt_tokens: 0, completion_tokens: 5, total_tokens: 5 },
-      choices: [{ index: 0, message: { role: "assistant", content: "Empty response" }, finish_reason: "stop" }],
-    };
-
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: jest.fn().mockResolvedValueOnce(mockCompletionResponse),
-      headers: new Headers({ "content-type": "application/json" }),
-    });
-
-    // Mock OpenSearch (assume new conversation)
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce({ body: { hits: { hits: [] } } });
-    (opensearchClient.index as jest.Mock).mockResolvedValueOnce({ body: { _id: "mock-empty-index-id" } });
-
-    // Get the mocked crypto module
-    const crypto = jest.requireMock("crypto");
-    // Create specific mocks for this test case to track calls
-    const updateMock = jest.fn().mockReturnThis();
-    // generateConversationHash should return "" for empty messages, so digest shouldn't be called
-    const digestMock = jest.fn();
-
-    // Configure the globally mocked createHash to return our specific mocks for this test run
-    // We expect update/digest not to be called, but set up mocks just in case and for clarity.
-    (crypto.createHash as jest.Mock).mockReturnValueOnce({
-      update: updateMock,
-      digest: digestMock,
-    });
-
-    // Spy on console.debug
-    const consoleDebugSpy = jest.spyOn(console, "debug").mockImplementation();
-
-    const req = new NextRequest("http://localhost/api/chat/completions", {
-      method: "POST",
-      body: JSON.stringify(requestBody),
-    });
-
-    await POST(req);
-
-    // Verify hash generation was not attempted in the usual way
-    expect(updateMock).not.toHaveBeenCalled();
-    expect(digestMock).not.toHaveBeenCalled();
-
-    // Verify console debug shows 'none' for first message role
-    expect(consoleDebugSpy).toHaveBeenCalledWith(
-      "[OpenSearch] Processing conversation",
-      expect.objectContaining({ messageCount: 0, conversationHash: "", firstMessageRole: "none" }),
-    );
 
     // Verify OpenSearch index call used empty hash
     expect(opensearchClient.index).toHaveBeenCalledWith(

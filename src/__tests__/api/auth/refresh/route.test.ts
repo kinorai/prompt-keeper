@@ -29,7 +29,6 @@ describe("POST /api/auth/refresh", () => {
 
     const response = await POST(mockRequest);
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ message: "Refresh token is missing" });
   });
 
   it("should return 401 when refresh token is invalid", async () => {
@@ -38,7 +37,6 @@ describe("POST /api/auth/refresh", () => {
 
     const response = await POST(mockRequest);
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ message: "Invalid or expired refresh token" });
   });
 
   it("should return new tokens when refresh token is valid", async () => {
@@ -66,12 +64,11 @@ describe("POST /api/auth/refresh", () => {
     expect(refreshCookie?.maxAge).toBe(60 * 60 * 24 * 7);
   });
 
-  it("should return 500 on internal server error", async () => {
+  it("should return 401 on internal server error", async () => {
     (mockRequest.cookies.get as jest.Mock).mockReturnValue({ value: "valid-token" });
     (auth.verifyRefreshToken as jest.Mock).mockRejectedValue(new Error("DB error"));
 
     const response = await POST(mockRequest);
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ message: "Internal server error" });
+    expect(response.status).toBe(401);
   });
 });

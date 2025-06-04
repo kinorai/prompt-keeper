@@ -84,16 +84,6 @@ Prompt Keeper uses three authentication methods:
         X-Prompt-Keeper-API-Key: your-api-key
         ```
 
-### CORS Configuration
-
-For browser-based access to the API (e.g., from a frontend application), you must configure the allowed origins. Set the `CORS_ORIGIN` environment variable in your `.env` file to a comma-separated list of allowed origins (without spaces). Example:
-
-```
-CORS_ORIGIN="example.com,another.com"
-```
-
-This ensures that only requests from these origins will be allowed by the browser.
-
 ## Contributing 🤝
 
 We welcome contributions! Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for details.

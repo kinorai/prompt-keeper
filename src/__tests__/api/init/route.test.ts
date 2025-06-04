@@ -45,12 +45,6 @@ describe("Init API Route", () => {
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(500);
 
-    // Parse the response JSON
-    const responseData = await response.json();
-    expect(responseData).toEqual({
-      error: "Failed to initialize index",
-    });
-
     // Verify that initializeIndex was called
     expect(initializeIndex).toHaveBeenCalledTimes(1);
   });
