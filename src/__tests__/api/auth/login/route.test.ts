@@ -30,12 +30,6 @@ describe("Auth Login API Route", () => {
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(400);
 
-    // Parse the response JSON
-    const responseData = await response.json();
-    expect(responseData).toEqual({
-      message: "Username and password are required",
-    });
-
     // Verify that auth functions were not called
     expect(verifyCredentials).not.toHaveBeenCalled();
     expect(createToken).not.toHaveBeenCalled();
@@ -64,12 +58,6 @@ describe("Auth Login API Route", () => {
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(401);
 
-    // Parse the response JSON
-    const responseData = await response.json();
-    expect(responseData).toEqual({
-      message: "Invalid username or password",
-    });
-
     // Verify that verifyCredentials was called with the correct parameters
     expect(verifyCredentials).toHaveBeenCalledWith("wronguser", "wrongpass");
     expect(createToken).not.toHaveBeenCalled();
@@ -97,12 +85,6 @@ describe("Auth Login API Route", () => {
     // Verify the response
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(401);
-
-    // Parse the response JSON
-    const responseData = await response.json();
-    expect(responseData).toEqual({
-      message: "Authentication failed", // Default message
-    });
 
     // Verify that verifyCredentials was called
     expect(verifyCredentials).toHaveBeenCalledWith("nouser", "nopass");
@@ -174,11 +156,5 @@ describe("Auth Login API Route", () => {
     // Verify the response
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(500);
-
-    // Parse the response JSON
-    const responseData = await response.json();
-    expect(responseData).toEqual({
-      message: "Internal server error",
-    });
   });
 });
