@@ -1,6 +1,7 @@
 import { POST } from "@/app/api/auth/login/route";
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME, createToken, createRefreshToken, verifyCredentials } from "@/lib/auth";
+import rateLimit from "@/lib/rate-limit";
 
 // Mock the auth functions
 jest.mock("@/lib/auth", () => ({
@@ -10,13 +11,36 @@ jest.mock("@/lib/auth", () => ({
   verifyCredentials: jest.fn(),
 }));
 
+// Mock the rate limiter
+jest.mock("@/lib/rate-limit", () => {
+  const mockCheck = jest.fn();
+  return {
+    __esModule: true,
+    default: jest.fn(() => ({
+      check: mockCheck,
+    })),
+    mockCheck, // Export the mock function so we can access it
+  };
+});
+
 describe("Auth Login API Route", () => {
+  let mockRateLimiter: { check: jest.Mock };
+
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks();
+
+    // Get the mocked rate limiter
+    const mockRateLimit = rateLimit as jest.MockedFunction<typeof rateLimit>;
+    const mockModule = jest.requireMock("@/lib/rate-limit");
+    mockRateLimiter = { check: mockModule.mockCheck };
+    mockRateLimit.mockReturnValue(mockRateLimiter);
   });
 
   it("should return 400 if username or password is missing", async () => {
+    // Mock rate limiter to allow request
+    mockRateLimiter.check.mockReturnValue({ isRateLimited: false });
+
     // Create a mock request with missing credentials
     const req = new NextRequest("http://localhost/api/auth/login", {
       method: "POST",
@@ -35,7 +59,38 @@ describe("Auth Login API Route", () => {
     expect(createToken).not.toHaveBeenCalled();
   });
 
+  it("should return 429 when rate limited", async () => {
+    // Mock rate limiter to block request
+    mockRateLimiter.check.mockReturnValue({ isRateLimited: true });
+
+    // Create a mock request
+    const req = new NextRequest("http://localhost/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        username: "testuser",
+        password: "testpass",
+      }),
+    });
+
+    // Call the API route handler
+    const response = await POST(req);
+
+    // Verify the response
+    expect(response).toBeInstanceOf(NextResponse);
+    expect(response.status).toBe(429);
+
+    // Verify rate limiter was called with IP
+    expect(mockRateLimiter.check).toHaveBeenCalledWith("127.0.0.1");
+
+    // Verify that auth functions were not called due to rate limiting
+    expect(verifyCredentials).not.toHaveBeenCalled();
+    expect(createToken).not.toHaveBeenCalled();
+  });
+
   it("should return 401 if credentials are invalid", async () => {
+    // Mock rate limiter to allow request
+    mockRateLimiter.check.mockReturnValue({ isRateLimited: false });
+
     // Mock failed authentication
     (verifyCredentials as jest.Mock).mockReturnValueOnce({
       success: false,
@@ -64,6 +119,9 @@ describe("Auth Login API Route", () => {
   });
 
   it("should return 401 with default message if credentials are invalid and no message is provided", async () => {
+    // Mock rate limiter to allow request
+    mockRateLimiter.check.mockReturnValue({ isRateLimited: false });
+
     // Mock failed authentication without a specific message
     (verifyCredentials as jest.Mock).mockReturnValueOnce({
       success: false,
@@ -92,6 +150,9 @@ describe("Auth Login API Route", () => {
   });
 
   it("should return 200 and set auth cookie if credentials are valid", async () => {
+    // Mock rate limiter to allow request
+    mockRateLimiter.check.mockReturnValue({ isRateLimited: false });
+
     // Mock successful authentication
     const mockUser = { username: "testuser" };
     (verifyCredentials as jest.Mock).mockReturnValueOnce({
@@ -136,6 +197,9 @@ describe("Auth Login API Route", () => {
   });
 
   it("should return 500 if an error occurs during authentication", async () => {
+    // Mock rate limiter to allow request
+    mockRateLimiter.check.mockReturnValue({ isRateLimited: false });
+
     // Mock an error during authentication
     (verifyCredentials as jest.Mock).mockImplementationOnce(() => {
       throw new Error("Authentication error");
