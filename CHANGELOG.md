@@ -1,3 +1,20 @@
+# [0.3.0](https://github.com/kinorai/prompt-keeper/compare/v0.2.0...v0.3.0) (2025-06-05)
+
+
+### Bug Fixes
+
+* click on header scroll to on desktop ([fe49795](https://github.com/kinorai/prompt-keeper/commit/fe49795a7d34c38c495425d6576628fcc9917328))
+* div problem with rehypeSanitize from gemini ([cc0fad3](https://github.com/kinorai/prompt-keeper/commit/cc0fad3bdcc139ecbc5b111bf1c0992b04bdb9ab))
+
+
+### Features
+
+* completely rework logging with pino and increase timeout completion api to 8 min ([95c4c12](https://github.com/kinorai/prompt-keeper/commit/95c4c122a7e5c7206efc63b3bc6f0d3b31d4dc20))
+* enhance CORS support ([fea9067](https://github.com/kinorai/prompt-keeper/commit/fea9067e8a70f7f44e2062b5b4e4848922a52758))
+* implement rate limiting for login requests ([353419f](https://github.com/kinorai/prompt-keeper/commit/353419feee174e69c1dcc1432dbd0008e170cd3b))
+
+
+
 # [0.2.0](https://github.com/kinorai/prompt-keeper/compare/v0.1.0...v0.2.0) (2025-05-31)
 
 
@@ -58,3 +75,6 @@
 * use create-release action ([a05b446](https://github.com/kinorai/prompt-keeper/commit/a05b4469bc3a8fc26ab8dc191829c67bb05b7ae2))
 * working api and search ([0737305](https://github.com/kinorai/prompt-keeper/commit/07373052590c34461b647beae2a3212dc835c2ca))
 * working deployment with helm + fix lint issues ([6fc8da9](https://github.com/kinorai/prompt-keeper/commit/6fc8da9d6b8c0885a625cff34a6062b1d7d44ab8))
+
+
+
