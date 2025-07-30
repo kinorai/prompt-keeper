@@ -77,7 +77,8 @@ const CopyButton = ({
 }) => {
   const [isCopied, setIsCopied] = useState(false);
 
-  const handleCopy = () => {
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
     copyToClipboard(text, successMessage);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
@@ -347,8 +348,16 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 
   // Function to handle the header click, using the passed handler if available
   const handleHeaderClick = (e: React.MouseEvent) => {
-    // Don't trigger if clicking on buttons
-    if ((e.target as HTMLElement).closest("button")) {
+    // Don't trigger if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    const isInteractiveElement =
+      target.closest("button") ||
+      target.closest("[role='button']") ||
+      target.closest("[data-radix-collection-item]") || // Radix UI dropdown items
+      target.closest("[data-state]") || // Radix UI popover/dropdown triggers
+      target.closest(".lucide"); // Icons that might be clickable
+
+    if (isInteractiveElement) {
       return;
     }
 
@@ -465,6 +474,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 variant="secondary"
                 size="sm"
                 className="h-7 px-2 py-1 bg-muted/50 hover:bg-destructive/20 hover:text-destructive"
+                onClick={(e) => e.stopPropagation()}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -498,7 +508,12 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
           </Popover>
           <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="sm" className="h-7 px-2 py-1 bg-muted/50 hover:bg-muted/80">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 px-2 py-1 bg-muted/50 hover:bg-muted/80"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreVertical className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
