@@ -6,3 +6,6 @@
 *.md
 
 /chart
+
+# Ignore UI components (shadcn/ui generated components)
+src/components/ui/
