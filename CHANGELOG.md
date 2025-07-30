@@ -1,3 +1,12 @@
+# [0.4.0](https://github.com/kinorai/prompt-keeper/compare/v0.3.0...v0.4.0) (2025-07-30)
+
+
+### Features
+
+* add delete functionality with confirmation dialog ([b43f313](https://github.com/kinorai/prompt-keeper/commit/b43f31307ef8c39cb2a2d367a0c1f9dc542239a3))
+
+
+
 # [0.3.0](https://github.com/kinorai/prompt-keeper/compare/v0.2.0...v0.3.0) (2025-06-05)
 
 
@@ -75,3 +84,6 @@
 * use create-release action ([a05b446](https://github.com/kinorai/prompt-keeper/commit/a05b4469bc3a8fc26ab8dc191829c67bb05b7ae2))
 * working api and search ([0737305](https://github.com/kinorai/prompt-keeper/commit/07373052590c34461b647beae2a3212dc835c2ca))
 * working deployment with helm + fix lint issues ([6fc8da9](https://github.com/kinorai/prompt-keeper/commit/6fc8da9d6b8c0885a625cff34a6062b1d7d44ab8))
+
+
+
