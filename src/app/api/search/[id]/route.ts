@@ -4,9 +4,9 @@ import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api:search:delete");
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json({ error: "Conversation ID is required" }, { status: 400 });

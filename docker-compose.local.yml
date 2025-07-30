@@ -17,8 +17,8 @@ services:
     volumes:
       - opensearch-data:/usr/share/opensearch/data
     ports:
-      - "9200:9200"
-      - "9600:9600"
+      - "${OPENSEARCH_PORT:-9200}:9200"
+      - "${OPENSEARCH_PERF_PORT:-9600}:9600"
     networks:
       - opensearch-net
     healthcheck:
@@ -39,7 +39,7 @@ services:
     command:
       - "--config=/app/config.local.litellm.yaml"
     ports:
-      - "4001:4000"
+      - "${LITELLM_PORT:-4000}:4000"
     env_file:
       - .env
     networks:
@@ -50,7 +50,7 @@ services:
     volumes:
       - open-webui:/app/backend/data
     ports:
-      - 8080:8080
+      - "${OPEN_WEBUI_PORT:-8080}:8080"
     environment:
       - "WEBUI_SECRET_KEY=secret"
     extra_hosts:

@@ -39,4 +39,3 @@ repos:
         entry: npx prettier --write .
         language: system
         pass_filenames: false
-        exclude: ^chart/

@@ -22,7 +22,7 @@ describe("DELETE /api/search/[id]", () => {
       method: "DELETE",
     });
 
-    const response = await DELETE(request, { params: { id: "test-id" } });
+    const response = await DELETE(request, { params: Promise.resolve({ id: "test-id" }) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -31,7 +31,7 @@ describe("DELETE /api/search/[id]", () => {
       deleted: true,
     });
     expect(mockOpensearchClient.delete).toHaveBeenCalledWith({
-      index: "conversations",
+      index: "prompt-keeper",
       id: "test-id",
       refresh: "wait_for",
     });
@@ -44,7 +44,7 @@ describe("DELETE /api/search/[id]", () => {
       method: "DELETE",
     });
 
-    const response = await DELETE(request, { params: { id: "non-existent" } });
+    const response = await DELETE(request, { params: Promise.resolve({ id: "non-existent" }) });
     const data = await response.json();
 
     expect(response.status).toBe(404);
@@ -60,7 +60,7 @@ describe("DELETE /api/search/[id]", () => {
       method: "DELETE",
     });
 
-    const response = await DELETE(request, { params: { id: "test-id" } });
+    const response = await DELETE(request, { params: Promise.resolve({ id: "test-id" }) });
     const data = await response.json();
 
     expect(response.status).toBe(500);
