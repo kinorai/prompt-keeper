@@ -278,6 +278,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 }) => {
   const createdDate = new Date(created);
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
+  const dropdownButtonRef = useRef<HTMLButtonElement>(null); // Ref for the dropdown button
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -405,6 +406,34 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
     }
   }, [showContextMenu]);
 
+  // Handle click outside and escape key for context delete confirmation
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showContextDeleteConfirm) {
+        const target = event.target as HTMLElement;
+        // Check if click is outside the confirmation dialog
+        if (!target.closest(".context-delete-confirmation") && !target.closest("button")) {
+          setShowContextDeleteConfirm(false);
+        }
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (showContextDeleteConfirm && event.key === "Escape") {
+        setShowContextDeleteConfirm(false);
+      }
+    };
+
+    if (showContextDeleteConfirm) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("keydown", handleKeyDown);
+      };
+    }
+  }, [showContextDeleteConfirm]);
+
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
@@ -509,6 +538,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
           <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
             <DropdownMenuTrigger asChild>
               <Button
+                ref={dropdownButtonRef}
                 variant="secondary"
                 size="sm"
                 className="h-7 px-2 py-1 bg-muted/50 hover:bg-muted/80"
@@ -539,49 +569,17 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 <Share2 className="mr-2 h-4 w-4" />
                 Share
               </DropdownMenuItem>
-              <Popover open={showContextDeleteConfirm} onOpenChange={setShowContextDeleteConfirm}>
-                <PopoverTrigger asChild>
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setShowContextDeleteConfirm(true);
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </PopoverTrigger>
-                <PopoverContent className="w-80" align="end" side="left">
-                  <div className="flex gap-3">
-                    <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-                    <div className="space-y-3 flex-1">
-                      <div>
-                        <p className="font-medium text-sm">Delete conversation?</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          This will permanently delete the conversation with {model}. This action cannot be undone.
-                        </p>
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setShowContextDeleteConfirm(false);
-                            setShowContextMenu(false);
-                          }}
-                          disabled={isDeleting}
-                        >
-                          Cancel
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setShowContextDeleteConfirm(true);
+                  setShowContextMenu(false); // Close the dropdown first
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -593,6 +591,44 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
           ))}
         </div>
       </CardContent>
+
+      {/* Context menu delete confirmation - positioned independently */}
+      {showContextDeleteConfirm && (
+        <div
+          className="context-delete-confirmation fixed z-50 w-80 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none"
+          style={{
+            left: dropdownButtonRef.current
+              ? Math.max(10, dropdownButtonRef.current.getBoundingClientRect().right - 320)
+              : 10,
+            top: dropdownButtonRef.current ? dropdownButtonRef.current.getBoundingClientRect().bottom + 5 : 10,
+          }}
+        >
+          <div className="flex gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="space-y-3 flex-1">
+              <div>
+                <p className="font-medium text-sm">Delete conversation?</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This will permanently delete the conversation with {model}. This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowContextDeleteConfirm(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
