@@ -180,7 +180,7 @@ const MarkdownContent: React.FC<{
   }, [content]);
 
   return (
-    <div ref={containerRef} className="prose dark:prose-invert max-w-none">
+    <div ref={containerRef} className="dark:prose-invert max-w-none prose-sm prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, rehypeSanitize]}
@@ -193,7 +193,7 @@ const MarkdownContent: React.FC<{
             // Simple code block rendering without syntax highlighting
             if (!inline && language) {
               return (
-                <pre className="rounded-md p-4 bg-muted/30 overflow-auto">
+                <pre className="rounded-md p-2 bg-muted/30 overflow-auto">
                   <code className={className} {...props}>
                     {String(children).replace(/\n$/, "")}
                   </code>
@@ -246,14 +246,14 @@ const ChatBubble: React.FC<{
   }
 
   return (
-    <div className={`flex ${alignmentClass} my-2`}>
-      <div className={`relative max-w-[97%] rounded-lg p-3 ${bubbleBg} shadow-xs`}>
-        <div className="flex items-center mb-2">
+    <div className={`flex ${alignmentClass}`}>
+      <div className={`relative max-w-[97%] rounded-lg p-1.5 ${bubbleBg} shadow-xs`}>
+        <div className="flex items-center mb-1">
           {icon}
           <span className="ml-1 text-xs font-semibold">{message.role.toUpperCase()}</span>
         </div>
         <MarkdownContent content={message.content} />
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-1 right-1">
           <CopyButton
             text={message.content}
             showText={false}
@@ -270,7 +270,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   id,
   created,
   model,
-  usage,
   messages = [],
   score,
   rank,
@@ -446,7 +445,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   return (
     <Card ref={cardRef} className="w-full relative conversation-card">
       <CardHeader
-        className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-2 sm:px-6 pt-2 sm:pt-4 sticky top-[-8px] sm:top-[calc(var(--search-filters-height,_120px)-24px)] z-[5] bg-background/95 backdrop-blur-sm border-b cursor-pointer rounded-t-lg"
+        className="flex flex-row items-center justify-between space-y-0 pb-1 px-2 sm:px-3 pt-1 sm:pt-1 sticky top-[-8px] sm:top-[calc(var(--search-filters-height,_90px)-24px)] z-[5] bg-background/95 backdrop-blur-sm border-b cursor-pointer rounded-t-lg"
         onClick={handleHeaderClick}
         onMouseDown={handleLongPressStart}
         onMouseUp={handleLongPressEnd}
@@ -456,21 +455,15 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
         onContextMenu={handleContextMenu}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
-          <div className="flex items-center flex-wrap gap-1 sm:gap-2 mb-0.5 sm:mb-0">
+          <div className="flex items-center flex-wrap gap-1 sm:gap-1.5 mb-0 sm:mb-0">
             {rank !== undefined && (
-              <Badge variant="secondary" className="font-medium text-xs sm:text-sm py-0.5">
+              <Badge variant="secondary" className="font-medium text-xs sm:text-sm py-0 px-1.5">
                 #{rank}
               </Badge>
             )}
-            <Badge variant="outline" className="font-medium text-xs sm:text-sm py-0.5">
+            <Badge variant="outline" className="font-medium text-xs sm:text-sm py-0 px-1.5">
               {model}
             </Badge>
-            {usage?.total_tokens !== undefined && (
-              <Badge
-                variant="outline"
-                className="font-medium text-xs sm:text-sm py-0.5"
-              >{`${usage.total_tokens} tokens`}</Badge>
-            )}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -479,7 +472,15 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                     <span>
                       {formatDistanceToNow(createdDate, {
                         addSuffix: false,
-                      }).replace("about ", "")}
+                      })
+                        .replace("about ", "")
+                        .replace(/ years?/g, "y")
+                        .replace(/ months?/g, "mo")
+                        .replace(/ weeks?/g, "w")
+                        .replace(/ days?/g, "d")
+                        .replace(/ hours?/g, "h")
+                        .replace(/ minutes?/g, "m")
+                        .replace(/ seconds?/g, "s")}
                     </span>
                   </div>
                 </TooltipTrigger>
@@ -489,7 +490,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
               </Tooltip>
             </TooltipProvider>
             {score && (
-              <Badge variant="outline" className="bg-primary/10 font-medium text-xs sm:text-sm py-0.5">
+              <Badge variant="outline" className="bg-primary/10 font-medium text-xs sm:text-sm py-0 px-1.5">
                 Score: {score.toFixed(2)}
               </Badge>
             )}
@@ -584,8 +585,8 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4 pb-3 sm:pb-6">
-        <div className="space-y-2 sm:space-y-4">
+      <CardContent className="px-2 sm:px-3 py-0.5 sm:py-1 pb-1 sm:pb-2">
+        <div className="space-y-3">
           {messages.map((message, index) => (
             <ChatBubble key={`message-${index}`} message={message} index={index} />
           ))}
