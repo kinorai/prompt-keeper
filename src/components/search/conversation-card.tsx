@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Bot, User, Clock, Check, Info } from "lucide-react";
+import { Copy, Bot, User, Clock, Check, Info, Trash2, MoreVertical, Share2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,13 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // Define custom types for ReactMarkdown components
 interface CodeProps {
@@ -38,6 +45,7 @@ export interface ConversationCardProps {
   messages: Message[];
   score?: number;
   rank?: number; // Add rank property
+  onDelete?: (id: string) => void; // Add onDelete callback
 }
 
 // Helper function to copy text to clipboard
@@ -258,23 +266,92 @@ const ChatBubble: React.FC<{
 };
 
 export const ConversationCard: React.FC<ConversationCardProps> = ({
+  id,
   created,
   model,
   usage,
   messages = [],
   score,
   rank,
+  onDelete,
 }) => {
   const createdDate = new Date(created);
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showContextDeleteConfirm, setShowContextDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Generate full conversation text for copying
   const getFullConversationText = () => {
     return messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n");
   };
 
+  // Generate markdown for sharing
+  const getShareableMarkdown = () => {
+    const header = `# Conversation with ${model}\n\nDate: ${createdDate.toLocaleString()}\n\n---\n\n`;
+    const content = messages.map((msg) => `### ${msg.role.toUpperCase()}\n\n${msg.content}\n\n`).join("");
+    return header + content;
+  };
+
+  // Handle delete
+  const handleDelete = async () => {
+    if (!onDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/search/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast.success("Conversation deleted");
+        onDelete(id);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to delete conversation");
+      }
+    } catch (error) {
+      console.error("Failed to delete conversation:", error);
+      toast.error("Failed to delete conversation");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+      setShowContextDeleteConfirm(false);
+    }
+  };
+
+  // Handle share
+  const handleShare = async () => {
+    const shareableText = getShareableMarkdown();
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Conversation with ${model}`,
+          text: shareableText,
+        });
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          // Fallback to clipboard if share fails
+          copyToClipboard(shareableText, "Conversation copied for sharing");
+        }
+      }
+    } else {
+      // Fallback to clipboard
+      copyToClipboard(shareableText, "Conversation copied for sharing");
+    }
+  };
+
   // Function to handle the header click, using the passed handler if available
-  const handleHeaderClick = () => {
+  const handleHeaderClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking on buttons
+    if ((e.target as HTMLElement).closest("button")) {
+      return;
+    }
+
     if (cardRef.current) {
       // Fallback to simple scrollIntoView if no handler is provided
       cardRef.current.scrollIntoView({
@@ -283,11 +360,62 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       });
     }
   };
+
+  // Handle long press start
+  const handleLongPressStart = (e: React.MouseEvent | React.TouchEvent) => {
+    // Don't prevent default here as it interferes with normal clicks
+    longPressTimer.current = setTimeout(() => {
+      setShowContextMenu(true);
+      if ("touches" in e) {
+        setContextMenuPosition({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      } else {
+        setContextMenuPosition({ x: e.clientX, y: e.clientY });
+      }
+    }, 500); // 500ms for long press
+  };
+
+  // Handle long press end
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  // Handle context menu
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setShowContextMenu(true);
+    setContextMenuPosition({ x: e.clientX, y: e.clientY });
+  };
+
+  // Reset context menu position when closing
+  useEffect(() => {
+    if (!showContextMenu) {
+      setContextMenuPosition({ x: 0, y: 0 });
+    }
+  }, [showContextMenu]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+  }, []);
+
   return (
     <Card ref={cardRef} className="w-full relative conversation-card">
       <CardHeader
         className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-2 sm:px-6 pt-2 sm:pt-4 sticky top-[-8px] sm:top-[calc(var(--search-filters-height,_120px)-24px)] z-[5] bg-background/95 backdrop-blur-sm border-b cursor-pointer rounded-t-lg"
         onClick={handleHeaderClick}
+        onMouseDown={handleLongPressStart}
+        onMouseUp={handleLongPressEnd}
+        onMouseLeave={handleLongPressEnd}
+        onTouchStart={handleLongPressStart}
+        onTouchEnd={handleLongPressEnd}
+        onContextMenu={handleContextMenu}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
           <div className="flex items-center flex-wrap gap-1 sm:gap-2 mb-0.5 sm:mb-0">
@@ -331,6 +459,116 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
           <CopyButton text={getFullConversationText()} successMessage="Conversation copied to clipboard" />
+          <Popover open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 px-2 py-1 bg-muted/50 hover:bg-destructive/20 hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="flex gap-3">
+                <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                <div className="space-y-3 flex-1">
+                  <div>
+                    <p className="font-medium text-sm">Delete conversation?</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      This will permanently delete the conversation with {model}. This action cannot be undone.
+                    </p>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeleting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                      {isDeleting ? "Deleting..." : "Delete"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="sm" className="h-7 px-2 py-1 bg-muted/50 hover:bg-muted/80">
+                <MoreVertical className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              style={
+                showContextMenu && contextMenuPosition.x > 0
+                  ? {
+                      position: "fixed",
+                      left: contextMenuPosition.x,
+                      top: contextMenuPosition.y,
+                    }
+                  : undefined
+              }
+            >
+              <DropdownMenuItem
+                onClick={() => copyToClipboard(getFullConversationText(), "Conversation copied to clipboard")}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShare}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Share
+              </DropdownMenuItem>
+              <Popover open={showContextDeleteConfirm} onOpenChange={setShowContextDeleteConfirm}>
+                <PopoverTrigger asChild>
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setShowContextDeleteConfirm(true);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end" side="left">
+                  <div className="flex gap-3">
+                    <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div className="space-y-3 flex-1">
+                      <div>
+                        <p className="font-medium text-sm">Delete conversation?</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          This will permanently delete the conversation with {model}. This action cannot be undone.
+                        </p>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowContextDeleteConfirm(false);
+                            setShowContextMenu(false);
+                          }}
+                          disabled={isDeleting}
+                        >
+                          Cancel
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardHeader>
       <CardContent className="px-2 sm:px-6 py-1.5 sm:py-4 pb-3 sm:pb-6">

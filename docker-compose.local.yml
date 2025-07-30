@@ -39,7 +39,7 @@ services:
     command:
       - "--config=/app/config.local.litellm.yaml"
     ports:
-      - "4000:4000"
+      - "4001:4000"
     env_file:
       - .env
     networks:
@@ -47,7 +47,6 @@ services:
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
-    container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
     ports:

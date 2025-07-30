@@ -105,6 +105,20 @@ function HomeContent() {
     }
   };
 
+  const handleDeleteConversation = (deletedId: string) => {
+    // Remove the deleted conversation from the search results
+    if (searchResults) {
+      setSearchResults(searchResults.filter((result) => result.id !== deletedId));
+      // Update metadata
+      if (searchMetadata) {
+        setSearchMetadata({
+          ...searchMetadata,
+          total: Math.max(0, searchMetadata.total - 1),
+        });
+      }
+    }
+  };
+
   const updateSearchParams = useCallback(() => {
     const params = new URLSearchParams(searchParams);
     if (query) params.set("q", query);
@@ -362,7 +376,7 @@ function HomeContent() {
             {!loading && searchResults && searchResults.length > 0 && (
               <div className="space-y-3 sm:space-y-6">
                 {searchResults.map((result, index) => (
-                  <ConversationCard key={result.id} {...result} rank={index + 1} />
+                  <ConversationCard key={result.id} {...result} rank={index + 1} onDelete={handleDeleteConversation} />
                 ))}
               </div>
             )}
