@@ -294,7 +294,7 @@ function HomeContent() {
       className="flex flex-col h-screen"
       style={
         {
-          "--search-filters-height": "110px",
+          "--search-filters-height": "90px",
           "--search-filters-height-mobile": "60px",
         } as React.CSSProperties
       }
@@ -303,8 +303,8 @@ function HomeContent() {
       <div ref={resultsContainerRef} className="flex-1 overflow-y-auto pb-16 sm:pb-0 main-content">
         <div className="container pb-4 sm:py-6">
           {/* Desktop search bar and filters */}
-          <div className="hidden sm:block sticky top-0 z-20 bg-background/80 backdrop-blur-xs pb-2">
-            <div className="space-y-3">
+          <div className="hidden sm:block sticky top-0 z-20 bg-background/80 backdrop-blur-xs">
+            <div className="space-y-2">
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
                   <SearchBar
@@ -334,7 +334,7 @@ function HomeContent() {
           <div className="mt-0 sm:mt-2">
             {/* Search metadata - only visible on desktop */}
             {searchMetadata && (
-              <div className="hidden sm:block text-sm text-muted-foreground mb-3 sm:mb-4">
+              <div className="hidden sm:block text-sm text-muted-foreground mb-1 sm:mb-1">
                 {searchMetadata.total > 0 ? (
                   <p>
                     Found {searchMetadata.total} results in{" "}
@@ -350,20 +350,20 @@ function HomeContent() {
 
             {/* Loading state */}
             {loading && (
-              <div className="space-y-3 sm:space-y-6">
+              <div className="space-y-1 sm:space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="w-full h-[200px] rounded-xl" />
+                  <Skeleton key={i} className="w-full h-[160px] rounded-xl" />
                 ))}
               </div>
             )}
 
             {/* Empty state */}
             {!loading && searchResults && searchResults.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
-                <div className="bg-muted/30 p-4 rounded-full mb-4">
-                  <MessageSquare className="h-8 w-8 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+                <div className="bg-muted/30 p-3 rounded-full mb-3">
+                  <MessageSquare className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-2">No conversations found</h3>
+                <h3 className="text-base sm:text-lg font-semibold mb-2">No conversations found</h3>
                 <p className="text-muted-foreground max-w-md">
                   {query
                     ? "Try adjusting your search or filters to find what you're looking for."
@@ -374,7 +374,7 @@ function HomeContent() {
 
             {/* Results */}
             {!loading && searchResults && searchResults.length > 0 && (
-              <div className="space-y-3 sm:space-y-6">
+              <div className="space-y-1 sm:space-y-2">
                 {searchResults.map((result, index) => (
                   <ConversationCard key={result.id} {...result} rank={index + 1} onDelete={handleDeleteConversation} />
                 ))}
