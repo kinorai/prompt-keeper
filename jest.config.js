@@ -26,7 +26,7 @@ module.exports = {
     "^.+\\.(ts|tsx)$": [
       "ts-jest",
       {
-        isolatedModules: true, // This will ignore TypeScript errors
+        // isolatedModules is now configured in tsconfig.json
       },
     ],
   },
