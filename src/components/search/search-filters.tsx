@@ -38,7 +38,7 @@ export function SearchFilters({
           <Filter className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">Filters</span>
           <div className="flex flex-wrap gap-1.5">
-            <Badge variant="secondary" className="text-xs font-normal">
+            <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
               <Calendar className="mr-1 h-3 w-3" />
               {timeRange === "1h"
                 ? "Last hour"
@@ -50,12 +50,12 @@ export function SearchFilters({
                       ? "Last year"
                       : "All time"}
             </Badge>
-            <Badge variant="secondary" className="text-xs font-normal">
+            <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
               <SlidersHorizontal className="mr-1 h-3 w-3" />
               {resultsSize} results
             </Badge>
             {searchMode === "fuzzy" && (
-              <Badge variant="secondary" className="text-xs font-normal">
+              <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
                 Fuzziness: {fuzzyConfig.fuzziness}
               </Badge>
             )}
@@ -140,12 +140,12 @@ export function SearchFilters({
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value="filters" className="border-none">
-        <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">
+        <AccordionTrigger className="text-sm font-medium hover:no-underline">
           <div className="flex flex-wrap items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <span>Filters</span>
             <div className="flex flex-wrap gap-1.5">
-              <Badge variant="secondary" className="text-xs font-normal">
+              <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
                 <Calendar className="mr-1 h-3 w-3" />
                 {timeRange === "1h"
                   ? "Last hour"
@@ -157,12 +157,12 @@ export function SearchFilters({
                         ? "Last year"
                         : "All time"}
               </Badge>
-              <Badge variant="secondary" className="text-xs font-normal">
+              <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
                 <SlidersHorizontal className="mr-1 h-3 w-3" />
                 {resultsSize} results
               </Badge>
               {searchMode === "fuzzy" && (
-                <Badge variant="secondary" className="text-xs font-normal">
+                <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
                   Fuzziness: {fuzzyConfig.fuzziness}
                 </Badge>
               )}
