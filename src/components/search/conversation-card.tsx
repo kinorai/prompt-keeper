@@ -1,5 +1,18 @@
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Bot, User, Clock, Check, Info, Trash2, MoreVertical, Share2, AlertTriangle } from "lucide-react";
+import {
+  Copy,
+  Bot,
+  User,
+  Clock,
+  Check,
+  Info,
+  Trash2,
+  MoreVertical,
+  Share2,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -220,6 +233,8 @@ const ChatBubble: React.FC<{
   message: Message;
   index: number;
 }> = ({ message }) => {
+  const [isSystemExpanded, setIsSystemExpanded] = useState(false);
+
   let alignmentClass = "";
   let bubbleBg = "";
   let icon = null;
@@ -245,14 +260,42 @@ const ChatBubble: React.FC<{
       bubbleBg = "bg-gray-50 dark:bg-gray-900";
   }
 
+  // Helper function to get preview text for system prompts
+  const getSystemPreview = (content: string, maxLength: number = 100) => {
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength).trim() + "...";
+  };
+
+  const isSystemMessage = message.role === "system";
+  const shouldShowPreview = isSystemMessage && !isSystemExpanded;
+  const contentToShow = shouldShowPreview ? getSystemPreview(message.content) : message.content;
+
   return (
     <div className={`flex ${alignmentClass}`}>
       <div className={`relative max-w-[97%] rounded-lg p-1.5 ${bubbleBg} shadow-xs`}>
         <div className="flex items-center mb-1">
           {icon}
           <span className="ml-1 text-xs font-semibold">{message.role.toUpperCase()}</span>
+          {isSystemMessage && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsSystemExpanded(!isSystemExpanded)}
+              className="ml-2 h-auto p-1 text-xs hover:bg-transparent"
+            >
+              {isSystemExpanded ? (
+                <>
+                  <ChevronUp className="h-3 w-3 mr-1" />
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3 mr-1" />
+                </>
+              )}
+            </Button>
+          )}
         </div>
-        <MarkdownContent content={message.content} />
+        <MarkdownContent content={contentToShow} />
         <div className="absolute top-1 right-1">
           <CopyButton
             text={message.content}
