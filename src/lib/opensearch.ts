@@ -3,6 +3,10 @@ import { createLogger } from "@/lib/logger";
 
 const log = createLogger("opensearch");
 
+/**
+ * OpenSearch client instance configured from environment variables.
+ * This client is used throughout the application for all OpenSearch operations.
+ */
 const client = new Client({
   node: process.env.OPENSEARCH_URL || "http://localhost:9200",
   auth: {
@@ -18,14 +22,89 @@ const client = new Client({
 
 export const PROMPT_KEEPER_INDEX = "prompt-keeper";
 
-// Initialize index with mapping if it doesn't exist
-export async function initializeIndex() {
+// Track initialization state
+let isInitialized = false;
+
+// Define the complete mapping schema
+const INDEX_MAPPING = {
+  properties: {
+    timestamp: { type: "date" as const },
+    created_at: { type: "date" as const },
+    updated_at: { type: "date" as const },
+    conversation_hash: {
+      type: "keyword" as const,
+      fields: {
+        keyword: { type: "keyword" as const },
+      },
+    },
+    model: {
+      type: "text" as const,
+      fields: {
+        keyword: { type: "keyword" as const },
+      },
+    },
+    messages: {
+      type: "nested" as const,
+      properties: {
+        role: { type: "keyword" as const },
+        content: {
+          type: "text" as const,
+          analyzer: "standard" as const,
+        },
+      },
+    },
+    usage: {
+      properties: {
+        total_tokens: { type: "integer" as const },
+        prompt_tokens: { type: "integer" as const },
+        completion_tokens: { type: "integer" as const },
+      },
+    },
+    latency: { type: "float" as const },
+  },
+};
+
+/**
+ * Check if the prompt-keeper index exists in OpenSearch.
+ * This is a read-only operation that doesn't modify the index.
+ *
+ * @returns {Promise<boolean>} True if the index exists, false otherwise
+ */
+export async function checkIndexExists(): Promise<boolean> {
   try {
-    const indexExists = await client.indices.exists({
+    const response = await client.indices.exists({
       index: PROMPT_KEEPER_INDEX,
     });
+    return response.body;
+  } catch (error) {
+    log.error(error, "Failed to check if index exists:");
+    return false;
+  }
+}
 
-    if (!indexExists.body) {
+/**
+ * Initialize the prompt-keeper index with the proper mapping schema.
+ * This function should only be called once during application startup,
+ * typically through the /api/init endpoint.
+ *
+ * Best practices:
+ * - Call this function only during initial setup or deployment
+ * - Use the /api/init endpoint rather than calling directly
+ * - The function tracks initialization state to prevent redundant operations
+ *
+ * @throws {Error} If index creation fails
+ */
+export async function initializeIndex() {
+  try {
+    // Skip if already initialized in this runtime
+    if (isInitialized) {
+      log.debug("Index already initialized in this runtime");
+      return;
+    }
+
+    const indexExists = await checkIndexExists();
+
+    if (!indexExists) {
       log.info(`Creating index ${PROMPT_KEEPER_INDEX}...`);
       await client.indices.create({
         index: PROMPT_KEEPER_INDEX,
@@ -34,76 +113,48 @@ export async function initializeIndex() {
             number_of_shards: 1,
             number_of_replicas: 1,
           },
-          mappings: {
-            properties: {
-              timestamp: { type: "date" },
-              created_at: { type: "date" },
-              updated_at: { type: "date" },
-              conversation_hash: {
-                type: "keyword",
-                fields: {
-                  keyword: { type: "keyword" },
-                },
-              },
-              model: {
-                type: "text",
-                fields: {
-                  keyword: { type: "keyword" },
-                },
-              },
-              messages: {
-                type: "nested",
-                properties: {
-                  role: { type: "keyword" },
-                  content: {
-                    type: "text",
-                    analyzer: "standard",
-                  },
-                },
-              },
-              usage: {
-                properties: {
-                  total_tokens: { type: "integer" },
-                  prompt_tokens: { type: "integer" },
-                  completion_tokens: { type: "integer" },
-                },
-              },
-              latency: { type: "float" },
-            },
-          },
+          mappings: INDEX_MAPPING,
         },
       });
       log.info(`Index ${PROMPT_KEEPER_INDEX} created successfully`);
     } else {
-      // If index already exists, update mapping to add new fields
-      try {
-        await client.indices.putMapping({
-          index: PROMPT_KEEPER_INDEX,
-          body: {
-            properties: {
-              created_at: { type: "date" },
-              updated_at: { type: "date" },
-              conversation_hash: {
-                type: "keyword",
-                fields: {
-                  keyword: { type: "keyword" },
-                },
-              },
-            },
-          },
-        });
-        log.info(`Updated mapping for ${PROMPT_KEEPER_INDEX} to include conversation_hash and timestamp fields`);
-      } catch (mappingError) {
-        log.error(mappingError, "Failed to update OpenSearch mapping:");
-      }
+      log.debug(`Index ${PROMPT_KEEPER_INDEX} already exists`);
+
+      // Only check mapping compatibility if needed
+      // In production, you might want to add migration logic here
+      // For now, we'll just log that the index exists
     }
+
+    isInitialized = true;
   } catch (error) {
     log.error(error, "Failed to initialize OpenSearch index:");
     throw error;
   }
 }
 
-// Call initializeIndex when the module is imported
-initializeIndex().catch((error) => log.error(error, "Error initializing index:"));
+/**
+ * Ensure the OpenSearch index exists before performing operations.
+ * This function is called automatically by all API routes that interact with OpenSearch.
+ * It provides a fast check without modifying the index mapping.
+ *
+ * @throws {Error} If the index doesn't exist and needs initialization
+ */
+export async function ensureIndexExists() {
+  if (!isInitialized) {
+    const exists = await checkIndexExists();
+    if (!exists) {
+      throw new Error("OpenSearch index not initialized. Please call /api/init endpoint first.");
+    }
+    isInitialized = true;
+  }
+}
+
+/**
+ * Reset the initialization state. This is primarily useful for testing.
+ * In production, the initialization state persists for the lifetime of the process.
+ */
+export function resetInitializationState() {
+  isInitialized = false;
+}
 
 export default client;

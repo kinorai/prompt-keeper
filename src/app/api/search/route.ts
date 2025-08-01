@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import opensearchClient, { PROMPT_KEEPER_INDEX } from "@/lib/opensearch";
+import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/opensearch";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api:search");
 
 export async function POST(req: NextRequest) {
   try {
+    // Ensure index exists before searching
+    await ensureIndexExists();
+
     const { query, searchMode = "keyword", timeRange, size = 20, from = 0, fuzzyConfig } = await req.json();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
