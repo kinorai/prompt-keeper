@@ -1,10 +1,10 @@
-name: Continuous Integration
+name: Lint and Test
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   # Setup job - checkout code, setup Node.js, install dependencies
@@ -109,28 +109,3 @@ jobs:
 
       - name: Run tests
         run: npm run test
-
-  # Build job - build the application
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      # Restore cached node_modules
-      - name: Restore node_modules
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
-
-      - name: Build application
-        run: npm run build
