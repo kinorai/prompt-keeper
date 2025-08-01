@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import opensearchClient, { PROMPT_KEEPER_INDEX } from "@/lib/opensearch";
+import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/opensearch";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api:search:delete");
@@ -11,6 +11,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!id) {
       return NextResponse.json({ error: "Conversation ID is required" }, { status: 400 });
     }
+
+    // Ensure index exists before deleting
+    await ensureIndexExists();
 
     log.debug({ id }, "[Delete API] Deleting conversation");
 
