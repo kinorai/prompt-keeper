@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import opensearchClient, { PROMPT_KEEPER_INDEX } from "@/lib/opensearch";
+import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/opensearch";
 import crypto from "crypto";
 import { createLogger } from "@/lib/logger";
 
@@ -187,6 +187,9 @@ async function storeConversation(requestMessages: Message[], response: Formatted
     const conversationHash = generateConversationHash(requestMessages);
 
     log.debug(requestMessages, "[OpenSearch] Processing conversation");
+
+    // Ensure index exists before any OpenSearch operations
+    await ensureIndexExists();
 
     // If we have a valid hash and more than one message (likely a continuation)
     if (conversationHash && requestMessages.length > 1) {
