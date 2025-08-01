@@ -50,6 +50,8 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/eslintrc": "^3",
     "@types/jest": "^30.0.0",
     "@types/lodash.debounce": "^4.0.9",
