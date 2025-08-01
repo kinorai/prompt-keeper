@@ -2,7 +2,17 @@ import { DELETE } from "@/app/api/search/[id]/route";
 import { NextRequest } from "next/server";
 import opensearchClient from "@/lib/opensearch";
 
-jest.mock("@/lib/opensearch");
+jest.mock("@/lib/opensearch", () => ({
+  __esModule: true,
+  default: {
+    delete: jest.fn(),
+  },
+  PROMPT_KEEPER_INDEX: "prompt-keeper",
+  ensureIndexExists: jest.fn().mockResolvedValue(undefined),
+  checkIndexExists: jest.fn().mockResolvedValue(true),
+  initializeIndex: jest.fn().mockResolvedValue(undefined),
+  resetInitializationState: jest.fn(),
+}));
 
 describe("DELETE /api/search/[id]", () => {
   const mockOpensearchClient = opensearchClient as jest.Mocked<typeof opensearchClient>;
