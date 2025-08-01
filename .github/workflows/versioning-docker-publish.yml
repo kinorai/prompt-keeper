@@ -2,10 +2,13 @@
 name: Docker Build and Publish
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_run:
+    workflows: ["Lint and Test"]
+    types: [completed]
+  release:
+    types: [published]
+  # Manual triggers for testing
+  workflow_dispatch:
 
 env:
   REGISTRY_IMAGE: kinorai/prompt-keeper
@@ -14,7 +17,7 @@ jobs:
   versioning:
     name: Versioning
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'release' && github.event.action == 'published'
     permissions:
       contents: write
     outputs:
@@ -34,21 +37,11 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Release
-        uses: actions/create-release@v1
-        if: ${{ steps.changelog.outputs.skipped == 'false' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.github_token }}
-        with:
-          tag_name: ${{ steps.changelog.outputs.tag }}
-          release_name: ${{ steps.changelog.outputs.tag }}
-          body: ${{ steps.changelog.outputs.clean_changelog }}
-
   build:
     name: Build Platform-Specific Images
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     needs: [versioning]
-    if: always() && (needs.versioning.result == 'success' || needs.versioning.result == 'skipped')
+    if: always() && (github.event.workflow_run.conclusion == 'success' || github.event_name == 'release')
     strategy:
       fail-fast: false
       matrix:
@@ -63,6 +56,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Docker meta
         id: meta
@@ -70,11 +65,19 @@ jobs:
         with:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
-            type=ref,event=pr
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ needs.versioning.outputs.version }},enable=${{ needs.versioning.result == 'success' && needs.versioning.outputs.skipped != 'true' }}
+            # PR builds - no tags (build only)
+            type=raw,value=pr-test,enable=${{ github.event.workflow_run.event == 'pull_request' }}
+            # Develop branch - 'dev' tag
+            type=raw,value=dev,enable=${{ github.event.workflow_run.head_branch == 'develop' }}
+            # Main branch - 'latest' tag
+            type=raw,value=latest,enable=${{ github.event.workflow_run.head_branch == 'main' }}
+            # Releases - semantic version tags
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }}
 
       - name: Login to Docker Hub
+        if: github.event.workflow_run.event != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -94,17 +97,21 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          # Only push if NOT a PR (build-only for PRs)
+          push: ${{ github.event.workflow_run.event != 'pull_request' }}
+          outputs: type=image,push-by-digest=${{ github.event.workflow_run.event != 'pull_request' }},name-canonical=true,push=${{ github.event.workflow_run.event != 'pull_request' }}
           cache-from: type=gha,scope=buildkit-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=buildkit-${{ matrix.platform }}
 
       - name: Export digest
+        if: github.event.workflow_run.event != 'pull_request'
         run: |
           mkdir -p ${{ runner.temp }}/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: Upload digest
+        if: github.event.workflow_run.event != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: digests-${{ env.PLATFORM_PAIR }}
@@ -115,7 +122,7 @@ jobs:
   merge:
     name: Merge and Push Multi-Platform Image
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.versioning.outputs.skipped != 'true'
+    if: github.event.workflow_run.event != 'pull_request'
     needs:
       - build
       - versioning
@@ -142,8 +149,14 @@ jobs:
         with:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
-            type=raw,value=latest
-            type=raw,value=${{ needs.versioning.outputs.version }}
+            # Develop branch - 'dev' tag
+            type=raw,value=dev,enable=${{ github.event.workflow_run.head_branch == 'develop' }}
+            # Main branch - 'latest' tag
+            type=raw,value=latest,enable=${{ github.event.workflow_run.head_branch == 'main' }}
+            # Releases - semantic version tags
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
@@ -153,4 +166,4 @@ jobs:
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ needs.versioning.outputs.version }}
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
