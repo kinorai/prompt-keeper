@@ -10,6 +10,10 @@ jest.mock("@/lib/opensearch", () => {
     __esModule: true,
     default: mockClient,
     PROMPT_KEEPER_INDEX: "prompt-keeper",
+    ensureIndexExists: jest.fn().mockResolvedValue(undefined),
+    checkIndexExists: jest.fn().mockResolvedValue(true),
+    initializeIndex: jest.fn().mockResolvedValue(undefined),
+    resetInitializationState: jest.fn(),
   };
 });
 
