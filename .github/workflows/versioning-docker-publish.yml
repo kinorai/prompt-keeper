@@ -40,8 +40,7 @@ jobs:
   build:
     name: Build Platform-Specific Images
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    needs: [versioning]
-    if: always() && (github.event.workflow_run.conclusion == 'success' || github.event_name == 'release')
+    if: (github.event.workflow_run.conclusion == 'success') || (github.event_name == 'release')
     strategy:
       fail-fast: false
       matrix:
@@ -125,7 +124,6 @@ jobs:
     if: github.event.workflow_run.event != 'pull_request'
     needs:
       - build
-      - versioning
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
