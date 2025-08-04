@@ -1,10 +1,10 @@
 #https://github.com/orgs/community/discussions/26724
-name: Docker Build and Publish
+name: CI/CD Pipeline
 
 on:
-  workflow_run:
-    workflows: ["Lint and Test"]
-    types: [completed]
+  push:
+    branches: [main, develop]
+  pull_request:
     branches: [main, develop]
   release:
     types: [published]
@@ -15,6 +15,108 @@ env:
   REGISTRY_IMAGE: kinorai/prompt-keeper
 
 jobs:
+  # Setup job - checkout code, setup Node.js, install dependencies
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # First try to restore the cache
+      - name: Restore node_modules cache
+        id: cache-node-modules-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+      # Only run npm ci if cache doesn't exist
+      - name: Install dependencies
+        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
+
+      # Save the cache if we had to install dependencies
+      - name: Save node_modules cache
+        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+  # Lint job - run all linting tasks
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Restore cached node_modules
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+      # Commit linting - skip for dependabot
+      - name: Validate current commit (last commit) with commitlint
+        if: github.event_name == 'push' && github.actor != 'dependabot[bot]'
+        run: npx commitlint --last --verbose
+
+      - name: Validate PR commits with commitlint
+        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+      # Code quality checks
+      - name: Check formatting
+        run: npx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+  # Test job - run tests
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Restore cached node_modules
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Run tests
+        run: npm run test
   versioning:
     name: Versioning
     runs-on: ubuntu-latest
@@ -41,10 +143,7 @@ jobs:
   build:
     name: Build Platform-Specific Images
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'release') ||
-      (github.event_name == 'workflow_dispatch')
+    needs: [test]
     strategy:
       fail-fast: false
       matrix:
@@ -52,14 +151,6 @@ jobs:
           - linux/amd64
           - linux/arm64
     steps:
-      - name: Debug workflow trigger
-        run: |
-          echo "Event name: ${{ github.event_name }}"
-          echo "Workflow run conclusion: ${{ github.event.workflow_run.conclusion }}"
-          echo "Workflow run event: ${{ github.event.workflow_run.event }}"
-          echo "Workflow run branch: ${{ github.event.workflow_run.head_branch }}"
-          echo "Release action: ${{ github.event.action }}"
-
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
@@ -67,8 +158,6 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Docker meta
         id: meta
@@ -76,19 +165,18 @@ jobs:
         with:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
-            # PR builds - no tags (build only)
-            type=raw,value=pr-test,enable=${{ github.event.workflow_run.event == 'pull_request' }}
+            # PR builds - validation tag (not pushed)
+            type=ref,event=pr
             # Develop branch - 'dev' tag
-            type=raw,value=dev,enable=${{ github.event.workflow_run.head_branch == 'develop' }}
+            type=raw,value=dev,enable=${{ github.ref_name == 'develop' }}
             # Main branch - 'latest' tag
-            type=raw,value=latest,enable=${{ github.event.workflow_run.head_branch == 'main' }}
+            type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
             # Releases - semantic version tags
             type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
             type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }}
 
       - name: Login to Docker Hub
-        if: github.event.workflow_run.event != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -107,22 +195,20 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
-          # Only push if NOT a PR (build-only for PRs)
-          push: ${{ github.event.workflow_run.event != 'pull_request' }}
-          outputs: type=image,push-by-digest=${{ github.event.workflow_run.event != 'pull_request' }},name-canonical=true,push=${{ github.event.workflow_run.event != 'pull_request' }}
+          # Don't tag individual platform builds - tags will be applied in merge step
+          outputs: ${{ github.event_name != 'pull_request' && 'type=image,push-by-digest=true,name-canonical=true,push=true' || 'type=docker' }}
           cache-from: type=gha,scope=buildkit-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=buildkit-${{ matrix.platform }}
 
       - name: Export digest
-        if: github.event.workflow_run.event != 'pull_request'
+        if: github.event_name != 'pull_request'
         run: |
           mkdir -p ${{ runner.temp }}/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: Upload digest
-        if: github.event.workflow_run.event != 'pull_request'
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: digests-${{ env.PLATFORM_PAIR }}
@@ -133,10 +219,7 @@ jobs:
   merge:
     name: Merge and Push Multi-Platform Image
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request') ||
-      (github.event_name == 'release') ||
-      (github.event_name == 'workflow_dispatch')
+    if: github.event_name != 'pull_request'
     needs:
       - build
     steps:
@@ -162,10 +245,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
+            # PR builds - validation tag (not pushed)
+            type=ref,event=pr
             # Develop branch - 'dev' tag
-            type=raw,value=dev,enable=${{ github.event.workflow_run.head_branch == 'develop' }}
+            type=raw,value=dev,enable=${{ github.ref_name == 'develop' }}
             # Main branch - 'latest' tag
-            type=raw,value=latest,enable=${{ github.event.workflow_run.head_branch == 'main' }}
+            type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
             # Releases - semantic version tags
             type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
