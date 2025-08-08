@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, verifyApiKey, verifyToken } from "./lib/auth";
+import {
+  AUTH_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_NAME,
+  verifyApiKey,
+  verifyToken,
+  verifyRefreshToken,
+  createToken,
+  createRefreshToken,
+} from "./lib/auth";
 
 // LiteLLM API routes that should use LiteLLM authentication
 const LITELLM_ROUTES = ["/api/chat/completions", "/api/completions", "/api/models"];
@@ -23,8 +31,12 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Skip authentication for login page and API
-  if (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/api/auth/login") {
+  // Skip authentication for login page and auth endpoints that must be reachable without an access token
+  if (
+    request.nextUrl.pathname === "/login" ||
+    request.nextUrl.pathname === "/api/auth/login" ||
+    request.nextUrl.pathname === "/api/auth/refresh"
+  ) {
     return response;
   }
 
@@ -52,7 +64,40 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // If no valid authentication, return 401
+    // Attempt refresh-token based re-authentication
+    const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_NAME)?.value;
+    if (refreshToken) {
+      const userFromRefresh = await verifyRefreshToken(refreshToken);
+      if (userFromRefresh) {
+        const newAccessToken = await createToken(userFromRefresh);
+        const newRefreshToken = await createRefreshToken(userFromRefresh);
+
+        // Set rotated cookies and allow the request to proceed
+        response.cookies.set({
+          name: AUTH_COOKIE_NAME,
+          value: newAccessToken,
+          httpOnly: true,
+          path: "/",
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 60 * 15, // 15 minutes
+          sameSite: "strict",
+        });
+
+        response.cookies.set({
+          name: REFRESH_TOKEN_COOKIE_NAME,
+          value: newRefreshToken,
+          httpOnly: true,
+          path: "/",
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+          sameSite: "strict",
+        });
+
+        return response;
+      }
+    }
+
+    // If no valid authentication and refresh failed, return 401
     return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: {
@@ -63,17 +108,47 @@ export async function middleware(request: NextRequest) {
 
   // For UI routes, check for cookie authentication
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  if (!token) {
-    // Redirect to login page if no token
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (token) {
+    const user = await verifyToken(token);
+    if (user) {
+      return response;
+    }
   }
 
-  // Verify token
-  const user = await verifyToken(token);
-  if (!user) {
-    // Redirect to login page if token is invalid
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Attempt refresh-token based re-authentication for UI routes
+  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_NAME)?.value;
+  if (refreshToken) {
+    const userFromRefresh = await verifyRefreshToken(refreshToken);
+    if (userFromRefresh) {
+      const newAccessToken = await createToken(userFromRefresh);
+      const newRefreshToken = await createRefreshToken(userFromRefresh);
+
+      response.cookies.set({
+        name: AUTH_COOKIE_NAME,
+        value: newAccessToken,
+        httpOnly: true,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 15, // 15 minutes
+        sameSite: "strict",
+      });
+
+      response.cookies.set({
+        name: REFRESH_TOKEN_COOKIE_NAME,
+        value: newRefreshToken,
+        httpOnly: true,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        sameSite: "strict",
+      });
+
+      return response;
+    }
   }
+
+  // Redirect to login page if token is invalid and refresh failed
+  return NextResponse.redirect(new URL("/login", request.url));
 
   return response;
 }
