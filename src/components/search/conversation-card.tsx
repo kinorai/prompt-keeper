@@ -260,19 +260,11 @@ const ChatBubble: React.FC<{
       bubbleBg = "bg-gray-50 dark:bg-gray-900";
   }
 
-  // Helper function to get preview text for system prompts
-  const getSystemPreview = (content: string, maxLength: number = 100) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength).trim() + "...";
-  };
-
   const isSystemMessage = message.role === "system";
-  const shouldShowPreview = isSystemMessage && !isSystemExpanded;
-  const contentToShow = shouldShowPreview ? getSystemPreview(message.content) : message.content;
 
   return (
     <div className={`flex ${alignmentClass}`}>
-      <div className={`relative max-w-[97%] rounded-lg p-1.5 ${bubbleBg} shadow-xs`}>
+      <div className={`relative ${isSystemMessage ? "w-full" : "max-w-[97%]"} rounded-lg p-1.5 ${bubbleBg} shadow-xs`}>
         <div className="flex items-center mb-1">
           {icon}
           <span className="ml-1 text-xs font-semibold">{message.role.toUpperCase()}</span>
@@ -295,7 +287,13 @@ const ChatBubble: React.FC<{
             </Button>
           )}
         </div>
-        <MarkdownContent content={contentToShow} />
+        {isSystemMessage && !isSystemExpanded ? (
+          <div className="w-full block text-sm sm:text-base whitespace-nowrap overflow-hidden text-ellipsis pr-8">
+            {message.content}
+          </div>
+        ) : (
+          <MarkdownContent content={message.content} />
+        )}
         <div className="absolute top-1 right-1">
           <CopyButton
             text={message.content}
