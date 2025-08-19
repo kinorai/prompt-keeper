@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, Suspense, useMemo } from "rea
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilters } from "@/components/search/search-filters";
 import { ConversationCard } from "@/components/search/conversation-card";
+import { ConversationListItem } from "@/components/search/conversation-list-item";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, Search, MessageSquare, Settings } from "lucide-react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
@@ -76,6 +77,7 @@ function HomeContent() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+  const selectedIdFromUrl = searchParams.get("cid");
 
   // Handle scroll events
   useEffect(() => {
@@ -117,7 +119,22 @@ function HomeContent() {
         });
       }
     }
+    // If the deleted conversation is currently selected, clear the selection
+    if (selectedIdFromUrl === deletedId) {
+      const params = new URLSearchParams(searchParams);
+      params.delete("cid");
+      router.replace(`${pathname}?${params.toString()}`);
+    }
   };
+
+  const handleSelectConversation = useCallback(
+    (id: string) => {
+      const params = new URLSearchParams(searchParams);
+      params.set("cid", id);
+      router.replace(`${pathname}?${params.toString()}`);
+    },
+    [pathname, router, searchParams],
+  );
 
   const updateSearchParams = useCallback(() => {
     const params = new URLSearchParams(searchParams);
@@ -136,8 +153,10 @@ function HomeContent() {
       params.delete("prefix");
     }
 
+    // Preserve selected conversation id if present
+    if (selectedIdFromUrl) params.set("cid", selectedIdFromUrl);
     router.replace(`${pathname}?${params.toString()}`);
-  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, searchParams, router, pathname]);
+  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, searchParams, router, pathname, selectedIdFromUrl]);
 
   const handleSearch = useCallback(async () => {
     updateSearchParams();
@@ -372,12 +391,89 @@ function HomeContent() {
               </div>
             )}
 
-            {/* Results */}
+            {/* Results - WhatsApp-like master/detail */}
             {!loading && searchResults && searchResults.length > 0 && (
-              <div className="space-y-1 sm:space-y-2">
-                {searchResults.map((result, index) => (
-                  <ConversationCard key={result.id} {...result} rank={index + 1} onDelete={handleDeleteConversation} />
-                ))}
+              <div className="sm:grid sm:grid-cols-[minmax(260px,340px)_1fr] sm:gap-3">
+                {/* List (always visible, takes full width on mobile) */}
+                <div className={"space-y-2 sm:space-y-2 " + (selectedIdFromUrl ? "hidden sm:block" : "block")}>
+                  {searchResults.map((result) => (
+                    <ConversationListItem
+                      key={result.id}
+                      id={result.id}
+                      created={result.created}
+                      model={result.model}
+                      messages={result.messages}
+                      score={result.score}
+                      isActive={selectedIdFromUrl === result.id}
+                      onSelect={handleSelectConversation}
+                      onDelete={handleDeleteConversation}
+                    />
+                  ))}
+                </div>
+
+                {/* Detail (desktop) */}
+                <div className="hidden sm:block">
+                  {selectedIdFromUrl ? (
+                    (() => {
+                      const active = searchResults.find((r) => r.id === selectedIdFromUrl);
+                      if (!active) return null;
+                      return (
+                        <ConversationCard
+                          key={active.id}
+                          id={active.id}
+                          created={active.created}
+                          model={active.model}
+                          usage={active.usage}
+                          messages={active.messages}
+                          score={active.score}
+                          rank={undefined}
+                          onDelete={handleDeleteConversation}
+                        />
+                      );
+                    })()
+                  ) : (
+                    <div className="hidden sm:flex h-[60vh] items-center justify-center rounded-xl border text-muted-foreground">
+                      Select a conversation to view
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Detail (mobile) */}
+            {!loading && selectedIdFromUrl && searchResults && (
+              <div className="sm:hidden">
+                <div className="mb-2 flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const params = new URLSearchParams(searchParams);
+                      params.delete("cid");
+                      router.replace(`${pathname}?${params.toString()}`);
+                    }}
+                  >
+                    Back
+                  </Button>
+                  <span className="text-sm text-muted-foreground">Conversation</span>
+                </div>
+                {(() => {
+                  const active = searchResults.find((r) => r.id === selectedIdFromUrl);
+                  if (!active) return null;
+                  return (
+                    <ConversationCard
+                      key={active.id}
+                      id={active.id}
+                      created={active.created}
+                      model={active.model}
+                      usage={active.usage}
+                      messages={active.messages}
+                      score={active.score}
+                      rank={undefined}
+                      onDelete={handleDeleteConversation}
+                    />
+                  );
+                })()}
               </div>
             )}
 
