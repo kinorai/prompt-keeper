@@ -111,24 +111,27 @@ export function ConversationListItem({
       )}
       onClick={() => onSelect?.(id)}
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 pr-3 sm:pr-3">
         {/* First row */}
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="font-medium text-xs py-0 px-1.5">
-            {model}
+        <div className="flex items-center gap-2 min-w-0">
+          <Badge
+            variant="outline"
+            className="font-medium text-xs py-0 px-1.5 max-w-[60%] sm:max-w-[50%] overflow-hidden whitespace-nowrap justify-start"
+            title={model}
+          >
+            <span className="truncate">{model}</span>
           </Badge>
           {typeof score === "number" && (
             <Badge variant="secondary" className="text-[10px] py-0 px-1">
               {score.toFixed(2)}
             </Badge>
           )}
-          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex flex-1 items-center gap-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <MessageSquare className="h-3.5 w-3.5" />
               <span>{userMessagesCount}</span>
             </div>
-            <span>•</span>
-            <div className="flex items-center gap-1">
+            <div className="ml-auto flex items-center gap-1 whitespace-nowrap">
               <CalendarDays className="h-3.5 w-3.5" />
               <span>{formatWhatsAppLikeDate(createdDate)}</span>
             </div>
@@ -139,8 +142,8 @@ export function ConversationListItem({
         <div className="line-clamp-2 min-h-[1.5rem] text-sm text-foreground/90">{firstUserPrompt}</div>
       </div>
 
-      {/* Actions on the right */}
-      <div className="ml-3 flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+      {/* Actions on the right (overlay) */}
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
         <Button
           variant="secondary"
           size="sm"
