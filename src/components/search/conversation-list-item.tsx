@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,9 +9,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { CalendarDays, ChevronRight, Copy, MessageSquare, MoreVertical, Share2, Trash2 } from "lucide-react";
+import { CalendarDays, Copy, MessageSquare, MoreVertical, Share2, Trash2, AlertTriangle } from "lucide-react";
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
 
@@ -62,7 +62,7 @@ export function ConversationListItem({
   const createdDate = useMemo(() => new Date(created), [created]);
   const userMessagesCount = useMemo(() => messages.filter((m) => m.role === "user").length, [messages]);
   const firstUserPrompt = useMemo(() => messages.find((m) => m.role === "user")?.content || "", [messages]);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // No local delete popover state in list view
 
   const getFullConversationText = () => messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n");
   const getShareableMarkdown = () => {
@@ -84,6 +84,9 @@ export function ConversationListItem({
     copyToClipboard(text, "Conversation copied for sharing");
   };
 
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const actionsAnchorRef = useRef<HTMLSpanElement | null>(null);
+
   const handleDelete = async () => {
     if (!onDelete) return;
     try {
@@ -98,8 +101,6 @@ export function ConversationListItem({
     } catch (e) {
       console.error(e);
       toast.error("Failed to delete");
-    } finally {
-      setShowDeleteConfirm(false);
     }
   };
 
@@ -139,38 +140,56 @@ export function ConversationListItem({
         </div>
 
         {/* Second row */}
-        <div className="line-clamp-2 min-h-[1.5rem] text-sm text-foreground/90">{firstUserPrompt}</div>
+        <div className="line-clamp-2 min-h-[1.5rem] text-sm text-foreground/90 pr-8 sm:pr-0">{firstUserPrompt}</div>
       </div>
 
-      {/* Actions on the right (overlay) */}
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-        <Button
-          variant="secondary"
-          size="sm"
-          className="h-7 px-2 py-1 bg-muted/50 hover:bg-muted/80"
-          onClick={(e) => {
-            e.stopPropagation();
-            copyToClipboard(getFullConversationText(), "Conversation copied");
-          }}
-        >
-          <Copy className="h-3.5 w-3.5" />
-        </Button>
-        <Popover open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <PopoverTrigger asChild>
+      {/* Mobile-only context menu positioned below the date at the top-right */}
+      <div className="absolute right-3 top-8 sm:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               variant="secondary"
               size="sm"
-              className="h-7 px-2 py-1 bg-muted/50 hover:bg-destructive/20 hover:text-destructive"
+              className="h-7 w-7 p-0 bg-muted/50 hover:bg-muted/80"
               onClick={(e) => e.stopPropagation()}
+              aria-label="Conversation actions"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <MoreVertical className="h-4 w-4" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80" align="end" onClick={(e) => e.stopPropagation()}>
-            <div className="space-y-3">
-              <p className="text-sm">Delete conversation?</p>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onClick={() => copyToClipboard(getFullConversationText(), "Conversation copied")}>
+              <Copy className="mr-2 h-4 w-4" /> Copy
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShare}>
+              <Share2 className="mr-2 h-4 w-4" /> Share
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setIsDeleteOpen(true)}>
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {/* Invisible anchor to position the popover exactly under the date/three-dots */}
+        <span ref={actionsAnchorRef} className="absolute right-0 top-0 w-0 h-0" />
+      </div>
+
+      {/* Popover confirmation like conversation view, anchored to top-right */}
+      <Popover open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <PopoverAnchor asChild>
+          <span ref={actionsAnchorRef} />
+        </PopoverAnchor>
+        <PopoverContent align="end" onClick={(e) => e.stopPropagation()}>
+          <div className="flex gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="space-y-3 flex-1">
+              <div>
+                <p className="font-medium text-sm">Delete conversation?</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This will permanently delete the conversation with {model}. This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setIsDeleteOpen(false)}>
                   Cancel
                 </Button>
                 <Button variant="destructive" size="sm" onClick={handleDelete}>
@@ -178,36 +197,9 @@ export function ConversationListItem({
                 </Button>
               </div>
             </div>
-          </PopoverContent>
-        </Popover>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7 px-2 py-1 bg-muted/50 hover:bg-muted/80"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onClick={() => copyToClipboard(getFullConversationText(), "Conversation copied")}>
-              Copy
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleShare}>
-              <Share2 className="mr-2 h-4 w-4" /> Share
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => setShowDeleteConfirm(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <ChevronRight className="ml-1 hidden h-4 w-4 text-muted-foreground sm:block" />
-      </div>
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
