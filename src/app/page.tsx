@@ -393,7 +393,7 @@ function HomeContent() {
 
             {/* Results - WhatsApp-like master/detail */}
             {!loading && searchResults && searchResults.length > 0 && (
-              <div className="sm:grid sm:grid-cols-[minmax(260px,340px)_1fr] sm:gap-3">
+              <div className="sm:grid sm:grid-cols-[minmax(260px,340px)_minmax(0,1fr)] sm:gap-3">
                 {/* List (always visible, takes full width on mobile) */}
                 <div className={"space-y-2 sm:space-y-2 " + (selectedIdFromUrl ? "hidden sm:block" : "block")}>
                   {searchResults.map((result) => (
@@ -412,7 +412,7 @@ function HomeContent() {
                 </div>
 
                 {/* Detail (desktop) */}
-                <div className="hidden sm:block">
+                <div className="hidden sm:block sm:min-w-0">
                   {selectedIdFromUrl ? (
                     (() => {
                       const active = searchResults.find((r) => r.id === selectedIdFromUrl);
