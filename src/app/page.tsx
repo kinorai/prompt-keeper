@@ -6,7 +6,7 @@ import { SearchFilters } from "@/components/search/search-filters";
 import { ConversationCard } from "@/components/search/conversation-card";
 import { ConversationListItem } from "@/components/search/conversation-list-item";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Search, MessageSquare, Settings } from "lucide-react";
+import { ArrowUp, Search, MessageSquare, Settings, ChevronLeft } from "lucide-react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import debounce from "lodash.debounce";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -443,20 +443,6 @@ function HomeContent() {
             {/* Detail (mobile) */}
             {!loading && selectedIdFromUrl && searchResults && (
               <div className="sm:hidden">
-                <div className="mb-2 flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const params = new URLSearchParams(searchParams);
-                      params.delete("cid");
-                      router.replace(`${pathname}?${params.toString()}`);
-                    }}
-                  >
-                    Back
-                  </Button>
-                  <span className="text-sm text-muted-foreground">Conversation</span>
-                </div>
                 {(() => {
                   const active = searchResults.find((r) => r.id === selectedIdFromUrl);
                   if (!active) return null;
@@ -501,6 +487,21 @@ function HomeContent() {
       >
         <div className="container py-2">
           <div className="flex items-center gap-2">
+            {selectedIdFromUrl && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-3 rounded-full"
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams);
+                  params.delete("cid");
+                  router.replace(`${pathname}?${params.toString()}`);
+                }}
+                aria-label="Back to results"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            )}
             <div className="flex-1">
               <SearchBar
                 query={query}
@@ -577,7 +578,7 @@ function HomeContent() {
               </SheetContent>
             </Sheet>
           </div>
-          {searchMetadata && (
+          {!selectedIdFromUrl && searchMetadata && (
             <div className="text-xs text-muted-foreground mt-1 px-1">
               {searchMetadata.total > 0 ? (
                 <p>
