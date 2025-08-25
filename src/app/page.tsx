@@ -14,6 +14,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ConversationList } from "@/components/search/conversation-list";
 
 // Define the types for our search results
 interface SearchHit {
@@ -76,6 +77,7 @@ function HomeContent() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Handle scroll events
   useEffect(() => {
@@ -115,6 +117,10 @@ function HomeContent() {
           ...searchMetadata,
           total: Math.max(0, searchMetadata.total - 1),
         });
+      }
+      // Clear selection if deleted item was selected
+      if (selectedId === deletedId) {
+        setSelectedId(null);
       }
     }
   };
@@ -289,6 +295,32 @@ function HomeContent() {
     }
   }, [searchResults]);
 
+  // Auto-select first conversation on desktop when results change and none selected
+  useEffect(() => {
+    if (!searchResults || searchResults.length === 0) return;
+    if (selectedId) return;
+    if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(min-width: 640px)").matches) {
+      setSelectedId(searchResults[0].id);
+    }
+  }, [searchResults, selectedId]);
+
+  const listItems = useMemo(
+    () =>
+      (searchResults || []).map((r) => ({
+        id: r.id,
+        model: r.model,
+        timestamp: r.created,
+        messages: r.messages,
+        score: r.score,
+      })),
+    [searchResults],
+  );
+
+  const selectedResult = useMemo(
+    () => (searchResults || []).find((r) => r.id === selectedId) || null,
+    [searchResults, selectedId],
+  );
+
   return (
     <div
       className="flex flex-col h-screen"
@@ -374,10 +406,46 @@ function HomeContent() {
 
             {/* Results */}
             {!loading && searchResults && searchResults.length > 0 && (
-              <div className="space-y-1 sm:space-y-2">
-                {searchResults.map((result, index) => (
-                  <ConversationCard key={result.id} {...result} rank={index + 1} onDelete={handleDeleteConversation} />
-                ))}
+              <div className="mt-0 sm:mt-2">
+                {/* Mobile: list only, navigates to /c/[id] */}
+                <div className="sm:hidden">
+                  <ConversationList
+                    items={listItems}
+                    selectedId={selectedId}
+                    buildHref={(id) => `/c/${encodeURIComponent(id)}`}
+                    aria-label="Conversations"
+                  />
+                </div>
+
+                {/* Desktop: split-pane layout */}
+                <div className="hidden sm:grid sm:grid-cols-[minmax(260px,340px)_minmax(0,1fr)] sm:gap-3">
+                  <div className="border rounded-lg p-2">
+                    <ConversationList
+                      items={listItems}
+                      selectedId={selectedId}
+                      onSelect={setSelectedId}
+                      aria-label="Conversations"
+                    />
+                  </div>
+                  <div className="min-h-[200px] sm:min-w-0">
+                    {selectedResult ? (
+                      <ConversationCard
+                        id={selectedResult.id}
+                        created={selectedResult.created}
+                        model={selectedResult.model}
+                        usage={selectedResult.usage}
+                        messages={selectedResult.messages}
+                        score={selectedResult.score}
+                        showInlineActions={false}
+                        onDelete={handleDeleteConversation}
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground border rounded-lg">
+                        Select a conversation
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
