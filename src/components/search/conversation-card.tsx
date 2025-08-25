@@ -1,3 +1,5 @@
+"use client";
+
 import { formatDistanceToNow } from "date-fns";
 import {
   Copy,
@@ -59,6 +61,7 @@ export interface ConversationCardProps {
   score?: number;
   rank?: number; // Add rank property
   onDelete?: (id: string) => void; // Add onDelete callback
+  showInlineActions?: boolean; // Hide Copy/Delete buttons in header when false
 }
 
 // Helper function to copy text to clipboard
@@ -315,6 +318,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   score,
   rank,
   onDelete,
+  showInlineActions = true,
 }) => {
   const createdDate = new Date(created);
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
@@ -538,45 +542,49 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
-          <CopyButton text={getFullConversationText()} successMessage="Conversation copied to clipboard" />
-          <Popover open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-7 px-2 py-1 bg-muted/50 hover:bg-destructive/20 hover:text-destructive"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80" align="end">
-              <div className="flex gap-3">
-                <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-                <div className="space-y-3 flex-1">
-                  <div>
-                    <p className="font-medium text-sm">Delete conversation?</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      This will permanently delete the conversation with {model}. This action cannot be undone.
-                    </p>
+          {showInlineActions && (
+            <>
+              <CopyButton text={getFullConversationText()} successMessage="Conversation copied to clipboard" />
+              <Popover open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-7 px-2 py-1 bg-muted/50 hover:bg-destructive/20 hover:text-destructive"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="flex gap-3">
+                    <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div className="space-y-3 flex-1">
+                      <div>
+                        <p className="font-medium text-sm">Delete conversation?</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          This will permanently delete the conversation with {model}. This action cannot be undone.
+                        </p>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDeleteConfirm(false)}
+                          disabled={isDeleting}
+                        >
+                          Cancel
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowDeleteConfirm(false)}
-                      disabled={isDeleting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
-                      {isDeleting ? "Deleting..." : "Delete"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
           <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
             <DropdownMenuTrigger asChild>
               <Button
