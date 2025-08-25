@@ -127,12 +127,12 @@ export function ConversationListItem({
               {score.toFixed(2)}
             </Badge>
           )}
-          <div className="flex flex-1 items-center gap-2 text-xs text-muted-foreground">
+          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <MessageSquare className="h-3.5 w-3.5" />
               <span>{userMessagesCount}</span>
             </div>
-            <div className="ml-auto flex items-center gap-1 whitespace-nowrap">
+            <div className="flex items-center gap-1 whitespace-nowrap">
               <CalendarDays className="h-3.5 w-3.5" />
               <span>{formatWhatsAppLikeDate(createdDate)}</span>
             </div>
