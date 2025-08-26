@@ -15,7 +15,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { FILTERS_DEFAULTS } from "@/lib/search-defaults";
+import { FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DEFAULTS } from "@/lib/defaults";
 
 // Define the types for our search results
 interface SearchHit {
@@ -95,6 +95,7 @@ function HomeContent() {
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
   const selectedIdFromUrl = searchParams.get("cid");
+  const [isMobile, setIsMobile] = useState(false);
 
   // Handle scroll events
   useEffect(() => {
@@ -113,6 +114,31 @@ function HomeContent() {
         resultsContainer.removeEventListener("scroll", handleScroll);
       };
     }
+  }, []);
+
+  // Track mobile breakpoint (match Tailwind sm: 640px)
+  useEffect(() => {
+    const mql = window.matchMedia(MOBILE_MEDIA_QUERY);
+    const update = () => setIsMobile(mql.matches);
+    update();
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    type MQLWithLegacy = MediaQueryList & {
+      addListener?: (listener: (e: MediaQueryListEvent) => void) => void;
+      removeListener?: (listener: (e: MediaQueryListEvent) => void) => void;
+    };
+
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", handleChange);
+      return () => mql.removeEventListener("change", handleChange);
+    }
+
+    const legacy = mql as MQLWithLegacy;
+    if (typeof legacy.addListener === "function") {
+      legacy.addListener(handleChange);
+      return () => legacy.removeListener?.(handleChange);
+    }
+
+    return () => {};
   }, []);
 
   const scrollToTop = () => {
@@ -275,7 +301,7 @@ function HomeContent() {
     return debounce(() => {
       console.debug("Debounced search triggered for query:", query);
       handleSearch();
-    }, 600);
+    }, SEARCH_BEHAVIOR_DEFAULTS.searchDebounceMs);
   }, [handleSearch, query]);
 
   // Debounced search for filter changes (mode, time range, size, fuzzy)
@@ -283,7 +309,7 @@ function HomeContent() {
     return debounce(() => {
       console.debug("Debounced search triggered for filters change");
       handleSearch();
-    }, 400);
+    }, SEARCH_BEHAVIOR_DEFAULTS.filterDebounceMs);
   }, [handleSearch]);
 
   // Initial load search: Fetch latest entries if query is initially empty
@@ -297,15 +323,17 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLoad]);
 
-  // Apply the debounced search when query changes, respecting 3-char minimum unless query is empty
+  // Apply the debounced search when query changes, respecting minimum length unless query is empty
   useEffect(() => {
     if (!initialLoad) {
       // Only apply debounced search after initial load has completed
-      if (query.length === 0 || query.length >= 3) {
+      if (query.length === 0 || query.length >= SEARCH_BEHAVIOR_DEFAULTS.minQueryLength) {
         console.debug(`Query is now '${query}', scheduling debounced search.`);
         debouncedSearch();
       } else {
-        console.debug(`Query is '${query}' (1-2 chars), cancelling pending debounced search.`);
+        console.debug(
+          `Query is '${query}' (<${SEARCH_BEHAVIOR_DEFAULTS.minQueryLength} chars), cancelling pending debounced search.`,
+        );
         debouncedSearch.cancel();
       }
     }
@@ -320,13 +348,26 @@ function HomeContent() {
   // Trigger search when filters change (but not on the very first mount)
   useEffect(() => {
     if (!initialLoad) {
-      debouncedFilterSearch();
+      // On mobile detail view (a conversation is open), do not reload search
+      if (isMobile && selectedIdFromUrl) {
+        debouncedFilterSearch.cancel();
+      } else {
+        debouncedFilterSearch();
+      }
     }
     return () => {
       debouncedFilterSearch.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchMode, timeRange, resultsSize, fuzzyConfig]);
+  }, [searchMode, timeRange, resultsSize, fuzzyConfig, isMobile, selectedIdFromUrl]);
+
+  // When returning to list view on mobile, ensure search reflects latest filters
+  useEffect(() => {
+    if (!initialLoad && isMobile && !selectedIdFromUrl) {
+      handleSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, selectedIdFromUrl]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
