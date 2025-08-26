@@ -10,7 +10,7 @@ import type { DateRange } from "react-day-picker";
 import { endOfDay, format, startOfDay, subMonths, startOfYear } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { FILTERS_DEFAULTS } from "@/lib/search-defaults";
+import { FILTERS_DEFAULTS } from "@/lib/defaults";
 
 interface CustomRange {
   start: string;
@@ -123,32 +123,14 @@ export function SearchFilters({
         </div>
         <div className="grid grid-cols-1 gap-4 p-3 bg-muted/20 rounded-xl">
           <div className="flex flex-col gap-2.5">
-            <Label className="text-sm font-medium">Time Range</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  className="w-full h-9 rounded-lg bg-background border text-left px-3 inline-flex items-center gap-2"
-                  aria-label="Select time range"
-                >
-                  <Calendar className="h-4 w-4" />
-                  <span className="truncate">{timeRangeLabel}</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="p-2">
-                <RangeCalendarWithPresets value={toDateRange(timeRange)} onChange={handleCalendarChange} />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="flex flex-col gap-2.5">
             <Label className="text-sm font-medium">Results Size</Label>
             <div className="flex gap-4 items-center">
               <Slider
                 value={[resultsSize]}
                 onValueChange={([value]) => onResultsSizeChange(value)}
-                min={1}
-                max={100}
-                step={1}
+                min={10}
+                max={1000}
+                step={10}
                 className="w-full"
               />
               <span className="text-sm font-medium w-12 text-center">{resultsSize}</span>
@@ -193,6 +175,23 @@ export function SearchFilters({
               </div>
             </>
           )}
+        </div>
+        <div className="flex flex-col gap-2.5">
+          <Label className="text-sm font-medium">Time Range</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className="w-full h-9 rounded-lg bg-background border text-left px-3 inline-flex items-center gap-2"
+                aria-label="Select time range"
+              >
+                <Calendar className="h-4 w-4" />
+                <span className="truncate">{timeRangeLabel}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="p-2">
+              <RangeCalendarWithPresets value={toDateRange(timeRange)} onChange={handleCalendarChange} />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     );
