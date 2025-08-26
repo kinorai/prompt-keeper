@@ -276,3 +276,4 @@ Follow Next.js docs for Data Fetching, Rendering, and Routing.
 IMPORTANT:
 - try to fix things at the cause, not the symptom.
 - when you delete code, check if dependencies are not needed anymore.
+- Default values should be in the src/lib/defaults.ts file.
