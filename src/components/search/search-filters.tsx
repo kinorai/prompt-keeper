@@ -5,16 +5,24 @@ import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Calendar, Filter, SlidersHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { RangeCalendarWithPresets } from "@/components/ui/range-calendar-with-presets";
+import type { DateRange } from "react-day-picker";
+import { endOfDay, format, startOfDay, subMonths, startOfYear } from "date-fns";
+
+interface CustomRange {
+  start: string;
+  end: string;
+}
 
 interface SearchFiltersProps {
-  timeRange: string;
+  timeRange: string | CustomRange;
   resultsSize: number;
   fuzzyConfig: {
     fuzziness: string;
     prefixLength: number;
   };
   searchMode: string;
-  onTimeRangeChange: (value: string) => void;
+  onTimeRangeChange: (value: string | CustomRange) => void;
   onResultsSizeChange: (value: number) => void;
   onFuzzyConfigChange: (config: { fuzziness: string; prefixLength: number }) => void;
   alwaysExpanded?: boolean;
@@ -30,6 +38,61 @@ export function SearchFilters({
   onFuzzyConfigChange,
   alwaysExpanded = false,
 }: SearchFiltersProps) {
+  const timeRangeLabel = (() => {
+    if (typeof timeRange === "string") {
+      return timeRange === "1h"
+        ? "Last hour"
+        : timeRange === "1d"
+          ? "Last 24 hours"
+          : timeRange === "1m"
+            ? "Last month"
+            : timeRange === "1y"
+              ? "Last year"
+              : "All time";
+    }
+    try {
+      const start = new Date(timeRange.start);
+      const end = new Date(timeRange.end);
+      const sameDay = start.toDateString() === end.toDateString();
+      return sameDay
+        ? `${format(start, "dd MMM yyyy")}`
+        : `${format(start, "dd MMM yyyy")} → ${format(end, "dd MMM yyyy")}`;
+    } catch {
+      return "Custom range";
+    }
+  })();
+
+  const toDateRange = (value: string | CustomRange): DateRange | undefined => {
+    const today = new Date();
+    if (typeof value !== "string") {
+      const from = new Date(value.start);
+      const to = new Date(value.end);
+      return { from, to };
+    }
+    switch (value) {
+      case "1h":
+      case "1d":
+        return { from: today, to: today };
+      case "1m": {
+        const from = subMonths(today, 1);
+        return { from, to: today };
+      }
+      case "1y": {
+        const from = startOfYear(today);
+        return { from, to: today };
+      }
+      case "all":
+      default:
+        return undefined;
+    }
+  };
+
+  const handleCalendarChange = (range?: DateRange) => {
+    if (range?.from && range?.to) {
+      onTimeRangeChange({ start: startOfDay(range.from).toISOString(), end: endOfDay(range.to).toISOString() });
+    }
+  };
+
   // If alwaysExpanded is true, render the content directly without the accordion
   if (alwaysExpanded) {
     return (
@@ -40,15 +103,7 @@ export function SearchFilters({
           <div className="flex flex-wrap gap-1.5">
             <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
               <Calendar className="mr-1 h-3 w-3" />
-              {timeRange === "1h"
-                ? "Last hour"
-                : timeRange === "1d"
-                  ? "Last 24 hours"
-                  : timeRange === "1m"
-                    ? "Last month"
-                    : timeRange === "1y"
-                      ? "Last year"
-                      : "All time"}
+              {timeRangeLabel}
             </Badge>
             <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
               <SlidersHorizontal className="mr-1 h-3 w-3" />
@@ -64,18 +119,7 @@ export function SearchFilters({
         <div className="grid grid-cols-1 gap-4 p-3 bg-muted/20 rounded-xl">
           <div className="flex flex-col gap-2.5">
             <Label className="text-sm font-medium">Time Range</Label>
-            <Select value={timeRange} onValueChange={onTimeRangeChange}>
-              <SelectTrigger className="w-full h-9 rounded-lg bg-background">
-                <SelectValue placeholder="Select range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1h">Last hour</SelectItem>
-                <SelectItem value="1d">Last 24 hours</SelectItem>
-                <SelectItem value="1m">Last month</SelectItem>
-                <SelectItem value="1y">Last year</SelectItem>
-                <SelectItem value="all">All time</SelectItem>
-              </SelectContent>
-            </Select>
+            <RangeCalendarWithPresets value={toDateRange(timeRange)} onChange={handleCalendarChange} />
           </div>
 
           <div className="flex flex-col gap-2.5">
@@ -147,15 +191,7 @@ export function SearchFilters({
             <div className="flex flex-wrap gap-1.5">
               <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
                 <Calendar className="mr-1 h-3 w-3" />
-                {timeRange === "1h"
-                  ? "Last hour"
-                  : timeRange === "1d"
-                    ? "Last 24 hours"
-                    : timeRange === "1m"
-                      ? "Last month"
-                      : timeRange === "1y"
-                        ? "Last year"
-                        : "All time"}
+                {timeRangeLabel}
               </Badge>
               <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
                 <SlidersHorizontal className="mr-1 h-3 w-3" />
@@ -173,18 +209,7 @@ export function SearchFilters({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 p-3 sm:p-5 bg-muted/20 rounded-xl mt-2">
             <div className="flex flex-col gap-2.5">
               <Label className="text-sm font-medium">Time Range</Label>
-              <Select value={timeRange} onValueChange={onTimeRangeChange}>
-                <SelectTrigger className="w-full h-9 sm:h-10 rounded-lg bg-background">
-                  <SelectValue placeholder="Select range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1h">Last hour</SelectItem>
-                  <SelectItem value="1d">Last 24 hours</SelectItem>
-                  <SelectItem value="1m">Last month</SelectItem>
-                  <SelectItem value="1y">Last year</SelectItem>
-                  <SelectItem value="all">All time</SelectItem>
-                </SelectContent>
-              </Select>
+              <RangeCalendarWithPresets value={toDateRange(timeRange)} onChange={handleCalendarChange} />
             </div>
 
             <div className="flex flex-col gap-2.5">

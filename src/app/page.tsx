@@ -53,6 +53,11 @@ interface MappedSearchResult {
 }
 
 // Create a separate component that uses useSearchParams
+interface CustomRange {
+  start: string;
+  end: string;
+}
+
 function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -63,7 +68,16 @@ function HomeContent() {
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [searchMode, setSearchMode] = useState(searchParams.get("mode") || "fuzzy");
-  const [timeRange, setTimeRange] = useState(searchParams.get("time") || "1y");
+  const initialTime = (() => {
+    const t = searchParams.get("time") || "1y";
+    if (t === "custom") {
+      const start = searchParams.get("start");
+      const end = searchParams.get("end");
+      if (start && end) return { start, end } as CustomRange;
+    }
+    return t;
+  })();
+  const [timeRange, setTimeRange] = useState<string | CustomRange>(initialTime);
   const [resultsSize, setResultsSize] = useState(parseInt(searchParams.get("size") || "10"));
   const [fuzzyConfig, setFuzzyConfig] = useState({
     fuzziness: searchParams.get("fuzziness") || "AUTO",
@@ -142,7 +156,15 @@ function HomeContent() {
     else params.delete("q");
 
     params.set("mode", searchMode);
-    params.set("time", timeRange);
+    if (typeof timeRange === "string") {
+      params.set("time", timeRange);
+      params.delete("start");
+      params.delete("end");
+    } else if (timeRange && timeRange.start && timeRange.end) {
+      params.set("time", "custom");
+      params.set("start", timeRange.start);
+      params.set("end", timeRange.end);
+    }
     params.set("size", resultsSize.toString());
 
     if (searchMode === "fuzzy") {
