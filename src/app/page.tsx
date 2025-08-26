@@ -174,7 +174,8 @@ function HomeContent() {
     (id: string) => {
       const params = new URLSearchParams(searchParams);
       params.set("cid", id);
-      router.replace(`${pathname}?${params.toString()}`);
+      // Use push so the browser back button returns to the list on mobile
+      router.push(`${pathname}?${params.toString()}`);
     },
     [pathname, router, searchParams],
   );
@@ -359,15 +360,7 @@ function HomeContent() {
       debouncedFilterSearch.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchMode, timeRange, resultsSize, fuzzyConfig, isMobile, selectedIdFromUrl]);
-
-  // When returning to list view on mobile, ensure search reflects latest filters
-  useEffect(() => {
-    if (!initialLoad && isMobile && !selectedIdFromUrl) {
-      handleSearch();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMobile, selectedIdFromUrl]);
+  }, [searchMode, timeRange, resultsSize, fuzzyConfig]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -578,9 +571,14 @@ function HomeContent() {
                 size="icon"
                 className="h-9 w-3 rounded-full"
                 onClick={() => {
-                  const params = new URLSearchParams(searchParams);
-                  params.delete("cid");
-                  router.replace(`${pathname}?${params.toString()}`);
+                  // Prefer native back if available (after selecting a conversation we pushed a new entry)
+                  if (typeof window !== "undefined" && window.history.length > 1) {
+                    router.back();
+                  } else {
+                    const params = new URLSearchParams(searchParams);
+                    params.delete("cid");
+                    router.replace(`${pathname}?${params.toString()}`);
+                  }
                 }}
                 aria-label="Back to results"
               >
