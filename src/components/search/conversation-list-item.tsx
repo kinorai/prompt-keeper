@@ -112,7 +112,7 @@ export function ConversationListItem({
       )}
       onClick={() => onSelect?.(id)}
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 pr-3 sm:pr-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         {/* First row */}
         <div className="flex items-center gap-2 min-w-0">
           <Badge
