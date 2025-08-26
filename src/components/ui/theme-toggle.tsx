@@ -6,6 +6,7 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";
+import { BREAKPOINTS } from "@/lib/defaults";
 
 export function ThemeToggle() {
   const { setTheme, resolvedTheme } = useTheme();
@@ -13,7 +14,7 @@ export function ThemeToggle() {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
+      setIsMobile(window.innerWidth < BREAKPOINTS.sm);
     };
 
     checkMobile();
