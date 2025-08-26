@@ -15,6 +15,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { FILTERS_DEFAULTS } from "@/lib/search-defaults";
 
 // Define the types for our search results
 interface SearchHit {
@@ -67,9 +68,9 @@ function HomeContent() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
-  const [searchMode, setSearchMode] = useState(searchParams.get("mode") || "fuzzy");
+  const [searchMode, setSearchMode] = useState(searchParams.get("mode") || FILTERS_DEFAULTS.searchMode);
   const initialTime = (() => {
-    const t = searchParams.get("time") || "1y";
+    const t = searchParams.get("time") || FILTERS_DEFAULTS.timeRange;
     if (t === "custom") {
       const start = searchParams.get("start");
       const end = searchParams.get("end");
@@ -78,10 +79,12 @@ function HomeContent() {
     return t;
   })();
   const [timeRange, setTimeRange] = useState<string | CustomRange>(initialTime);
-  const [resultsSize, setResultsSize] = useState(parseInt(searchParams.get("size") || "10"));
+  const [resultsSize, setResultsSize] = useState(
+    parseInt(searchParams.get("size") || String(FILTERS_DEFAULTS.resultsSize)),
+  );
   const [fuzzyConfig, setFuzzyConfig] = useState({
-    fuzziness: searchParams.get("fuzziness") || "AUTO",
-    prefixLength: parseInt(searchParams.get("prefix") || "2"),
+    fuzziness: searchParams.get("fuzziness") || FILTERS_DEFAULTS.fuzziness,
+    prefixLength: parseInt(searchParams.get("prefix") || String(FILTERS_DEFAULTS.prefixLength)),
   });
 
   const [searchResults, setSearchResults] = useState<MappedSearchResult[] | null>(null);
@@ -275,6 +278,14 @@ function HomeContent() {
     }, 600);
   }, [handleSearch, query]);
 
+  // Debounced search for filter changes (mode, time range, size, fuzzy)
+  const debouncedFilterSearch = useMemo(() => {
+    return debounce(() => {
+      console.debug("Debounced search triggered for filters change");
+      handleSearch();
+    }, 400);
+  }, [handleSearch]);
+
   // Initial load search: Fetch latest entries if query is initially empty
   useEffect(() => {
     if (initialLoad) {
@@ -305,6 +316,17 @@ function HomeContent() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
+
+  // Trigger search when filters change (but not on the very first mount)
+  useEffect(() => {
+    if (!initialLoad) {
+      debouncedFilterSearch();
+    }
+    return () => {
+      debouncedFilterSearch.cancel();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchMode, timeRange, resultsSize, fuzzyConfig]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -581,6 +603,22 @@ function HomeContent() {
                     </Select>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setTimeRange(FILTERS_DEFAULTS.timeRange);
+                        setResultsSize(FILTERS_DEFAULTS.resultsSize);
+                        if (searchMode === "fuzzy") {
+                          setFuzzyConfig({
+                            fuzziness: FILTERS_DEFAULTS.fuzziness,
+                            prefixLength: FILTERS_DEFAULTS.prefixLength,
+                          });
+                        }
+                      }}
+                    >
+                      Reset filters
+                    </Button>
                     <ThemeToggle />
                     <LogoutButton />
                   </div>

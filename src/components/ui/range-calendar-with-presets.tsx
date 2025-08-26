@@ -146,6 +146,16 @@ export const RangeCalendarWithPresets = ({ value, onChange, className }: RangeCa
         >
           Last year
         </Button>
+        <Button
+          variant='ghost'
+          size='sm'
+          onClick={() => {
+            handleSelect(undefined)
+            setMonth(today)
+          }}
+        >
+          Reset
+        </Button>
       </CardFooter>
     </Card>
   )
