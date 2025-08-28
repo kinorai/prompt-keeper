@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
+import { ModelBadge, ScoreBadgeSmall } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { CalendarDays, Copy, MessageSquare, Share2, Trash2 } from "lucide-react";
 import { KebabMenu } from "@/components/kebab-menu";
@@ -107,18 +107,8 @@ export function ConversationListItem({
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         {/* First row */}
         <div className="flex items-center gap-2 min-w-0">
-          <Badge
-            variant="outline"
-            className="font-medium text-xs py-0 px-1.5 max-w-[60%] sm:max-w-[50%] overflow-hidden whitespace-nowrap justify-start"
-            title={model}
-          >
-            <span className="truncate">{model}</span>
-          </Badge>
-          {typeof score === "number" && (
-            <Badge variant="secondary" className="text-[10px] py-0 px-1">
-              {score.toFixed(2)}
-            </Badge>
-          )}
+          <ModelBadge title={model}>{model}</ModelBadge>
+          {typeof score === "number" && <ScoreBadgeSmall>{score.toFixed(2)}</ScoreBadgeSmall>}
           <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <MessageSquare className="h-3.5 w-3.5" />
