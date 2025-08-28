@@ -446,7 +446,7 @@ function HomeContent() {
             {loading && (
               <div className="space-y-1 sm:space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="w-full h-[160px] rounded-xl" />
+                  <Skeleton key={i} className="w-full h-[160px] rounded-lg" />
                 ))}
               </div>
             )}
@@ -454,7 +454,7 @@ function HomeContent() {
             {/* Empty state */}
             {!loading && searchResults && searchResults.length === 0 && (
               <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
-                <div className="bg-muted/30 p-3 rounded-full mb-3">
+                <div className="bg-muted/30 p-3 rounded-md mb-3">
                   <MessageSquare className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <h3 className="text-base sm:text-lg font-semibold mb-2">No conversations found</h3>
@@ -504,7 +504,7 @@ function HomeContent() {
                       );
                     })()
                   ) : (
-                    <div className="hidden sm:flex h-[60vh] items-center justify-center rounded-xl border text-muted-foreground">
+                    <div className="hidden sm:flex h-[60vh] items-center justify-center rounded-lg border text-muted-foreground">
                       Select a conversation to view
                     </div>
                   )}
@@ -536,7 +536,7 @@ function HomeContent() {
             {/* Initial empty state */}
             {initialLoad && !loading && !searchResults && (
               <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
-                <div className="bg-muted/30 p-4 rounded-full mb-4">
+                <div className="bg-muted/30 p-4 rounded-md mb-4">
                   <Search className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg sm:text-xl font-semibold mb-2">Search your conversations</h3>
@@ -561,7 +561,7 @@ function HomeContent() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-3 rounded-full"
+                className="h-9 w-3 rounded-md"
                 onClick={() => {
                   // Prefer native back if available (after selecting a conversation we pushed a new entry)
                   if (typeof window !== "undefined" && window.history.length > 1) {
@@ -589,7 +589,7 @@ function HomeContent() {
             </div>
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full">
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-md">
                   <Settings className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
@@ -602,7 +602,7 @@ function HomeContent() {
                   <div className="flex flex-col gap-1.5">
                     <span className="text-sm font-medium">Search Mode</span>
                     <Select value={searchMode} onValueChange={setSearchMode}>
-                      <SelectTrigger className="w-[160px] h-9 rounded-lg border-muted-foreground/20 bg-background shadow-xs">
+                      <SelectTrigger className="w-[160px] h-9 rounded-md border-muted-foreground/20 bg-background shadow-xs">
                         <SelectValue placeholder="Search mode" />
                       </SelectTrigger>
                       <SelectContent>
@@ -685,7 +685,7 @@ function HomeContent() {
         <Button
           variant="secondary"
           size="icon"
-          className="fixed bottom-20 right-4 sm:bottom-4 sm:right-4 z-30 rounded-full shadow-md scroll-to-top-button"
+          className="fixed bottom-20 right-4 sm:bottom-4 sm:right-4 z-30 rounded-md shadow-md scroll-to-top-button"
           onClick={scrollToTop}
         >
           <ArrowUp className="h-4 w-4" />
