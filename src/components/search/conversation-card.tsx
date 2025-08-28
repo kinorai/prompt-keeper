@@ -17,11 +17,11 @@ import { Button } from "@/components/ui/button";
 import { ModelBadge } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useState, useEffect, useRef, ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
+import { useState, useEffect, useRef } from "react";
+import { Streamdown } from "streamdown";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize from "rehype-sanitize";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
@@ -31,14 +31,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-// Define custom types for ReactMarkdown components
-interface CodeProps {
-  inline?: boolean;
-  className?: string;
-  children: ReactNode;
-  [key: string]: unknown;
-}
 
 export interface Message {
   role: string;
@@ -122,106 +114,111 @@ const MarkdownContent: React.FC<{
   content: string;
 }> = ({ content }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const inlineCopyTimersRef = useRef<WeakMap<HTMLElement, number>>(new WeakMap());
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Process code blocks
-    const codeBlocks = containerRef.current.querySelectorAll("pre code");
+    const container = containerRef.current;
+
+    // Add copy buttons to code blocks, guarding against duplicates
+    const codeBlocks = container.querySelectorAll("pre code");
     codeBlocks.forEach((codeBlock) => {
       const pre = codeBlock.parentElement;
       if (!pre) return;
+      if (pre.querySelector(".pk-copy-btn-container")) return;
 
-      // Create copy button container
       const buttonContainer = document.createElement("div");
-      buttonContainer.className = "absolute top-2 right-2";
+      buttonContainer.className = "absolute top-2 right-2 pk-copy-btn-container";
 
-      // Create copy button
       const copyButton = document.createElement("button");
       copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
       copyButton.className = "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
       copyButton.title = "Copy code";
 
-      // Add click event to copy code
-      copyButton.addEventListener("click", () => {
+      copyButton.addEventListener("click", (e) => {
+        e.stopPropagation();
         const code = codeBlock.textContent || "";
         navigator.clipboard.writeText(code).then(() => {
-          copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>`;
+          copyButton.innerHTML = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-check\"><path d=\"M20 6 9 17l-5-5\"/></svg>`;
           copyButton.className = "p-1 rounded-md bg-green-500/20 hover:bg-green-500/30 text-green-500";
 
-          setTimeout(() => {
-            copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+          window.setTimeout(() => {
+            copyButton.innerHTML = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-copy\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/></svg>`;
             copyButton.className = "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
-          }, 2000);
+          }, 1500);
         });
       });
 
       buttonContainer.appendChild(copyButton);
-
-      // Make pre position relative for absolute positioning of button
       pre.style.position = "relative";
       pre.appendChild(buttonContainer);
     });
 
-    // Process inline code
-    const inlineCodes = containerRef.current.querySelectorAll("code:not(pre code)");
-    inlineCodes.forEach((inlineCode) => {
-      const codeElement = inlineCode as HTMLElement;
-      codeElement.style.cursor = "pointer";
-      codeElement.title = "Click to copy";
+    // Event delegation for inline code copy
+    const handleInlineCodeClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const codeElement = target.closest("code") as HTMLElement | null;
+      if (!codeElement) return;
+      if (codeElement.closest("pre")) return; // ignore code blocks
 
-      codeElement.addEventListener("click", () => {
-        const code = codeElement.textContent || "";
-        navigator.clipboard.writeText(code).then(() => {
-          const originalBg = codeElement.style.backgroundColor;
-          const originalColor = codeElement.style.color;
+      e.preventDefault();
+      e.stopPropagation();
 
-          codeElement.style.backgroundColor = "rgba(34, 197, 94, 0.2)";
-          codeElement.style.color = "rgb(34, 197, 94)";
-
-          setTimeout(() => {
-            codeElement.style.backgroundColor = originalBg;
-            codeElement.style.color = originalColor;
-          }, 2000);
-
-          toast.success("Code copied to clipboard");
-        });
+      // Clear any previous highlight and timers
+      container.querySelectorAll("code.__pk_copied").forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const timerId = inlineCopyTimersRef.current.get(htmlEl);
+        if (timerId) {
+          window.clearTimeout(timerId);
+          inlineCopyTimersRef.current.delete(htmlEl);
+        }
+        htmlEl.style.backgroundColor = "";
+        htmlEl.style.color = "";
+        htmlEl.classList.remove("__pk_copied");
       });
-    });
+
+      const code = codeElement.textContent || "";
+      navigator.clipboard.writeText(code).then(() => {
+        codeElement.classList.add("__pk_copied");
+        codeElement.style.backgroundColor = "rgba(34, 197, 94, 0.2)";
+        codeElement.style.color = "rgb(34, 197, 94)";
+
+        const timerId = window.setTimeout(() => {
+          codeElement.style.backgroundColor = "";
+          codeElement.style.color = "";
+          codeElement.classList.remove("__pk_copied");
+          inlineCopyTimersRef.current.delete(codeElement);
+        }, 1500);
+        inlineCopyTimersRef.current.set(codeElement, timerId);
+
+        toast.success("Code copied to clipboard");
+      });
+    };
+
+    container.addEventListener("click", handleInlineCodeClick);
+
+    return () => {
+      container.removeEventListener("click", handleInlineCodeClick);
+      container.querySelectorAll("code.__pk_copied").forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const timerId = inlineCopyTimersRef.current.get(htmlEl);
+        if (timerId) {
+          window.clearTimeout(timerId);
+          inlineCopyTimersRef.current.delete(htmlEl);
+        }
+        htmlEl.style.backgroundColor = "";
+        htmlEl.style.color = "";
+        htmlEl.classList.remove("__pk_copied");
+      });
+    };
   }, [content]);
 
   return (
     <div ref={containerRef} className="dark:prose-invert max-w-none prose-sm prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, rehypeSanitize]}
-        components={{
-          // @ts-expect-error - ReactMarkdown types are incompatible with our custom types
-          code({ inline, className, children, ...props }: CodeProps) {
-            const match = /language-(\w+)/.exec(className || "");
-            const language = match ? match[1] : "";
-
-            // Simple code block rendering without syntax highlighting
-            if (!inline && language) {
-              return (
-                <pre className="rounded-md p-2 bg-muted/30 overflow-auto">
-                  <code className={className} {...props}>
-                    {String(children).replace(/\n$/, "")}
-                  </code>
-                </pre>
-              );
-            }
-
-            return (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            );
-          },
-        }}
-      >
+      <Streamdown className="sd-prose" remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
         {content}
-      </ReactMarkdown>
+      </Streamdown>
     </div>
   );
 };

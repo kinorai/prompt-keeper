@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @plugin 'tailwindcss-animate';
+@source "../node_modules/streamdown/dist/index.js";
+@import "katex/dist/katex.min.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -304,87 +306,115 @@
   }
 }
 
-/* Prose styles for markdown content */
-.prose pre {
+/* Prose styles for markdown content (applies to Streamdown too) */
+.prose pre,
+.sd-prose pre {
   @apply bg-muted/50 p-3 sm:p-4 rounded-lg overflow-auto text-xs sm:text-sm;
   position: relative;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
-.prose code {
-  @apply bg-muted/50 px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono;
+.prose code,
+.sd-prose code {
+  /* @apply bg-muted/50 px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono; */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-.prose p {
+.prose p,
+.sd-prose p {
   @apply mb-3 sm:mb-4;
 }
 
 .prose ul,
-.prose ol {
+.prose ol,
+.sd-prose ul,
+.sd-prose ol {
   @apply pl-4 sm:pl-6 mb-3 sm:mb-4;
 }
 
-.prose ul {
+.prose ul,
+.sd-prose ul {
   @apply list-disc;
 }
 
-.prose ol {
+.prose ol,
+.sd-prose ol {
   @apply list-decimal;
 }
 
 .prose h1,
 .prose h2,
 .prose h3,
-.prose h4 {
+.prose h4,
+.sd-prose h1,
+.sd-prose h2,
+.sd-prose h3,
+.sd-prose h4 {
   @apply font-semibold mb-2 mt-4 sm:mt-6;
 }
 
-.prose h1 {
+.prose h1,
+.sd-prose h1 {
   @apply text-xl sm:text-2xl;
 }
 
-.prose h2 {
+.prose h2,
+.sd-prose h2 {
   @apply text-lg sm:text-xl;
 }
 
-.prose h3 {
+.prose h3,
+.sd-prose h3 {
   @apply text-base sm:text-lg;
 }
 
-.prose h4 {
+.prose h4,
+.sd-prose h4 {
   @apply text-sm sm:text-base;
 }
 
 /* Additional markdown styles */
-.prose blockquote {
+.prose blockquote,
+.sd-prose blockquote {
   @apply border-l-4 border-muted pl-4 italic my-4 text-muted-foreground;
 }
 
-.prose hr {
+.prose hr,
+.sd-prose hr {
   @apply my-6 border-t border-border;
 }
 
-.prose table {
+.prose table,
+.sd-prose table {
   @apply w-full my-4 border-collapse;
 }
 
-.prose table th {
+.prose table th,
+.sd-prose table th {
   @apply bg-muted p-2 text-left font-semibold border border-border;
 }
 
-.prose table td {
+.prose table td,
+.sd-prose table td {
   @apply p-2 border border-border;
 }
 
-.prose a {
+.prose a,
+.sd-prose a {
   @apply text-primary underline hover:text-primary/80 transition-colors;
 }
 
-.prose img {
+.prose img,
+.sd-prose img {
   @apply max-w-full h-auto rounded-md my-4;
 }
 
 .prose mark,
-.prose em {
+.prose em,
+.sd-prose mark,
+.sd-prose em {
   @apply px-1 py-0.5 rounded not-italic;
 }
 
