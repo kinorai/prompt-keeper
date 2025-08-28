@@ -39,7 +39,7 @@ export function SearchBar({
           onChange={(e) => onQueryChange(e.target.value)}
           className={`pl-9 pr-9 ${
             isCompact ? "h-9" : "h-10 sm:h-11"
-          } rounded-full border-muted-foreground/20 bg-background shadow-sm focus-visible:ring-primary/50`}
+          } rounded-md border-muted-foreground/20 bg-background shadow-sm focus-visible:ring-primary/50`}
           onKeyDown={(e) => {
             if (e.key === "Enter") onSearch();
           }}
@@ -48,7 +48,7 @@ export function SearchBar({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-1.5 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full p-0 hover:bg-muted"
+            className="absolute right-1.5 top-1/2 h-7 w-7 -translate-y-1/2 rounded-md p-0 hover:bg-muted"
             onClick={handleClearSearch}
           >
             <X className="h-4 w-4" />
@@ -59,7 +59,7 @@ export function SearchBar({
       <div className={`flex gap-2 ${isCompact ? "w-auto" : "sm:w-auto"}`}>
         {!isCompact && (
           <Select value={searchMode} onValueChange={onSearchModeChange}>
-            <SelectTrigger className="w-full sm:w-[140px] h-10 sm:h-11 rounded-full border-muted-foreground/20 bg-background shadow-xs">
+            <SelectTrigger className="w-full sm:w-[140px] h-10 sm:h-11 rounded-md border-muted-foreground/20 bg-background shadow-xs">
               <SelectValue placeholder="Search mode" />
             </SelectTrigger>
             <SelectContent>
@@ -88,7 +88,7 @@ export function SearchBar({
           onClick={onSearch}
           className={`${
             isCompact ? "h-9 w-9 px-0" : "h-10 sm:h-11 px-4 sm:px-5"
-          } rounded-full shadow-sm flex items-center justify-center`}
+          } rounded-md shadow-sm flex items-center justify-center`}
         >
           <Search className="h-4 w-4" />
           {!isCompact && <span className="ml-1">Search</span>}
