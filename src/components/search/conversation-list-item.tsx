@@ -1,16 +1,10 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { CalendarDays, Copy, MessageSquare, MoreVertical, Share2, Trash2, AlertTriangle } from "lucide-react";
+import { CalendarDays, Copy, MessageSquare, Share2, Trash2 } from "lucide-react";
+import { KebabMenu } from "@/components/kebab-menu";
 import { toast } from "sonner";
 import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
 
@@ -83,15 +77,9 @@ export function ConversationListItem({
     copyToClipboard(text, "Conversation copied for sharing");
   };
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
-
   const handleDelete = async () => {
     if (!onDelete) return;
     try {
-      setIsDeleting(true);
       const res = await fetch(`/api/search/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("Conversation deleted");
@@ -103,31 +91,10 @@ export function ConversationListItem({
     } catch (e) {
       console.error(e);
       toast.error("Failed to delete");
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
     }
   };
 
-  // Close confirmation on outside click or Escape
-  useEffect(() => {
-    if (!showDeleteConfirm) return;
-    const onMouseDown = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest(".context-delete-confirmation") && !target.closest("button")) {
-        setShowDeleteConfirm(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setShowDeleteConfirm(false);
-    };
-    document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [showDeleteConfirm]);
+  // Confirmation managed within KebabMenu
 
   return (
     <div
@@ -170,71 +137,49 @@ export function ConversationListItem({
 
       {/* Mobile-only context menu positioned below the date at the top-right */}
       <div className="absolute right-3 top-8 sm:hidden">
-        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              ref={menuButtonRef}
-              variant="secondary"
-              size="sm"
-              className="h-7 w-7 p-0 bg-muted/50 hover:bg-muted/80"
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Conversation actions"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onClick={() => copyToClipboard(getFullConversationText(), "Conversation copied")}>
-              <Copy className="mr-2 h-4 w-4" /> Copy
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleShare}>
-              <Share2 className="mr-2 h-4 w-4" /> Share
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onSelect={(e) => {
-                e.preventDefault();
-                setIsMenuOpen(false);
-                setTimeout(() => setShowDeleteConfirm(true), 0);
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <KebabMenu
+          actions={[
+            {
+              id: "copy",
+              label: "Copy",
+              icon: (
+                <span className="mr-2">
+                  <Copy className="h-4 w-4" />
+                </span>
+              ),
+              onSelect: () => copyToClipboard(getFullConversationText(), "Conversation copied"),
+            },
+            {
+              id: "share",
+              label: "Share",
+              icon: (
+                <span className="mr-2">
+                  <Share2 className="h-4 w-4" />
+                </span>
+              ),
+              onSelect: handleShare,
+            },
+            {
+              id: "delete",
+              label: "Delete",
+              className: "text-destructive focus:text-destructive",
+              icon: (
+                <span className="mr-2">
+                  <Trash2 className="h-4 w-4" />
+                </span>
+              ),
+              confirm: {
+                title: "Delete conversation?",
+                description: `This will permanently delete the conversation with ${model}. This action cannot be undone.`,
+                confirmText: "Delete",
+                cancelText: "Cancel",
+                variant: "destructive",
+                onConfirm: handleDelete,
+              },
+            },
+          ]}
+        />
       </div>
-
-      {/* Confirmation panel anchored like conversation card */}
-      {showDeleteConfirm && (
-        <div
-          className="context-delete-confirmation fixed z-50 w-80 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none"
-          style={{
-            left: menuButtonRef.current ? Math.max(10, menuButtonRef.current.getBoundingClientRect().right - 320) : 10,
-            top: menuButtonRef.current ? menuButtonRef.current.getBoundingClientRect().bottom + 5 : 10,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex gap-3">
-            <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-            <div className="space-y-3 flex-1">
-              <div>
-                <p className="font-medium text-sm">Delete conversation?</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  This will permanently delete the conversation with {model}. This action cannot be undone.
-                </p>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
-                  Cancel
-                </Button>
-                <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
-                  {isDeleting ? "Deleting..." : "Delete"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
