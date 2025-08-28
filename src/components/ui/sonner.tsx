@@ -12,11 +12,23 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
+          // Ensure opaque backgrounds for all toast variants
+          "--normal-bg": "hsl(var(--popover))",
+          "--normal-text": "hsl(var(--popover-foreground))",
+          "--normal-border": "hsl(var(--border))",
+          "--success-bg": "hsl(var(--popover))",
+          "--success-text": "hsl(var(--popover-foreground))",
+          "--success-border": "hsl(var(--border))",
+          "--error-bg": "hsl(var(--popover))",
+          "--error-text": "hsl(var(--popover-foreground))",
+          "--error-border": "hsl(var(--border))",
+          "--warning-bg": "hsl(var(--popover))",
+          "--warning-text": "hsl(var(--popover-foreground))",
+          "--warning-border": "hsl(var(--border))",
         } as React.CSSProperties
       }
+      // Make toasts auto-dismiss quicker by default (can be overridden via props)
+      duration={typeof props.duration === "number" ? props.duration : 1600}
       {...props}
     />
   )
