@@ -1,4 +1,5 @@
 import { Search, X } from "lucide-react";
+import * as motion from "motion/react-client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -88,10 +89,15 @@ export function SearchBar({
           onClick={onSearch}
           className={`${
             isCompact ? "h-9 w-9 px-0" : "h-10 sm:h-11 px-4 sm:px-5"
-          } rounded-md shadow-sm flex items-center justify-center`}
+          } rounded-md shadow-sm flex items-center justify-center transition-none`}
+          asChild
         >
-          <Search className="h-4 w-4" />
-          {!isCompact && <span className="ml-1">Search</span>}
+          <motion.button whileTap={{ scale: 0.85 }}>
+            <span className="flex items-center justify-center">
+              <Search className="h-4 w-4" />
+              {!isCompact && <span className="ml-1">Search</span>}
+            </span>
+          </motion.button>
         </Button>
       </div>
     </div>
