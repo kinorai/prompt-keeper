@@ -504,7 +504,6 @@ function HomeContent() {
                           usage={active.usage}
                           messages={active.messages}
                           score={active.score}
-                          rank={undefined}
                           onDelete={handleDeleteConversation}
                         />
                       );
@@ -533,7 +532,6 @@ function HomeContent() {
                       usage={active.usage}
                       messages={active.messages}
                       score={active.score}
-                      rank={undefined}
                       onDelete={handleDeleteConversation}
                     />
                   );
