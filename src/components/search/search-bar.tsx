@@ -2,7 +2,7 @@ import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { ModeHintBadge } from "@/components/badges";
 
 interface SearchBarProps {
   query: string;
@@ -66,25 +66,19 @@ export function SearchBar({
               <SelectItem value="keyword">
                 <div className="flex items-center">
                   <span>Keyword</span>
-                  <Badge variant="outline" className="ml-2 text-xs">
-                    Exact
-                  </Badge>
+                  <ModeHintBadge>Exact</ModeHintBadge>
                 </div>
               </SelectItem>
               <SelectItem value="fuzzy">
                 <div className="flex items-center">
                   <span>Fuzzy</span>
-                  <Badge variant="outline" className="ml-2 text-xs">
-                    Similar
-                  </Badge>
+                  <ModeHintBadge>Similar</ModeHintBadge>
                 </div>
               </SelectItem>
               <SelectItem value="regex">
                 <div className="flex items-center">
                   <span>Regex</span>
-                  <Badge variant="outline" className="ml-2 text-xs">
-                    Pattern
-                  </Badge>
+                  <ModeHintBadge>Pattern</ModeHintBadge>
                 </div>
               </SelectItem>
             </SelectContent>
