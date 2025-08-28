@@ -29,3 +29,6 @@ export const FILTERS_DEFAULTS = {
   fuzziness: DEFAULT_FUZZINESS,
   prefixLength: DEFAULT_PREFIX_LENGTH,
 } as const;
+
+// Deletion behavior defaults
+export const DELETE_UNDO_TIMEOUT_MS = 5000;
