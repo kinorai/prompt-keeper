@@ -14,7 +14,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ModelBadge, ScoreBadgeHighlight } from "@/components/badges";
+import { ModelBadge } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useEffect, useRef, ReactNode } from "react";
@@ -56,7 +56,6 @@ export interface ConversationCardProps {
     completion_tokens?: number;
   };
   messages: Message[];
-  score?: number;
   onDelete?: (id: string) => void; // Add onDelete callback
 }
 
@@ -306,14 +305,7 @@ const ChatBubble: React.FC<{
   );
 };
 
-export const ConversationCard: React.FC<ConversationCardProps> = ({
-  id,
-  created,
-  model,
-  messages = [],
-  score,
-  onDelete,
-}) => {
+export const ConversationCard: React.FC<ConversationCardProps> = ({ id, created, model, messages = [], onDelete }) => {
   const createdDate = new Date(created);
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
   const dropdownButtonRef = useRef<HTMLButtonElement>(null); // Ref for the dropdown button
@@ -524,7 +516,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            {score && <ScoreBadgeHighlight>Score: {score.toFixed(2)}</ScoreBadgeHighlight>}
           </div>
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
