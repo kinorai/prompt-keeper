@@ -24,6 +24,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useUndoableDelete } from "@/hooks/use-undo-delete";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +50,17 @@ export interface ConversationCardProps {
   };
   messages: Message[];
   onDelete?: (id: string) => void; // Add onDelete callback
+  onRestore?: (item: {
+    id: string;
+    created: string;
+    model: string;
+    usage?: {
+      total_tokens?: number;
+      prompt_tokens?: number;
+      completion_tokens?: number;
+    };
+    messages: Message[];
+  }) => void;
 }
 
 // Helper function to copy text to clipboard
@@ -120,6 +132,7 @@ const MarkdownContent: React.FC<{
     if (!containerRef.current) return;
 
     const container = containerRef.current;
+    const timersMap = inlineCopyTimersRef.current;
 
     // Add copy buttons to code blocks, guarding against duplicates
     const codeBlocks = container.querySelectorAll("pre code");
@@ -168,10 +181,10 @@ const MarkdownContent: React.FC<{
       // Clear any previous highlight and timers
       container.querySelectorAll("code.__pk_copied").forEach((el) => {
         const htmlEl = el as HTMLElement;
-        const timerId = inlineCopyTimersRef.current.get(htmlEl);
+        const timerId = timersMap.get(htmlEl);
         if (timerId) {
           window.clearTimeout(timerId);
-          inlineCopyTimersRef.current.delete(htmlEl);
+          timersMap.delete(htmlEl);
         }
         htmlEl.style.backgroundColor = "";
         htmlEl.style.color = "";
@@ -188,9 +201,9 @@ const MarkdownContent: React.FC<{
           codeElement.style.backgroundColor = "";
           codeElement.style.color = "";
           codeElement.classList.remove("__pk_copied");
-          inlineCopyTimersRef.current.delete(codeElement);
+          timersMap.delete(codeElement);
         }, 1500);
-        inlineCopyTimersRef.current.set(codeElement, timerId);
+        timersMap.set(codeElement, timerId);
 
         toast.success("Code copied to clipboard");
       });
@@ -202,10 +215,10 @@ const MarkdownContent: React.FC<{
       container.removeEventListener("click", handleInlineCodeClick);
       container.querySelectorAll("code.__pk_copied").forEach((el) => {
         const htmlEl = el as HTMLElement;
-        const timerId = inlineCopyTimersRef.current.get(htmlEl);
+        const timerId = timersMap.get(htmlEl);
         if (timerId) {
           window.clearTimeout(timerId);
-          inlineCopyTimersRef.current.delete(htmlEl);
+          timersMap.delete(htmlEl);
         }
         htmlEl.style.backgroundColor = "";
         htmlEl.style.color = "";
@@ -307,7 +320,15 @@ const ChatBubble: React.FC<{
   );
 };
 
-export const ConversationCard: React.FC<ConversationCardProps> = ({ id, created, model, messages = [], onDelete }) => {
+export const ConversationCard: React.FC<ConversationCardProps> = ({
+  id,
+  created,
+  model,
+  usage,
+  messages = [],
+  onDelete,
+  onRestore,
+}) => {
   const createdDate = new Date(created);
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
   const dropdownButtonRef = useRef<HTMLButtonElement>(null); // Ref for the dropdown button
@@ -317,6 +338,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({ id, created,
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContextDeleteConfirm, setShowContextDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { undoableDelete } = useUndoableDelete();
 
   // Generate full conversation text for copying
   const getFullConversationText = () => {
@@ -335,26 +357,17 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({ id, created,
     if (!onDelete) return;
 
     setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/search/${id}`, {
-        method: "DELETE",
-      });
+    await undoableDelete({
+      item: { id, created, model, usage, messages },
+      onOptimisticRemove: () => onDelete(id),
+      onRestore,
+      doDelete: () => fetch(`/api/search/${id}`, { method: "DELETE" }),
+      toastLabel: "Conversation deleted",
+    });
 
-      if (response.ok) {
-        toast.success("Conversation deleted");
-        onDelete(id);
-      } else {
-        const data = await response.json();
-        toast.error(data.error || "Failed to delete conversation");
-      }
-    } catch (error) {
-      console.error("Failed to delete conversation:", error);
-      toast.error("Failed to delete conversation");
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
-      setShowContextDeleteConfirm(false);
-    }
+    setIsDeleting(false);
+    setShowDeleteConfirm(false);
+    setShowContextDeleteConfirm(false);
   };
 
   // Handle share
