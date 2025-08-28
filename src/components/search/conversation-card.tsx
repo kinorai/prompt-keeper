@@ -476,7 +476,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({ id, created,
   return (
     <Card
       ref={cardRef}
-      className="w-full relative conversation-card bg-transparent border-0 shadow-none rounded-none sm:bg-card sm:border sm:shadow-sm sm:rounded-xl"
+      className="w-full relative conversation-card bg-transparent border-0 shadow-none rounded-none sm:bg-card sm:border sm:shadow-sm sm:rounded-lg"
     >
       <CardHeader
         className="flex flex-row items-center justify-between space-y-0 pb-1 px-2 sm:px-3 pt-1 sm:pt-1 sticky top-[-8px] sm:top-[calc(var(--search-filters-height,_90px)-24px)] z-[5] bg-background/95 backdrop-blur-sm border-b cursor-pointer rounded-none sm:rounded-t-lg"

@@ -38,7 +38,7 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       variant={isMobile ? "secondary" : "ghost"}
       size="icon"
-      className={`rounded-full ${isMobile ? "theme-toggle-mobile" : "h-9 w-9"}`}
+      className={`rounded-md ${isMobile ? "theme-toggle-mobile" : "h-9 w-9"}`}
       aria-label="Toggle theme"
     >
       <Sun

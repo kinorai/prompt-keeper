@@ -97,7 +97,7 @@ export function ConversationListItem({
   return (
     <div
       className={cn(
-        "group relative flex w-full cursor-pointer select-none rounded-xl border bg-card p-3 transition-colors hover:bg-muted/40",
+        "group relative flex w-full cursor-pointer select-none rounded-lg border bg-card p-3 transition-colors hover:bg-muted/40",
         isActive && "ring-2 ring-primary/60",
       )}
       onClick={() => onSelect?.(id)}
