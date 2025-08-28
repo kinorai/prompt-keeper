@@ -57,7 +57,6 @@ export interface ConversationCardProps {
   };
   messages: Message[];
   score?: number;
-  rank?: number; // Add rank property
   onDelete?: (id: string) => void; // Add onDelete callback
 }
 
@@ -313,7 +312,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   model,
   messages = [],
   score,
-  rank,
   onDelete,
 }) => {
   const createdDate = new Date(created);
@@ -500,11 +498,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
           <div className="flex items-center flex-wrap gap-1 sm:gap-1.5 mb-0 sm:mb-0">
-            {rank !== undefined && (
-              <Badge variant="secondary" className="font-medium text-xs sm:text-sm py-0 px-1.5">
-                #{rank}
-              </Badge>
-            )}
             <Badge variant="outline" className="font-medium text-xs sm:text-sm py-0 px-1.5">
               {model}
             </Badge>
