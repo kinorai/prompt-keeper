@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Calendar, Filter, SlidersHorizontal } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { FilterBadge } from "@/components/badges";
 import { RangeCalendarWithPresets } from "@/components/ui/range-calendar-with-presets";
 import type { DateRange } from "react-day-picker";
 import { endOfDay, format, startOfDay, subMonths, startOfYear } from "date-fns";
@@ -106,19 +106,15 @@ export function SearchFilters({
           <Filter className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">Filters</span>
           <div className="flex flex-wrap gap-1.5">
-            <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
+            <FilterBadge>
               <Calendar className="mr-1 h-3 w-3" />
               {timeRangeLabel}
-            </Badge>
-            <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
+            </FilterBadge>
+            <FilterBadge>
               <SlidersHorizontal className="mr-1 h-3 w-3" />
               {resultsSize} results
-            </Badge>
-            {searchMode === "fuzzy" && (
-              <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
-                Fuzziness: {fuzzyConfig.fuzziness}
-              </Badge>
-            )}
+            </FilterBadge>
+            {searchMode === "fuzzy" && <FilterBadge>Fuzziness: {fuzzyConfig.fuzziness}</FilterBadge>}
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4 p-3 bg-muted/20 rounded-xl">
@@ -206,19 +202,15 @@ export function SearchFilters({
             <Filter className="h-4 w-4 text-muted-foreground" />
             <span>Filters</span>
             <div className="flex flex-wrap gap-1.5">
-              <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
+              <FilterBadge>
                 <Calendar className="mr-1 h-3 w-3" />
                 {timeRangeLabel}
-              </Badge>
-              <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
+              </FilterBadge>
+              <FilterBadge>
                 <SlidersHorizontal className="mr-1 h-3 w-3" />
                 {resultsSize} results
-              </Badge>
-              {searchMode === "fuzzy" && (
-                <Badge variant="secondary" className="text-xs font-normal py-0 px-1.5">
-                  Fuzziness: {fuzzyConfig.fuzziness}
-                </Badge>
-              )}
+              </FilterBadge>
+              {searchMode === "fuzzy" && <FilterBadge>Fuzziness: {fuzzyConfig.fuzziness}</FilterBadge>}
             </div>
             <div className="ml-auto hidden sm:flex">
               <Button
