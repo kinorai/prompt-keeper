@@ -117,7 +117,7 @@ export function SearchFilters({
             {searchMode === "fuzzy" && <FilterBadge>Fuzziness: {fuzzyConfig.fuzziness}</FilterBadge>}
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 p-3 bg-muted/20 rounded-xl">
+        <div className="grid grid-cols-1 gap-4 p-3 bg-muted/20 rounded-lg">
           <div className="flex flex-col gap-2.5">
             <Label className="text-sm font-medium">Results Size</Label>
             <div className="flex gap-4 items-center">
@@ -141,7 +141,7 @@ export function SearchFilters({
                   value={fuzzyConfig.fuzziness}
                   onValueChange={(value) => onFuzzyConfigChange({ ...fuzzyConfig, fuzziness: value })}
                 >
-                  <SelectTrigger className="w-full h-9 rounded-lg bg-background">
+                  <SelectTrigger className="w-full h-9 rounded-md bg-background">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -166,7 +166,7 @@ export function SearchFilters({
                       prefixLength: parseInt(e.target.value) || 0,
                     })
                   }
-                  className="w-full h-9 rounded-lg bg-background"
+                  className="w-full h-9 rounded-md bg-background"
                 />
               </div>
             </>
@@ -177,7 +177,7 @@ export function SearchFilters({
           <Popover>
             <PopoverTrigger asChild>
               <button
-                className="w-full h-9 rounded-lg bg-background border text-left px-3 inline-flex items-center gap-2"
+                className="w-full h-9 rounded-md bg-background border text-left px-3 inline-flex items-center gap-2"
                 aria-label="Select time range"
               >
                 <Calendar className="h-4 w-4" />
@@ -237,7 +237,7 @@ export function SearchFilters({
           </div>
         </AccordionTrigger>
         <AccordionContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 p-3 sm:p-5 bg-muted/20 rounded-xl mt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 p-3 sm:p-5 bg-muted/20 rounded-lg mt-2">
             {/* Left: Calendar */}
             <div className="flex flex-col gap-2.5">
               <Label className="text-sm font-medium">Time Range</Label>
@@ -269,7 +269,7 @@ export function SearchFilters({
                       value={fuzzyConfig.fuzziness}
                       onValueChange={(value) => onFuzzyConfigChange({ ...fuzzyConfig, fuzziness: value })}
                     >
-                      <SelectTrigger className="w-full h-9 sm:h-10 rounded-lg bg-background">
+                      <SelectTrigger className="w-full h-9 sm:h-10 rounded-md bg-background">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -294,7 +294,7 @@ export function SearchFilters({
                           prefixLength: parseInt(e.target.value) || 0,
                         })
                       }
-                      className="w-full h-9 sm:h-10 rounded-lg bg-background"
+                      className="w-full h-9 sm:h-10 rounded-md bg-background"
                     />
                   </div>
                 </div>
