@@ -5,17 +5,16 @@ import { cn } from "@/lib/utils";
 type BadgeProps = React.ComponentProps<typeof Badge>;
 
 // Model name badge with truncation and max width for list/card headers
-export const ModelBadge: React.FC<BadgeProps> = ({ className, children, ...props }) => (
-  <Badge
-    variant="outline"
+export const ModelBadge: React.FC<React.HTMLAttributes<HTMLSpanElement>> = ({ className, children, ...props }) => (
+  <span
     className={cn(
-      "font-medium text-xs py-0 px-1.5 max-w-[60%] sm:max-w-[60%] overflow-hidden whitespace-nowrap justify-start",
+      "inline-flex items-center font-medium text-xs max-w-[65%] sm:max-w-[65%] overflow-hidden whitespace-nowrap",
       className,
     )}
     {...props}
   >
     <span className="truncate">{children}</span>
-  </Badge>
+  </span>
 );
 
 // Inline hint badge used next to select labels (Keyword/Fuzzy/Regex)
