@@ -121,9 +121,8 @@ export async function POST(req: NextRequest) {
       index: PROMPT_KEEPER_INDEX,
       body: {
         query: esQueryBody,
-        // Only fuzzy search mode is ordered by score, others are ordered by date.
-        // If query is empty, it correctly falls to [{ timestamp: "desc" }]
-        sort: searchMode === "fuzzy" && query ? [{ _score: "desc" }, { timestamp: "desc" }] : [{ timestamp: "desc" }],
+        // Always order by date (most recent first)
+        sort: [{ timestamp: "desc" }],
         size,
         from,
         _source: true,
