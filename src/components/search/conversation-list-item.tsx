@@ -118,7 +118,7 @@ export function ConversationListItem({
         </div>
 
         {/* Second row */}
-        <div className="line-clamp-2 min-h-[1.5rem] text-sm text-foreground/90 pr-8 sm:pr-0">{firstUserPrompt}</div>
+        <div className="line-clamp-2 min-h-[1.5rem] text-sm text-muted-foreground pr-8 sm:pr-0">{firstUserPrompt}</div>
       </div>
 
       {/* Mobile-only context menu positioned below the date at the top-right */}
