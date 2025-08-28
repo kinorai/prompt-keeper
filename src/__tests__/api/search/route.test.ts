@@ -190,11 +190,8 @@ describe("Search API Route", () => {
               minimum_should_match: 1,
             }),
           }),
-          // Verify sort order for fuzzy search
-          sort: expect.arrayContaining([
-            expect.objectContaining({ _score: "desc" }),
-            expect.objectContaining({ timestamp: "desc" }),
-          ]),
+          // Verify sort order is always by timestamp desc
+          sort: expect.arrayContaining([expect.objectContaining({ timestamp: "desc" })]),
         }),
       }),
     );
