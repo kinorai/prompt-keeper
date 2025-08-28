@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { CalendarDays, Copy, MessageSquare, MoreVertical, Share2, Trash2, AlertTriangle } from "lucide-react";
-import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
 
@@ -84,12 +83,15 @@ export function ConversationListItem({
     copyToClipboard(text, "Conversation copied for sharing");
   };
 
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const actionsAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const handleDelete = async () => {
     if (!onDelete) return;
     try {
+      setIsDeleting(true);
       const res = await fetch(`/api/search/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("Conversation deleted");
@@ -101,8 +103,31 @@ export function ConversationListItem({
     } catch (e) {
       console.error(e);
       toast.error("Failed to delete");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
+
+  // Close confirmation on outside click or Escape
+  useEffect(() => {
+    if (!showDeleteConfirm) return;
+    const onMouseDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".context-delete-confirmation") && !target.closest("button")) {
+        setShowDeleteConfirm(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowDeleteConfirm(false);
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showDeleteConfirm]);
 
   return (
     <div
@@ -145,9 +170,10 @@ export function ConversationListItem({
 
       {/* Mobile-only context menu positioned below the date at the top-right */}
       <div className="absolute right-3 top-8 sm:hidden">
-        <DropdownMenu>
+        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
+              ref={menuButtonRef}
               variant="secondary"
               size="sm"
               className="h-7 w-7 p-0 bg-muted/50 hover:bg-muted/80"
@@ -164,21 +190,30 @@ export function ConversationListItem({
             <DropdownMenuItem onClick={handleShare}>
               <Share2 className="mr-2 h-4 w-4" /> Share
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setIsDeleteOpen(true)}>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onSelect={(e) => {
+                e.preventDefault();
+                setIsMenuOpen(false);
+                setTimeout(() => setShowDeleteConfirm(true), 0);
+              }}
+            >
               <Trash2 className="mr-2 h-4 w-4" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {/* Invisible anchor to position the popover exactly under the date/three-dots */}
-        <span ref={actionsAnchorRef} className="absolute right-0 top-0 w-0 h-0" />
       </div>
 
-      {/* Popover confirmation like conversation view, anchored to top-right */}
-      <Popover open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <PopoverAnchor asChild>
-          <span ref={actionsAnchorRef} />
-        </PopoverAnchor>
-        <PopoverContent align="end" onClick={(e) => e.stopPropagation()}>
+      {/* Confirmation panel anchored like conversation card */}
+      {showDeleteConfirm && (
+        <div
+          className="context-delete-confirmation fixed z-50 w-80 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none"
+          style={{
+            left: menuButtonRef.current ? Math.max(10, menuButtonRef.current.getBoundingClientRect().right - 320) : 10,
+            top: menuButtonRef.current ? menuButtonRef.current.getBoundingClientRect().bottom + 5 : 10,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex gap-3">
             <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
             <div className="space-y-3 flex-1">
@@ -189,17 +224,17 @@ export function ConversationListItem({
                 </p>
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => setIsDeleteOpen(false)}>
+                <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
                   Cancel
                 </Button>
-                <Button variant="destructive" size="sm" onClick={handleDelete}>
-                  Delete
+                <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                  {isDeleting ? "Deleting..." : "Delete"}
                 </Button>
               </div>
             </div>
           </div>
-        </PopoverContent>
-      </Popover>
+        </div>
+      )}
     </div>
   );
 }
