@@ -14,7 +14,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ModelBadge, ScoreBadgeHighlight } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useEffect, useRef, ReactNode } from "react";
@@ -498,9 +498,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
           <div className="flex items-center flex-wrap gap-1 sm:gap-1.5 mb-0 sm:mb-0">
-            <Badge variant="outline" className="font-medium text-xs sm:text-sm py-0 px-1.5">
-              {model}
-            </Badge>
+            <ModelBadge>{model}</ModelBadge>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -526,11 +524,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            {score && (
-              <Badge variant="outline" className="bg-primary/10 font-medium text-xs sm:text-sm py-0 px-1.5">
-                Score: {score.toFixed(2)}
-              </Badge>
-            )}
+            {score && <ScoreBadgeHighlight>Score: {score.toFixed(2)}</ScoreBadgeHighlight>}
           </div>
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
