@@ -237,12 +237,14 @@ const ChatBubble: React.FC<{
   switch (message.role) {
     case "assistant":
       alignmentClass = "justify-start";
-      bubbleBg = "bg-blue-50 dark:bg-blue-900/30";
+      // Assistant should not be in a bubble (no background)
+      bubbleBg = "";
       icon = <Bot className="h-4 w-4" />;
       break;
     case "user":
       alignmentClass = "justify-end";
-      bubbleBg = "bg-green-50 dark:bg-green-900/30";
+      // User bubble background must be #f9f9f9
+      bubbleBg = "bg-[#f9f9f9]";
       icon = <User className="h-4 w-4" />;
       break;
     case "system":
@@ -256,10 +258,13 @@ const ChatBubble: React.FC<{
   }
 
   const isSystemMessage = message.role === "system";
+  const isAssistantMessage = message.role === "assistant";
+  const widthClass = isSystemMessage ? "w-full" : isAssistantMessage ? "w-full" : "max-w-[97%]";
+  const bubbleClasses = isAssistantMessage ? "" : "rounded-lg p-1.5 shadow-xs";
 
   return (
     <div className={`flex ${alignmentClass}`}>
-      <div className={`relative ${isSystemMessage ? "w-full" : "max-w-[97%]"} rounded-lg p-1.5 ${bubbleBg} shadow-xs`}>
+      <div className={`relative ${widthClass} ${bubbleClasses} ${bubbleBg}`}>
         <div className="flex items-center mb-1">
           {icon}
           <span className="ml-1 text-xs font-semibold">{message.role.toUpperCase()}</span>
