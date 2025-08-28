@@ -181,44 +181,55 @@ function HomeContent() {
     (id: string) => {
       const params = new URLSearchParams(searchParams);
       params.set("cid", id);
-      // Use push so the browser back button returns to the list on mobile
-      router.push(`${pathname}?${params.toString()}`);
+      // On mobile, push so back goes to list; on desktop, replace to avoid history bloat
+      if (isMobile) {
+        router.push(`${pathname}?${params.toString()}`);
+      } else {
+        router.replace(`${pathname}?${params.toString()}`);
+      }
     },
-    [pathname, router, searchParams],
+    [pathname, router, searchParams, isMobile],
   );
 
-  const updateSearchParams = useCallback(() => {
-    const params = new URLSearchParams(searchParams);
-    if (query) params.set("q", query);
-    else params.delete("q");
+  const updateSearchParams = useCallback(
+    (opts?: { preserveCid?: boolean }) => {
+      const preserveCid = opts?.preserveCid ?? true;
+      const params = new URLSearchParams(searchParams);
+      if (query) params.set("q", query);
+      else params.delete("q");
 
-    params.set("mode", searchMode);
-    if (typeof timeRange === "string") {
-      params.set("time", timeRange);
-      params.delete("start");
-      params.delete("end");
-    } else if (timeRange && timeRange.start && timeRange.end) {
-      params.set("time", "custom");
-      params.set("start", timeRange.start);
-      params.set("end", timeRange.end);
-    }
-    params.set("size", resultsSize.toString());
+      params.set("mode", searchMode);
+      if (typeof timeRange === "string") {
+        params.set("time", timeRange);
+        params.delete("start");
+        params.delete("end");
+      } else if (timeRange && timeRange.start && timeRange.end) {
+        params.set("time", "custom");
+        params.set("start", timeRange.start);
+        params.set("end", timeRange.end);
+      }
+      params.set("size", resultsSize.toString());
 
-    if (searchMode === "fuzzy") {
-      params.set("fuzziness", fuzzyConfig.fuzziness);
-      params.set("prefix", fuzzyConfig.prefixLength.toString());
-    } else {
-      params.delete("fuzziness");
-      params.delete("prefix");
-    }
+      if (searchMode === "fuzzy") {
+        params.set("fuzziness", fuzzyConfig.fuzziness);
+        params.set("prefix", fuzzyConfig.prefixLength.toString());
+      } else {
+        params.delete("fuzziness");
+        params.delete("prefix");
+      }
 
-    // Preserve selected conversation id if present
-    if (selectedIdFromUrl) params.set("cid", selectedIdFromUrl);
-    router.replace(`${pathname}?${params.toString()}`);
-  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, searchParams, router, pathname, selectedIdFromUrl]);
+      // Optionally preserve selected conversation id
+      if (preserveCid && selectedIdFromUrl) params.set("cid", selectedIdFromUrl);
+      else params.delete("cid");
+      router.replace(`${pathname}?${params.toString()}`);
+    },
+    [query, searchMode, timeRange, resultsSize, fuzzyConfig, searchParams, router, pathname, selectedIdFromUrl],
+  );
 
   const handleSearch = useCallback(async () => {
-    updateSearchParams();
+    // On mobile detail view, clear selection so results list shows
+    const shouldClearCid = isMobile && Boolean(selectedIdFromUrl);
+    updateSearchParams({ preserveCid: !shouldClearCid });
 
     setLoading(true);
     try {
@@ -301,7 +312,7 @@ function HomeContent() {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, updateSearchParams]);
+  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, updateSearchParams, isMobile, selectedIdFromUrl]);
 
   // Create a memoized debounced function for search
   const debouncedSearch = useMemo(() => {
@@ -355,12 +366,8 @@ function HomeContent() {
   // Trigger search when filters change (but not on the very first mount)
   useEffect(() => {
     if (!initialLoad) {
-      // On mobile detail view (a conversation is open), do not reload search
-      if (isMobile && selectedIdFromUrl) {
-        debouncedFilterSearch.cancel();
-      } else {
-        debouncedFilterSearch();
-      }
+      // Always trigger; handleSearch will clear selection on mobile detail view
+      debouncedFilterSearch();
     }
     return () => {
       debouncedFilterSearch.cancel();
@@ -574,14 +581,10 @@ function HomeContent() {
                 size="icon"
                 className="h-9 w-3 rounded-md"
                 onClick={() => {
-                  // Prefer native back if available (after selecting a conversation we pushed a new entry)
-                  if (typeof window !== "undefined" && window.history.length > 1) {
-                    router.back();
-                  } else {
-                    const params = new URLSearchParams(searchParams);
-                    params.delete("cid");
-                    router.replace(`${pathname}?${params.toString()}`);
-                  }
+                  // Always clear selection to return to list on mobile
+                  const params = new URLSearchParams(searchParams);
+                  params.delete("cid");
+                  router.replace(`${pathname}?${params.toString()}`);
                 }}
                 aria-label="Back to results"
               >
