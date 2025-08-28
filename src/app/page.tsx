@@ -20,7 +20,6 @@ import { FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DEFAULTS } from "
 // Define the types for our search results
 interface SearchHit {
   _id: string;
-  _score: number;
   _source: {
     timestamp: string;
     model: string;
@@ -50,7 +49,6 @@ interface MappedSearchResult {
     content: string;
     finish_reason?: string;
   }>;
-  score?: number;
 }
 
 // Create a separate component that uses useSearchParams
@@ -273,7 +271,6 @@ function HomeContent() {
             model: hit._source?.model || "Unknown",
             usage: hit._source?.usage || undefined,
             messages: hit._source?.messages || [],
-            score: hit._score,
           }),
         ) || [];
 
@@ -481,7 +478,6 @@ function HomeContent() {
                       created={result.created}
                       model={result.model}
                       messages={result.messages}
-                      score={result.score}
                       isActive={selectedIdFromUrl === result.id}
                       onSelect={handleSelectConversation}
                       onDelete={handleDeleteConversation}
@@ -503,7 +499,6 @@ function HomeContent() {
                           model={active.model}
                           usage={active.usage}
                           messages={active.messages}
-                          score={active.score}
                           onDelete={handleDeleteConversation}
                         />
                       );
@@ -531,7 +526,6 @@ function HomeContent() {
                       model={active.model}
                       usage={active.usage}
                       messages={active.messages}
-                      score={active.score}
                       onDelete={handleDeleteConversation}
                     />
                   );

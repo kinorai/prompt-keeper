@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { ModelBadge, ScoreBadgeSmall } from "@/components/badges";
+import { ModelBadge } from "@/components/badges";
 import { cn } from "@/lib/utils";
-import { CalendarDays, Copy, MessageSquare, Share2, Trash2 } from "lucide-react";
+import { Copy, MessageSquare, Share2, Trash2 } from "lucide-react";
 import { KebabMenu } from "@/components/kebab-menu";
 import { toast } from "sonner";
 import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
@@ -13,7 +13,6 @@ export interface ConversationListItemProps {
   created: string; // ISO date
   model: string;
   messages: Array<{ role: string; content: string; finish_reason?: string }>;
-  score?: number;
   isActive?: boolean;
   onSelect?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -47,7 +46,6 @@ export function ConversationListItem({
   created,
   model,
   messages,
-  score,
   isActive = false,
   onSelect,
   onDelete,
@@ -108,15 +106,13 @@ export function ConversationListItem({
         {/* First row */}
         <div className="flex items-center gap-2 min-w-0">
           <ModelBadge title={model}>{model}</ModelBadge>
-          {typeof score === "number" && <ScoreBadgeSmall>{score.toFixed(2)}</ScoreBadgeSmall>}
           <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1 whitespace-nowrap">
+              <span>{formatWhatsAppLikeDate(createdDate)}</span>
+            </div>
             <div className="flex items-center gap-1">
               <MessageSquare className="h-3.5 w-3.5" />
               <span>{userMessagesCount}</span>
-            </div>
-            <div className="flex items-center gap-1 whitespace-nowrap">
-              <CalendarDays className="h-3.5 w-3.5" />
-              <span>{formatWhatsAppLikeDate(createdDate)}</span>
             </div>
           </div>
         </div>

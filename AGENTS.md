@@ -38,7 +38,7 @@ Prompt Keeper - Design Architecture Template (DAT)
      - search input and filters
        - the search bar should be above and take the full screen with search mode on the right, all other filters should be below the search bar
        - with multiple modes
-         - fuzzy | order by score
+         - fuzzy | order by date desc
          - regex | order by date desc
          - keyword | order by date desc
        - search should start after 3 characters with an optional button search
