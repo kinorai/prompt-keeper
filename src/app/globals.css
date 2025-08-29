@@ -306,6 +306,12 @@
   }
 }
 
+.prose,
+.sd-prose {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* Prose styles for markdown content (applies to Streamdown too) */
 .prose pre,
 .sd-prose pre {
@@ -318,8 +324,6 @@
 .prose code,
 .sd-prose code {
   /* @apply bg-muted/50 px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono; */
-  overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 .prose p,
