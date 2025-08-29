@@ -5,9 +5,11 @@ import { ModelBadge } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { Copy, MessageSquare, Share2, Trash2 } from "lucide-react";
 import { KebabMenu } from "@/components/kebab-menu";
-import { toast } from "sonner";
 import { useUndoableDelete } from "@/hooks/use-undo-delete";
 import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
+import { copyToClipboard } from "@/lib/clipboard";
+import { buildConversationMarkdown, buildConversationPlainText } from "@/lib/conversation";
+import { toast } from "sonner";
 
 export interface ConversationListItemProps {
   id: string;
@@ -24,16 +26,6 @@ export interface ConversationListItemProps {
     messages: Array<{ role: string; content: string; finish_reason?: string }>;
   }) => void;
 }
-
-const copyToClipboard = async (text: string, successMessage = "Copied") => {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(successMessage);
-  } catch (err) {
-    console.error("Failed to copy", err);
-    toast.error("Copy failed");
-  }
-};
 
 const formatWhatsAppLikeDate = (date: Date) => {
   if (isSameDay(date, new Date())) {
@@ -64,12 +56,8 @@ export function ConversationListItem({
   // No local delete popover state in list view
   const { undoableDelete } = useUndoableDelete();
 
-  const getFullConversationText = () => messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n");
-  const getShareableMarkdown = () => {
-    const header = `# Conversation with ${model}\n\nDate: ${createdDate.toLocaleString()}\n\n---\n\n`;
-    const content = messages.map((m) => `### ${m.role.toUpperCase()}\n\n${m.content}\n\n`).join("");
-    return header + content;
-  };
+  const getFullConversationText = () => buildConversationPlainText(messages);
+  const getShareableMarkdown = () => buildConversationMarkdown({ model, created: createdDate, messages });
   const handleShare = async () => {
     const text = getShareableMarkdown();
     if (navigator.share) {

@@ -7,10 +7,10 @@ import { Calendar, Filter, SlidersHorizontal } from "lucide-react";
 import { FilterBadge } from "@/components/badges";
 import { RangeCalendarWithPresets } from "@/components/ui/range-calendar-with-presets";
 import type { DateRange } from "react-day-picker";
-import { endOfDay, format, startOfDay, subMonths, startOfYear } from "date-fns";
+import { labelForTimeRange, toCustomRangeFromDateRange, toDateRange } from "@/lib/date";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { FILTERS_DEFAULTS } from "@/lib/defaults";
+import { DEFAULT_ROLES, FILTERS_DEFAULTS } from "@/lib/defaults";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface CustomRange {
@@ -39,7 +39,7 @@ export function SearchFilters({
   resultsSize,
   fuzzyConfig,
   searchMode,
-  roles = ["system", "user", "assistant"],
+  roles = [...DEFAULT_ROLES],
   onTimeRangeChange,
   onResultsSizeChange,
   onFuzzyConfigChange,
@@ -140,61 +140,10 @@ export function SearchFilters({
       </>
     );
   }
-  const timeRangeLabel = (() => {
-    if (typeof timeRange === "string") {
-      return timeRange === "1h"
-        ? "Last hour"
-        : timeRange === "1d"
-          ? "Last 24 hours"
-          : timeRange === "1m"
-            ? "Last month"
-            : timeRange === "1y"
-              ? "Last year"
-              : "All time";
-    }
-    try {
-      const start = new Date(timeRange.start);
-      const end = new Date(timeRange.end);
-      const sameDay = start.toDateString() === end.toDateString();
-      return sameDay
-        ? `${format(start, "dd MMM yyyy")}`
-        : `${format(start, "dd MMM yyyy")} → ${format(end, "dd MMM yyyy")}`;
-    } catch {
-      return "Custom range";
-    }
-  })();
-
-  const toDateRange = (value: string | CustomRange): DateRange | undefined => {
-    const today = new Date();
-    if (typeof value !== "string") {
-      const from = new Date(value.start);
-      const to = new Date(value.end);
-      return { from, to };
-    }
-    switch (value) {
-      case "1h":
-      case "1d":
-        return { from: today, to: today };
-      case "1m": {
-        const from = subMonths(today, 1);
-        return { from, to: today };
-      }
-      case "1y": {
-        const from = startOfYear(today);
-        return { from, to: today };
-      }
-      case "all":
-      default:
-        return undefined;
-    }
-  };
+  const timeRangeLabel = labelForTimeRange(timeRange);
 
   const handleCalendarChange = (range?: DateRange) => {
-    if (range?.from && range?.to) {
-      onTimeRangeChange({ start: startOfDay(range.from).toISOString(), end: endOfDay(range.to).toISOString() });
-    } else if (!range) {
-      onTimeRangeChange("all");
-    }
+    onTimeRangeChange(toCustomRangeFromDateRange(range));
   };
 
   // If alwaysExpanded is true, render the content directly without the accordion
@@ -277,7 +226,7 @@ export function SearchFilters({
                       prefixLength: FILTERS_DEFAULTS.prefixLength,
                     });
                   }
-                  onRolesChange?.(["system", "user", "assistant"]);
+                  onRolesChange?.([...DEFAULT_ROLES]);
                 }}
               >
                 <span role="button" tabIndex={0}>
