@@ -46,6 +46,100 @@ export function SearchFilters({
   onRolesChange,
   alwaysExpanded = false,
 }: SearchFiltersProps) {
+  // Subcomponents to DRY repeated UI
+  function RolesToggle({ value, onChange }: { value: string[]; onChange?: (next: string[]) => void }) {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <Label className="text-sm font-medium">Filter by sender</Label>
+        <ToggleGroup
+          type="multiple"
+          className="rounded-md w-full"
+          value={value}
+          onValueChange={(vals) => onChange?.(vals as string[])}
+        >
+          <ToggleGroupItem
+            value="system"
+            aria-label="Filter system"
+            className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+          >
+            <span className="text-sm">system</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="user"
+            aria-label="Filter user"
+            className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+          >
+            <span className="text-sm">user</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="assistant"
+            aria-label="Filter assistant"
+            className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+          >
+            <span className="text-sm">assistant</span>
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+    );
+  }
+
+  function ResultsSizeControl({ value, onChange }: { value: number; onChange: (next: number) => void }) {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <Label className="text-sm font-medium">Results Size</Label>
+        <div className="flex gap-4 items-center">
+          <Slider
+            value={[value]}
+            onValueChange={([v]) => onChange(v)}
+            min={10}
+            max={1000}
+            step={10}
+            className="w-full"
+          />
+          <span className="text-sm font-medium w-12 text-center">{value}</span>
+        </div>
+      </div>
+    );
+  }
+
+  function FuzzyControls({
+    value,
+    onChange,
+  }: {
+    value: { fuzziness: string; prefixLength: number };
+    onChange: (next: { fuzziness: string; prefixLength: number }) => void;
+  }) {
+    return (
+      <>
+        <div className="flex flex-col gap-2.5">
+          <Label className="text-sm font-medium">Fuzziness</Label>
+          <Select value={value.fuzziness} onValueChange={(v) => onChange({ ...value, fuzziness: v })}>
+            <SelectTrigger className="w-full h-9 sm:h-10 rounded-md bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="AUTO">Auto</SelectItem>
+              <SelectItem value="0">0</SelectItem>
+              <SelectItem value="1">1</SelectItem>
+              <SelectItem value="2">2</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <Label className="text-sm font-medium">Prefix Length</Label>
+          <Input
+            type="number"
+            min={0}
+            max={10}
+            value={value.prefixLength}
+            onChange={(e) => onChange({ ...value, prefixLength: parseInt(e.target.value) || 0 })}
+            className="w-full h-9 sm:h-10 rounded-md bg-background"
+          />
+        </div>
+      </>
+    );
+  }
   const timeRangeLabel = (() => {
     if (typeof timeRange === "string") {
       return timeRange === "1h"
@@ -123,90 +217,10 @@ export function SearchFilters({
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4 p-3 bg-muted/20 rounded-lg">
-          <div className="flex flex-col gap-2.5">
-            <Label className="text-sm font-medium">Filter by sender</Label>
-            <ToggleGroup
-              type="multiple"
-              className="rounded-md w-full"
-              value={roles}
-              onValueChange={(vals) => onRolesChange?.(vals as string[])}
-            >
-              <ToggleGroupItem
-                value="system"
-                aria-label="Filter system"
-                className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-              >
-                <span className="text-sm">system</span>
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="user"
-                aria-label="Filter user"
-                className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-              >
-                <span className="text-sm">user</span>
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="assistant"
-                aria-label="Filter assistant"
-                className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-              >
-                <span className="text-sm">assistant</span>
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="flex flex-col gap-2.5">
-            <Label className="text-sm font-medium">Results Size</Label>
-            <div className="flex gap-4 items-center">
-              <Slider
-                value={[resultsSize]}
-                onValueChange={([value]) => onResultsSizeChange(value)}
-                min={10}
-                max={1000}
-                step={10}
-                className="w-full"
-              />
-              <span className="text-sm font-medium w-12 text-center">{resultsSize}</span>
-            </div>
-          </div>
+          <RolesToggle value={roles} onChange={onRolesChange} />
+          <ResultsSizeControl value={resultsSize} onChange={onResultsSizeChange} />
 
-          {searchMode === "fuzzy" && (
-            <>
-              <div className="flex flex-col gap-2.5">
-                <Label className="text-sm font-medium">Fuzziness</Label>
-                <Select
-                  value={fuzzyConfig.fuzziness}
-                  onValueChange={(value) => onFuzzyConfigChange({ ...fuzzyConfig, fuzziness: value })}
-                >
-                  <SelectTrigger className="w-full h-9 rounded-md bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="AUTO">Auto</SelectItem>
-                    <SelectItem value="0">0</SelectItem>
-                    <SelectItem value="1">1</SelectItem>
-                    <SelectItem value="2">2</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-2.5">
-                <Label className="text-sm font-medium">Prefix Length</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={10}
-                  value={fuzzyConfig.prefixLength}
-                  onChange={(e) =>
-                    onFuzzyConfigChange({
-                      ...fuzzyConfig,
-                      prefixLength: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="w-full h-9 rounded-md bg-background"
-                />
-              </div>
-            </>
-          )}
+          {searchMode === "fuzzy" && <FuzzyControls value={fuzzyConfig} onChange={onFuzzyConfigChange} />}
         </div>
         <div className="flex flex-col gap-2.5">
           <Label className="text-sm font-medium">Time Range</Label>
@@ -283,88 +297,12 @@ export function SearchFilters({
 
             {/* Right: All other controls stacked */}
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2.5">
-                <Label className="text-sm font-medium">Filter by sender</Label>
-                <ToggleGroup
-                  type="multiple"
-                  className="rounded-md w-full"
-                  value={roles}
-                  onValueChange={(vals) => onRolesChange?.(vals as string[])}
-                >
-                  <ToggleGroupItem
-                    value="system"
-                    aria-label="Filter system"
-                    className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-                  >
-                    <span className="text-sm">system</span>
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="user"
-                    aria-label="Filter user"
-                    className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-                  >
-                    <span className="text-sm">user</span>
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="assistant"
-                    aria-label="Filter assistant"
-                    className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-                  >
-                    <span className="text-sm">assistant</span>
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-              <div className="flex flex-col gap-2.5">
-                <Label className="text-sm font-medium">Results Size</Label>
-                <div className="flex gap-4 items-center">
-                  <Slider
-                    value={[resultsSize]}
-                    onValueChange={([value]) => onResultsSizeChange(value)}
-                    min={10}
-                    max={1000}
-                    step={10}
-                    className="w-full"
-                  />
-                  <span className="text-sm font-medium w-12 text-center">{resultsSize}</span>
-                </div>
-              </div>
+              <RolesToggle value={roles} onChange={onRolesChange} />
+              <ResultsSizeControl value={resultsSize} onChange={onResultsSizeChange} />
 
               {searchMode === "fuzzy" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2.5">
-                    <Label className="text-sm font-medium">Fuzziness</Label>
-                    <Select
-                      value={fuzzyConfig.fuzziness}
-                      onValueChange={(value) => onFuzzyConfigChange({ ...fuzzyConfig, fuzziness: value })}
-                    >
-                      <SelectTrigger className="w-full h-9 sm:h-10 rounded-md bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="AUTO">Auto</SelectItem>
-                        <SelectItem value="0">0</SelectItem>
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-col gap-2.5">
-                    <Label className="text-sm font-medium">Prefix Length</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={10}
-                      value={fuzzyConfig.prefixLength}
-                      onChange={(e) =>
-                        onFuzzyConfigChange({
-                          ...fuzzyConfig,
-                          prefixLength: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="w-full h-9 sm:h-10 rounded-md bg-background"
-                    />
-                  </div>
+                  <FuzzyControls value={fuzzyConfig} onChange={onFuzzyConfigChange} />
                 </div>
               )}
             </div>
