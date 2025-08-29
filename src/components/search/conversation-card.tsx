@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { ModelBadge } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Streamdown } from "streamdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -62,6 +62,41 @@ export interface ConversationCardProps {
     messages: Message[];
   }) => void;
 }
+
+// Normalize unsupported code fence languages to supported aliases for the highlighter
+const normalizeMarkdownCodeFenceLanguages = (markdown: string): string => {
+  const languageAliasMap: Record<string, string> = {
+    // Common aliases
+    typescriptreact: "tsx",
+    javascriptreact: "jsx",
+  };
+
+  const lines = markdown.split("\n");
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const trimmed = line.trimStart();
+    if (!trimmed.startsWith("```") || trimmed === "```") continue;
+
+    // Extract the info string (language and optional metadata)
+    const backtickIndex = line.indexOf("```");
+    const before = line.slice(0, backtickIndex + 3);
+    const after = line.slice(backtickIndex + 3);
+    const infoString = after.trim();
+    if (infoString.length === 0) continue;
+
+    // First token is the language identifier
+    const firstSpaceIdx = infoString.indexOf(" ");
+    const languageId = (firstSpaceIdx === -1 ? infoString : infoString.slice(0, firstSpaceIdx)).toLowerCase();
+
+    if (languageAliasMap[languageId]) {
+      const alias = languageAliasMap[languageId];
+      const rest = firstSpaceIdx === -1 ? "" : infoString.slice(firstSpaceIdx);
+      lines[i] = `${before}${alias}${rest}`;
+    }
+  }
+
+  return lines.join("\n");
+};
 
 // Helper function to copy text to clipboard
 const copyToClipboard = (text: string, successMessage: string = "Copied to clipboard") => {
@@ -127,6 +162,7 @@ const MarkdownContent: React.FC<{
 }> = ({ content }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const inlineCopyTimersRef = useRef<WeakMap<HTMLElement, number>>(new WeakMap());
+  const normalizedContent = useMemo(() => normalizeMarkdownCodeFenceLanguages(content), [content]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -230,7 +266,7 @@ const MarkdownContent: React.FC<{
   return (
     <div ref={containerRef} className="dark:prose-invert max-w-none prose-sm prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
       <Streamdown className="sd-prose" remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
-        {content}
+        {normalizedContent}
       </Streamdown>
     </div>
   );
