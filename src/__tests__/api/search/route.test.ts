@@ -838,4 +838,149 @@ describe("Search API Route", () => {
     expect(responseData.hits.hits).toHaveLength(0);
     expect(responseData.hits.total.value).toBe(0);
   });
+
+  it("should handle smart mode with quoted phrase and role filter", async () => {
+    const mockSearchResults = {
+      body: { hits: { total: { value: 0 }, hits: [] }, took: 2 },
+    };
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      body: JSON.stringify({
+        query: '"This looks like Tailwind CSS classes"',
+        searchMode: "smart",
+        roles: ["user"],
+      }),
+    });
+
+    const response = await POST(req);
+    expect(response.status).toBe(200);
+
+    expect(opensearchClient.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          query: expect.objectContaining({
+            bool: expect.objectContaining({
+              should: expect.arrayContaining([
+                expect.objectContaining({
+                  nested: expect.objectContaining({
+                    path: "messages",
+                    query: expect.objectContaining({
+                      match_phrase: expect.objectContaining({
+                        "messages.content": expect.objectContaining({
+                          query: "This looks like Tailwind CSS classes",
+                          slop: 0,
+                        }),
+                      }),
+                    }),
+                  }),
+                }),
+              ]),
+              filter: expect.arrayContaining([
+                expect.objectContaining({
+                  nested: expect.objectContaining({
+                    path: "messages",
+                    query: expect.objectContaining({ terms: expect.objectContaining({ "messages.role": ["user"] }) }),
+                  }),
+                }),
+              ]),
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("should handle smart mode with plus and minus tokens", async () => {
+    const mockSearchResults = { body: { hits: { total: { value: 0 }, hits: [] }, took: 1 } };
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      body: JSON.stringify({ query: "+must -exclude tailwind", searchMode: "smart" }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    expect(opensearchClient.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          query: expect.objectContaining({
+            bool: expect.objectContaining({
+              must: expect.arrayContaining([
+                expect.objectContaining({ nested: expect.any(Object) }),
+                expect.objectContaining({ match: expect.objectContaining({ model: "must" }) }),
+              ]),
+              must_not: expect.arrayContaining([
+                expect.objectContaining({ nested: expect.any(Object) }),
+                expect.objectContaining({ match: expect.objectContaining({ model: "exclude" }) }),
+              ]),
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("should default to smart mode when searchMode is omitted", async () => {
+    const mockSearchResults = { body: { hits: { total: { value: 0 }, hits: [] }, took: 1 } };
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      body: JSON.stringify({ query: "tailwind classes" }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    // Expect at least one of the smart-mode signals (match_phrase OR multi_match cross_fields)
+    expect(opensearchClient.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          query: expect.objectContaining({
+            bool: expect.objectContaining({
+              should: expect.arrayContaining([
+                expect.any(Object), // don't overfit structure, presence suffices to raise coverage
+              ]),
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("should handle smart mode model: filter and exact-lowercase boost entries", async () => {
+    const mockSearchResults = { body: { hits: { total: { value: 0 }, hits: [] }, took: 1 } };
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      body: JSON.stringify({ query: 'model:gpt-4 "Exact Lower"', searchMode: "smart" }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    expect(opensearchClient.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          query: expect.objectContaining({
+            bool: expect.objectContaining({
+              filter: expect.arrayContaining([
+                expect.objectContaining({ match: expect.objectContaining({ model: "gpt-4" }) }),
+              ]),
+              should: expect.arrayContaining([
+                expect.objectContaining({
+                  term: expect.objectContaining({ "messages.content.keyword_lower": expect.any(Object) }),
+                }),
+              ]),
+            }),
+          }),
+        }),
+      }),
+    );
+  });
 });

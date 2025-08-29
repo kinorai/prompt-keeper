@@ -1,5 +1,3 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -21,15 +19,9 @@ interface CustomRange {
 interface SearchFiltersProps {
   timeRange: string | CustomRange;
   resultsSize: number;
-  fuzzyConfig: {
-    fuzziness: string;
-    prefixLength: number;
-  };
-  searchMode: string;
   roles?: string[];
   onTimeRangeChange: (value: string | CustomRange) => void;
   onResultsSizeChange: (value: number) => void;
-  onFuzzyConfigChange: (config: { fuzziness: string; prefixLength: number }) => void;
   onRolesChange?: (roles: string[]) => void;
   alwaysExpanded?: boolean;
 }
@@ -37,12 +29,9 @@ interface SearchFiltersProps {
 export function SearchFilters({
   timeRange,
   resultsSize,
-  fuzzyConfig,
-  searchMode,
   roles = [...DEFAULT_ROLES],
   onTimeRangeChange,
   onResultsSizeChange,
-  onFuzzyConfigChange,
   onRolesChange,
   alwaysExpanded = false,
 }: SearchFiltersProps) {
@@ -102,44 +91,7 @@ export function SearchFilters({
     );
   }
 
-  function FuzzyControls({
-    value,
-    onChange,
-  }: {
-    value: { fuzziness: string; prefixLength: number };
-    onChange: (next: { fuzziness: string; prefixLength: number }) => void;
-  }) {
-    return (
-      <>
-        <div className="flex flex-col gap-2.5">
-          <Label className="text-sm font-medium">Fuzziness</Label>
-          <Select value={value.fuzziness} onValueChange={(v) => onChange({ ...value, fuzziness: v })}>
-            <SelectTrigger className="w-full h-9 sm:h-10 rounded-md bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="AUTO">Auto</SelectItem>
-              <SelectItem value="0">0</SelectItem>
-              <SelectItem value="1">1</SelectItem>
-              <SelectItem value="2">2</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-2.5">
-          <Label className="text-sm font-medium">Prefix Length</Label>
-          <Input
-            type="number"
-            min={0}
-            max={10}
-            value={value.prefixLength}
-            onChange={(e) => onChange({ ...value, prefixLength: parseInt(e.target.value) || 0 })}
-            className="w-full h-9 sm:h-10 rounded-md bg-background"
-          />
-        </div>
-      </>
-    );
-  }
+  // Smart mode only: no fuzzy or phrase-specific controls
   const timeRangeLabel = labelForTimeRange(timeRange);
 
   const handleCalendarChange = (range?: DateRange) => {
@@ -162,14 +114,11 @@ export function SearchFilters({
               <SlidersHorizontal className="mr-1 h-3 w-3" />
               {resultsSize} results
             </FilterBadge>
-            {searchMode === "fuzzy" && <FilterBadge>Fuzziness: {fuzzyConfig.fuzziness}</FilterBadge>}
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4 p-3 bg-muted/20 rounded-lg">
           <RolesToggle value={roles} onChange={onRolesChange} />
           <ResultsSizeControl value={resultsSize} onChange={onResultsSizeChange} />
-
-          {searchMode === "fuzzy" && <FuzzyControls value={fuzzyConfig} onChange={onFuzzyConfigChange} />}
         </div>
         <div className="flex flex-col gap-2.5">
           <Label className="text-sm font-medium">Time Range</Label>
@@ -209,7 +158,6 @@ export function SearchFilters({
                 <SlidersHorizontal className="mr-1 h-3 w-3" />
                 {resultsSize} results
               </FilterBadge>
-              {searchMode === "fuzzy" && <FilterBadge>Fuzziness: {fuzzyConfig.fuzziness}</FilterBadge>}
             </div>
             <div className="ml-auto hidden sm:flex">
               <Button
@@ -220,12 +168,7 @@ export function SearchFilters({
                   e.stopPropagation();
                   onTimeRangeChange(FILTERS_DEFAULTS.timeRange);
                   onResultsSizeChange(FILTERS_DEFAULTS.resultsSize);
-                  if (searchMode === "fuzzy") {
-                    onFuzzyConfigChange({
-                      fuzziness: FILTERS_DEFAULTS.fuzziness,
-                      prefixLength: FILTERS_DEFAULTS.prefixLength,
-                    });
-                  }
+
                   onRolesChange?.([...DEFAULT_ROLES]);
                 }}
               >
@@ -248,12 +191,6 @@ export function SearchFilters({
             <div className="flex flex-col gap-4">
               <RolesToggle value={roles} onChange={onRolesChange} />
               <ResultsSizeControl value={resultsSize} onChange={onResultsSizeChange} />
-
-              {searchMode === "fuzzy" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FuzzyControls value={fuzzyConfig} onChange={onFuzzyConfigChange} />
-                </div>
-              )}
             </div>
           </div>
         </AccordionContent>
