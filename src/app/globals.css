@@ -323,7 +323,7 @@
 
 .prose code,
 .sd-prose code {
-  /* @apply bg-muted/50 px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono; */
+  @apply px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono;
 }
 
 .prose p,
