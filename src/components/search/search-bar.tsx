@@ -2,26 +2,15 @@ import { Search, X } from "lucide-react";
 import * as motion from "motion/react-client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ModeHintBadge } from "@/components/badges";
 
 interface SearchBarProps {
   query: string;
-  searchMode: string;
   onQueryChange: (value: string) => void;
-  onSearchModeChange: (value: string) => void;
   onSearch: () => void;
   isCompact?: boolean;
 }
 
-export function SearchBar({
-  query,
-  searchMode,
-  onQueryChange,
-  onSearchModeChange,
-  onSearch,
-  isCompact = false,
-}: SearchBarProps) {
+export function SearchBar({ query, onQueryChange, onSearch, isCompact = false }: SearchBarProps) {
   const handleClearSearch = () => {
     onQueryChange("");
   };
@@ -58,33 +47,6 @@ export function SearchBar({
         )}
       </div>
       <div className={`flex gap-2 ${isCompact ? "w-auto" : "sm:w-auto"}`}>
-        {!isCompact && (
-          <Select value={searchMode} onValueChange={onSearchModeChange}>
-            <SelectTrigger className="w-full sm:w-[140px] h-10 sm:h-11 rounded-md border-muted-foreground/20 bg-background shadow-xs">
-              <SelectValue placeholder="Search mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="keyword">
-                <div className="flex items-center">
-                  <span>Keyword</span>
-                  <ModeHintBadge>Exact</ModeHintBadge>
-                </div>
-              </SelectItem>
-              <SelectItem value="fuzzy">
-                <div className="flex items-center">
-                  <span>Fuzzy</span>
-                  <ModeHintBadge>Similar</ModeHintBadge>
-                </div>
-              </SelectItem>
-              <SelectItem value="regex">
-                <div className="flex items-center">
-                  <span>Regex</span>
-                  <ModeHintBadge>Pattern</ModeHintBadge>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        )}
         <Button
           onClick={onSearch}
           className={`${
