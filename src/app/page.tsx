@@ -12,8 +12,7 @@ import debounce from "lodash.debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LogoutButton } from "@/components/logout-button";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { ModeHintBadge } from "@/components/badges";
+
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DEFAULT_ROLES, FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DEFAULTS } from "@/lib/defaults";
 
@@ -66,7 +65,7 @@ function HomeContent() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
-  const [searchMode, setSearchMode] = useState(searchParams.get("mode") || FILTERS_DEFAULTS.searchMode);
+  // Smart mode only
   const initialTime = (() => {
     const t = searchParams.get("time") || FILTERS_DEFAULTS.timeRange;
     if (t === "custom") {
@@ -80,10 +79,7 @@ function HomeContent() {
   const [resultsSize, setResultsSize] = useState(
     parseInt(searchParams.get("size") || String(FILTERS_DEFAULTS.resultsSize)),
   );
-  const [fuzzyConfig, setFuzzyConfig] = useState({
-    fuzziness: searchParams.get("fuzziness") || FILTERS_DEFAULTS.fuzziness,
-    prefixLength: parseInt(searchParams.get("prefix") || String(FILTERS_DEFAULTS.prefixLength)),
-  });
+  // Removed fuzzy/phrase config in Smart mode
   const initialRoles = (() => {
     const rolesParam = searchParams.get("roles");
     if (!rolesParam) return [...DEFAULT_ROLES] as string[];
@@ -210,7 +206,7 @@ function HomeContent() {
       if (query) params.set("q", query);
       else params.delete("q");
 
-      params.set("mode", searchMode);
+      // Smart mode: no explicit mode param
       if (typeof timeRange === "string") {
         params.set("time", timeRange);
         params.delete("start");
@@ -222,13 +218,7 @@ function HomeContent() {
       }
       params.set("size", resultsSize.toString());
 
-      if (searchMode === "fuzzy") {
-        params.set("fuzziness", fuzzyConfig.fuzziness);
-        params.set("prefix", fuzzyConfig.prefixLength.toString());
-      } else {
-        params.delete("fuzziness");
-        params.delete("prefix");
-      }
+      // No per-mode params in Smart mode
 
       // roles
       if (roles.length === DEFAULT_ROLES.length) {
@@ -245,7 +235,7 @@ function HomeContent() {
       else params.delete("cid");
       router.replace(`${pathname}?${params.toString()}`);
     },
-    [query, searchMode, timeRange, resultsSize, fuzzyConfig, roles, searchParams, router, pathname, selectedIdFromUrl],
+    [query, timeRange, resultsSize, roles, searchParams, router, pathname, selectedIdFromUrl],
   );
 
   const handleSearch = useCallback(async () => {
@@ -255,27 +245,22 @@ function HomeContent() {
 
     setLoading(true);
     try {
-      console.debug("Sending search request with:", {
+      const body = {
         query,
-        searchMode,
+        searchMode: "smart",
         timeRange,
         size: resultsSize,
-        fuzzyConfig: searchMode === "fuzzy" ? fuzzyConfig : undefined,
-      });
+
+        roles,
+      };
+      console.debug("Sending search request with:", body);
 
       const response = await fetch("/api/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          query,
-          searchMode,
-          timeRange,
-          size: resultsSize,
-          fuzzyConfig: searchMode === "fuzzy" ? fuzzyConfig : undefined,
-          roles,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
@@ -335,7 +320,7 @@ function HomeContent() {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, roles, updateSearchParams, isMobile, selectedIdFromUrl]);
+  }, [query, timeRange, resultsSize, roles, updateSearchParams, isMobile, selectedIdFromUrl]);
 
   // Create a memoized debounced function for search
   const debouncedSearch = useMemo(() => {
@@ -345,7 +330,7 @@ function HomeContent() {
     }, SEARCH_BEHAVIOR_DEFAULTS.searchDebounceMs);
   }, [handleSearch, query]);
 
-  // Debounced search for filter changes (mode, time range, size, fuzzy)
+  // Debounced search for filter changes (time range, size, roles)
   const debouncedFilterSearch = useMemo(() => {
     return debounce(() => {
       console.debug("Debounced search triggered for filters change");
@@ -396,7 +381,7 @@ function HomeContent() {
       debouncedFilterSearch.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchMode, timeRange, resultsSize, fuzzyConfig, roles]);
+  }, [timeRange, resultsSize, roles]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -440,13 +425,7 @@ function HomeContent() {
             <div className="space-y-2">
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
-                  <SearchBar
-                    query={query}
-                    searchMode={searchMode}
-                    onQueryChange={setQuery}
-                    onSearchModeChange={setSearchMode}
-                    onSearch={handleSearch}
-                  />
+                  <SearchBar query={query} onQueryChange={setQuery} onSearch={handleSearch} />
                 </div>
                 <ThemeToggle />
                 <LogoutButton />
@@ -454,12 +433,9 @@ function HomeContent() {
               <SearchFilters
                 timeRange={timeRange}
                 resultsSize={resultsSize}
-                fuzzyConfig={fuzzyConfig}
-                searchMode={searchMode}
                 roles={roles}
                 onTimeRangeChange={setTimeRange}
                 onResultsSizeChange={setResultsSize}
-                onFuzzyConfigChange={setFuzzyConfig}
                 onRolesChange={setRoles}
               />
             </div>
@@ -617,14 +593,7 @@ function HomeContent() {
               </Button>
             )}
             <div className="flex-1">
-              <SearchBar
-                query={query}
-                searchMode={searchMode}
-                onQueryChange={setQuery}
-                onSearchModeChange={setSearchMode}
-                onSearch={handleSearch}
-                isCompact={true}
-              />
+              <SearchBar query={query} onQueryChange={setQuery} onSearch={handleSearch} isCompact={true} />
             </div>
             <Sheet>
               <SheetTrigger asChild>
@@ -638,34 +607,7 @@ function HomeContent() {
                   <SheetDescription>Adjust your search filters and preferences</SheetDescription>
                 </SheetHeader>
                 <div className="flex justify-between items-center mb-4">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-sm font-medium">Search Mode</span>
-                    <Select value={searchMode} onValueChange={setSearchMode}>
-                      <SelectTrigger className="w-[160px] h-9 rounded-md border-muted-foreground/20 bg-background shadow-xs">
-                        <SelectValue placeholder="Search mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="keyword">
-                          <div className="flex items-center">
-                            <span>Keyword</span>
-                            <ModeHintBadge>Exact</ModeHintBadge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="fuzzy">
-                          <div className="flex items-center">
-                            <span>Fuzzy</span>
-                            <ModeHintBadge>Similar</ModeHintBadge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="regex">
-                          <div className="flex items-center">
-                            <span>Regex</span>
-                            <ModeHintBadge>Pattern</ModeHintBadge>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <div />
                   <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
@@ -673,12 +615,6 @@ function HomeContent() {
                       onClick={() => {
                         setTimeRange(FILTERS_DEFAULTS.timeRange);
                         setResultsSize(FILTERS_DEFAULTS.resultsSize);
-                        if (searchMode === "fuzzy") {
-                          setFuzzyConfig({
-                            fuzziness: FILTERS_DEFAULTS.fuzziness,
-                            prefixLength: FILTERS_DEFAULTS.prefixLength,
-                          });
-                        }
                       }}
                     >
                       Reset filters
@@ -691,12 +627,9 @@ function HomeContent() {
                   <SearchFilters
                     timeRange={timeRange}
                     resultsSize={resultsSize}
-                    fuzzyConfig={fuzzyConfig}
-                    searchMode={searchMode}
                     roles={roles}
                     onTimeRangeChange={setTimeRange}
                     onResultsSizeChange={setResultsSize}
-                    onFuzzyConfigChange={setFuzzyConfig}
                     onRolesChange={setRoles}
                     alwaysExpanded={true}
                   />
