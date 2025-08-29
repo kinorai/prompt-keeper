@@ -32,3 +32,7 @@ export const FILTERS_DEFAULTS = {
 
 // Deletion behavior defaults
 export const DELETE_UNDO_TIMEOUT_MS = 5000;
+
+// Roles defaults used across the app
+export const DEFAULT_ROLES = ["system", "user", "assistant"] as const;
+export type Role = (typeof DEFAULT_ROLES)[number];

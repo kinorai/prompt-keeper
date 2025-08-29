@@ -32,6 +32,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { copyToClipboard } from "@/lib/clipboard";
+import { normalizeMarkdownCodeFenceLanguages } from "@/lib/markdown";
+import { buildConversationMarkdown, buildConversationPlainText } from "@/lib/conversation";
 
 export interface Message {
   role: string;
@@ -63,54 +66,7 @@ export interface ConversationCardProps {
   }) => void;
 }
 
-// Normalize unsupported code fence languages to supported aliases for the highlighter
-// ERROR: Language `typescriptreact` is not included in this bundle. You may want to load it from external source
-const normalizeMarkdownCodeFenceLanguages = (markdown: string): string => {
-  const languageAliasMap: Record<string, string> = {
-    // Common aliases
-    typescriptreact: "tsx",
-    javascriptreact: "jsx",
-  };
-
-  const lines = markdown.split("\n");
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
-    const trimmed = line.trimStart();
-    if (!trimmed.startsWith("```") || trimmed === "```") continue;
-
-    // Extract the info string (language and optional metadata)
-    const backtickIndex = line.indexOf("```");
-    const before = line.slice(0, backtickIndex + 3);
-    const after = line.slice(backtickIndex + 3);
-    const infoString = after.trim();
-    if (infoString.length === 0) continue;
-
-    // First token is the language identifier
-    const firstSpaceIdx = infoString.indexOf(" ");
-    const languageId = (firstSpaceIdx === -1 ? infoString : infoString.slice(0, firstSpaceIdx)).toLowerCase();
-
-    if (languageAliasMap[languageId]) {
-      const alias = languageAliasMap[languageId];
-      const rest = firstSpaceIdx === -1 ? "" : infoString.slice(firstSpaceIdx);
-      lines[i] = `${before}${alias}${rest}`;
-    }
-  }
-
-  return lines.join("\n");
-};
-
-// Helper function to copy text to clipboard
-const copyToClipboard = (text: string, successMessage: string = "Copied to clipboard") => {
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      toast.success(successMessage);
-    })
-    .catch((err) => {
-      console.error("Failed to copy: ", err);
-      toast.error("Failed to copy to clipboard");
-    });
-};
+// Using shared helpers from lib/markdown and lib/clipboard
 
 // Component for copy button
 const CopyButton = ({
@@ -378,16 +334,10 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   const { undoableDelete } = useUndoableDelete();
 
   // Generate full conversation text for copying
-  const getFullConversationText = () => {
-    return messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n");
-  };
+  const getFullConversationText = () => buildConversationPlainText(messages);
 
   // Generate markdown for sharing
-  const getShareableMarkdown = () => {
-    const header = `# Conversation with ${model}\n\nDate: ${createdDate.toLocaleString()}\n\n---\n\n`;
-    const content = messages.map((msg) => `### ${msg.role.toUpperCase()}\n\n${msg.content}\n\n`).join("");
-    return header + content;
-  };
+  const getShareableMarkdown = () => buildConversationMarkdown({ model, created: createdDate, messages });
 
   // Handle delete
   const handleDelete = async () => {

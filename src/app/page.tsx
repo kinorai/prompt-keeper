@@ -15,7 +15,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ModeHintBadge } from "@/components/badges";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DEFAULTS } from "@/lib/defaults";
+import { DEFAULT_ROLES, FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DEFAULTS } from "@/lib/defaults";
 
 // Define the types for our search results
 interface SearchHit {
@@ -86,14 +86,14 @@ function HomeContent() {
   });
   const initialRoles = (() => {
     const rolesParam = searchParams.get("roles");
-    if (!rolesParam) return ["system", "user", "assistant"] as string[];
+    if (!rolesParam) return [...DEFAULT_ROLES] as string[];
     const parts = rolesParam
       .split(",")
       .map((r) => r.trim())
       .filter(Boolean);
-    const allowed = ["system", "user", "assistant"] as const;
-    const filtered = parts.filter((p) => (allowed as readonly string[]).includes(p));
-    return filtered.length > 0 ? filtered : ["system", "user", "assistant"];
+    const allowed = DEFAULT_ROLES as readonly string[];
+    const filtered = parts.filter((p) => allowed.includes(p));
+    return filtered.length > 0 ? filtered : [...DEFAULT_ROLES];
   })();
   const [roles, setRoles] = useState<string[]>(initialRoles);
 
@@ -231,7 +231,7 @@ function HomeContent() {
       }
 
       // roles
-      if (roles.length === 3) {
+      if (roles.length === DEFAULT_ROLES.length) {
         params.delete("roles");
       } else if (roles.length > 0) {
         params.set("roles", roles.join(","));
