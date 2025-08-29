@@ -709,6 +709,9 @@ function HomeContent() {
   );
 }
 
+// Disable static generation since this page uses search parameters
+export const dynamic = "force-dynamic";
+
 // Main component that wraps the content with Suspense
 export default function Home() {
   return (
