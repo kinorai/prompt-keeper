@@ -249,7 +249,7 @@ async function storeConversation(requestMessages: Message[], response: Formatted
           log.debug(existingConversation, "[OpenSearch] Updated existing conversation");
           return;
         } else {
-          log.debug(conversationHash, "[OpenSearch] No existing conversation found with hash");
+          log.debug({ conversationHash }, "[OpenSearch] No existing conversation found with hash");
         }
       } catch (searchError) {
         log.error(searchError, "[OpenSearch] Error searching for existing conversation:");
