@@ -84,6 +84,18 @@ function HomeContent() {
     fuzziness: searchParams.get("fuzziness") || FILTERS_DEFAULTS.fuzziness,
     prefixLength: parseInt(searchParams.get("prefix") || String(FILTERS_DEFAULTS.prefixLength)),
   });
+  const initialRoles = (() => {
+    const rolesParam = searchParams.get("roles");
+    if (!rolesParam) return ["system", "user", "assistant"] as string[];
+    const parts = rolesParam
+      .split(",")
+      .map((r) => r.trim())
+      .filter(Boolean);
+    const allowed = ["system", "user", "assistant"] as const;
+    const filtered = parts.filter((p) => (allowed as readonly string[]).includes(p));
+    return filtered.length > 0 ? filtered : ["system", "user", "assistant"];
+  })();
+  const [roles, setRoles] = useState<string[]>(initialRoles);
 
   const [searchResults, setSearchResults] = useState<MappedSearchResult[] | null>(null);
   const [searchMetadata, setSearchMetadata] = useState<{
@@ -218,12 +230,22 @@ function HomeContent() {
         params.delete("prefix");
       }
 
+      // roles
+      if (roles.length === 3) {
+        params.delete("roles");
+      } else if (roles.length > 0) {
+        params.set("roles", roles.join(","));
+      } else {
+        // if empty, keep param to reflect state
+        params.set("roles", "");
+      }
+
       // Optionally preserve selected conversation id
       if (preserveCid && selectedIdFromUrl) params.set("cid", selectedIdFromUrl);
       else params.delete("cid");
       router.replace(`${pathname}?${params.toString()}`);
     },
-    [query, searchMode, timeRange, resultsSize, fuzzyConfig, searchParams, router, pathname, selectedIdFromUrl],
+    [query, searchMode, timeRange, resultsSize, fuzzyConfig, roles, searchParams, router, pathname, selectedIdFromUrl],
   );
 
   const handleSearch = useCallback(async () => {
@@ -252,6 +274,7 @@ function HomeContent() {
           timeRange,
           size: resultsSize,
           fuzzyConfig: searchMode === "fuzzy" ? fuzzyConfig : undefined,
+          roles,
         }),
       });
 
@@ -312,7 +335,7 @@ function HomeContent() {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, updateSearchParams, isMobile, selectedIdFromUrl]);
+  }, [query, searchMode, timeRange, resultsSize, fuzzyConfig, roles, updateSearchParams, isMobile, selectedIdFromUrl]);
 
   // Create a memoized debounced function for search
   const debouncedSearch = useMemo(() => {
@@ -373,7 +396,7 @@ function HomeContent() {
       debouncedFilterSearch.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchMode, timeRange, resultsSize, fuzzyConfig]);
+  }, [searchMode, timeRange, resultsSize, fuzzyConfig, roles]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -433,9 +456,11 @@ function HomeContent() {
                 resultsSize={resultsSize}
                 fuzzyConfig={fuzzyConfig}
                 searchMode={searchMode}
+                roles={roles}
                 onTimeRangeChange={setTimeRange}
                 onResultsSizeChange={setResultsSize}
                 onFuzzyConfigChange={setFuzzyConfig}
+                onRolesChange={setRoles}
               />
             </div>
           </div>
@@ -668,9 +693,11 @@ function HomeContent() {
                     resultsSize={resultsSize}
                     fuzzyConfig={fuzzyConfig}
                     searchMode={searchMode}
+                    roles={roles}
                     onTimeRangeChange={setTimeRange}
                     onResultsSizeChange={setResultsSize}
                     onFuzzyConfigChange={setFuzzyConfig}
+                    onRolesChange={setRoles}
                     alwaysExpanded={true}
                   />
                 </div>
