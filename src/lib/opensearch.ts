@@ -41,6 +41,8 @@ const INDEX_MAPPING = {
       type: "text" as const,
       fields: {
         keyword: { type: "keyword" as const },
+        asyt: { type: "search_as_you_type" as const },
+        keyword_lower: { type: "keyword" as const, normalizer: "lowercase_normalizer" as const },
       },
     },
     messages: {
@@ -50,6 +52,10 @@ const INDEX_MAPPING = {
         content: {
           type: "text" as const,
           analyzer: "standard" as const,
+          fields: {
+            asyt: { type: "search_as_you_type" as const },
+            keyword_lower: { type: "keyword" as const, normalizer: "lowercase_normalizer" as const },
+          },
         },
       },
     },
@@ -112,6 +118,14 @@ export async function initializeIndex() {
           settings: {
             number_of_shards: 1,
             number_of_replicas: 1,
+            analysis: {
+              normalizer: {
+                lowercase_normalizer: {
+                  type: "custom",
+                  filter: ["lowercase"],
+                },
+              },
+            },
           },
           mappings: INDEX_MAPPING,
         },
