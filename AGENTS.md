@@ -118,6 +118,15 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, 
 - before making any code changes, start by finding & reading ALL of
 - never make changes without reading the entire file
 
+## TESTING
+- `npm run test`
+
+## PR instructions
+- Always run `pre-commit run`
+- Always run `npm run lint`
+- Always run `npm run test`
+- Always run `npm run build`
+
 ## Debug
 
 - Do not add debug buttons in the UI, or debug api routes, just use console.debug
