@@ -11,6 +11,7 @@ import { endOfDay, format, startOfDay, subMonths, startOfYear } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { FILTERS_DEFAULTS } from "@/lib/defaults";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface CustomRange {
   start: string;
@@ -25,9 +26,11 @@ interface SearchFiltersProps {
     prefixLength: number;
   };
   searchMode: string;
+  roles?: string[];
   onTimeRangeChange: (value: string | CustomRange) => void;
   onResultsSizeChange: (value: number) => void;
   onFuzzyConfigChange: (config: { fuzziness: string; prefixLength: number }) => void;
+  onRolesChange?: (roles: string[]) => void;
   alwaysExpanded?: boolean;
 }
 
@@ -36,9 +39,11 @@ export function SearchFilters({
   resultsSize,
   fuzzyConfig,
   searchMode,
+  roles = ["system", "user", "assistant"],
   onTimeRangeChange,
   onResultsSizeChange,
   onFuzzyConfigChange,
+  onRolesChange,
   alwaysExpanded = false,
 }: SearchFiltersProps) {
   const timeRangeLabel = (() => {
@@ -118,6 +123,37 @@ export function SearchFilters({
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4 p-3 bg-muted/20 rounded-lg">
+          <div className="flex flex-col gap-2.5">
+            <Label className="text-sm font-medium">Filter by sender</Label>
+            <ToggleGroup
+              type="multiple"
+              className="rounded-md w-full"
+              value={roles}
+              onValueChange={(vals) => onRolesChange?.(vals as string[])}
+            >
+              <ToggleGroupItem
+                value="system"
+                aria-label="Filter system"
+                className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+              >
+                <span className="text-sm">system</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="user"
+                aria-label="Filter user"
+                className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+              >
+                <span className="text-sm">user</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="assistant"
+                aria-label="Filter assistant"
+                className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+              >
+                <span className="text-sm">assistant</span>
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
           <div className="flex flex-col gap-2.5">
             <Label className="text-sm font-medium">Results Size</Label>
             <div className="flex gap-4 items-center">
@@ -227,6 +263,7 @@ export function SearchFilters({
                       prefixLength: FILTERS_DEFAULTS.prefixLength,
                     });
                   }
+                  onRolesChange?.(["system", "user", "assistant"]);
                 }}
               >
                 <span role="button" tabIndex={0}>
@@ -246,6 +283,37 @@ export function SearchFilters({
 
             {/* Right: All other controls stacked */}
             <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2.5">
+                <Label className="text-sm font-medium">Filter by sender</Label>
+                <ToggleGroup
+                  type="multiple"
+                  className="rounded-md w-full"
+                  value={roles}
+                  onValueChange={(vals) => onRolesChange?.(vals as string[])}
+                >
+                  <ToggleGroupItem
+                    value="system"
+                    aria-label="Filter system"
+                    className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+                  >
+                    <span className="text-sm">system</span>
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="user"
+                    aria-label="Filter user"
+                    className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+                  >
+                    <span className="text-sm">user</span>
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="assistant"
+                    aria-label="Filter assistant"
+                    className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+                  >
+                    <span className="text-sm">assistant</span>
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
               <div className="flex flex-col gap-2.5">
                 <Label className="text-sm font-medium">Results Size</Label>
                 <div className="flex gap-4 items-center">

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     // Ensure index exists before searching
     await ensureIndexExists();
 
-    const { query, searchMode = "keyword", timeRange, size = 20, from = 0, fuzzyConfig } = await req.json();
+    const { query, searchMode = "keyword", timeRange, size = 20, from = 0, fuzzyConfig, roles } = await req.json();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const esQueryBody: any = {
@@ -20,65 +20,130 @@ export async function POST(req: NextRequest) {
     };
 
     if (query) {
+      const rolesFilterActive = Array.isArray(roles) && roles.length > 0 && roles.length < 3;
       // Add search query based on mode
       switch (searchMode) {
         case "fuzzy":
-          esQueryBody.bool.should.push({
-            match: {
-              model: {
-                query,
-                fuzziness: fuzzyConfig?.fuzziness || "AUTO",
-                prefix_length: fuzzyConfig?.prefixLength || 2,
-              },
-            },
-          });
-
-          esQueryBody.bool.should.push({
-            nested: {
-              path: "messages",
-              query: {
-                match: {
-                  "messages.content": {
-                    query,
-                    fuzziness: fuzzyConfig?.fuzziness || "AUTO",
-                    prefix_length: fuzzyConfig?.prefixLength || 2,
+          if (rolesFilterActive) {
+            esQueryBody.bool.should.push({
+              nested: {
+                path: "messages",
+                query: {
+                  bool: {
+                    filter: [{ terms: { "messages.role": roles } }],
+                    must: [
+                      {
+                        match: {
+                          "messages.content": {
+                            query,
+                            fuzziness: fuzzyConfig?.fuzziness || "AUTO",
+                            prefix_length: fuzzyConfig?.prefixLength || 2,
+                          },
+                        },
+                      },
+                    ],
                   },
                 },
               },
-            },
-          });
+            });
+          } else {
+            esQueryBody.bool.should.push({
+              match: {
+                model: {
+                  query,
+                  fuzziness: fuzzyConfig?.fuzziness || "AUTO",
+                  prefix_length: fuzzyConfig?.prefixLength || 2,
+                },
+              },
+            });
+            esQueryBody.bool.should.push({
+              nested: {
+                path: "messages",
+                query: {
+                  match: {
+                    "messages.content": {
+                      query,
+                      fuzziness: fuzzyConfig?.fuzziness || "AUTO",
+                      prefix_length: fuzzyConfig?.prefixLength || 2,
+                    },
+                  },
+                },
+              },
+            });
+          }
           break;
 
         case "regex":
-          esQueryBody.bool.should.push(
-            { regexp: { model: query } },
-            {
+          if (rolesFilterActive) {
+            esQueryBody.bool.should.push({
               nested: {
                 path: "messages",
                 query: {
-                  regexp: { "messages.content": query },
+                  bool: {
+                    filter: [{ terms: { "messages.role": roles } }],
+                    must: [{ regexp: { "messages.content": query } }],
+                  },
                 },
               },
-            },
-          );
+            });
+          } else {
+            esQueryBody.bool.should.push(
+              { regexp: { model: query } },
+              {
+                nested: {
+                  path: "messages",
+                  query: {
+                    regexp: { "messages.content": query },
+                  },
+                },
+              },
+            );
+          }
           break;
 
         default: // keyword
-          esQueryBody.bool.should.push(
-            { match: { model: query } },
-            {
+          if (rolesFilterActive) {
+            esQueryBody.bool.should.push({
               nested: {
                 path: "messages",
                 query: {
-                  match: { "messages.content": query },
+                  bool: {
+                    filter: [{ terms: { "messages.role": roles } }],
+                    must: [{ match: { "messages.content": query } }],
+                  },
                 },
               },
-            },
-          );
+            });
+          } else {
+            esQueryBody.bool.should.push(
+              { match: { model: query } },
+              {
+                nested: {
+                  path: "messages",
+                  query: {
+                    match: { "messages.content": query },
+                  },
+                },
+              },
+            );
+          }
       }
     } else {
       // No search query, use match_all but keep in the should array for test consistency
       esQueryBody.bool.should.push({ match_all: {} });
+    }
+
+    // Add role filters if provided (filter nested messages by selected roles)
+    if (Array.isArray(roles) && roles.length > 0 && roles.length < 3) {
+      esQueryBody.bool.filter = esQueryBody.bool.filter || [];
+      esQueryBody.bool.filter.push({
+        nested: {
+          path: "messages",
+          query: {
+            terms: { "messages.role": roles },
+          },
+        },
+      });
     }
 
     // Add time range filter if specified

@@ -64,6 +64,7 @@ export interface ConversationCardProps {
 }
 
 // Normalize unsupported code fence languages to supported aliases for the highlighter
+// ERROR: Language `typescriptreact` is not included in this bundle. You may want to load it from external source
 const normalizeMarkdownCodeFenceLanguages = (markdown: string): string => {
   const languageAliasMap: Record<string, string> = {
     // Common aliases
