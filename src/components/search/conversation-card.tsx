@@ -250,7 +250,7 @@ const ChatBubble: React.FC<{
     case "user":
       alignmentClass = "justify-end";
       // User bubble background must be #e9e9e980
-      bubbleBg = "bg-[#e9e9e980]";
+      bubbleBg = "bg-[var(--pk-user-bubble-bg)]";
       icon = <User className="h-4 w-4" />;
       break;
     case "system":
