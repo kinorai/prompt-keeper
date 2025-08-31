@@ -384,21 +384,39 @@ function HomeContent() {
   }, [timeRange, resultsSize, roles]);
 
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+    const onTypeToSearch = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target && (target as HTMLElement).isContentEditable)
+      ) {
         return;
       }
-      if (e.key.length === 1 && e.key.match(/[a-zA-Z0-9]/)) {
-        setQuery(e.key);
-        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.length !== 1) return;
+
+      const candidates = Array.from(document.querySelectorAll("[data-search-input]")) as HTMLInputElement[];
+      const input = candidates.find(
+        (el) => el.getClientRects().length > 0 && el.offsetWidth > 0 && el.offsetHeight > 0,
+      );
+      const isFocusedOnSearch = input ? document.activeElement === input : false;
+      if (isFocusedOnSearch) {
+        setQuery((prev) => prev + e.key);
+      } else {
+        if (input) {
+          // Set the first character typed and focus the input
+          e.preventDefault();
+          setQuery(e.key);
+          input.focus();
+          return;
         }
       }
+      input?.focus();
     };
 
-    window.addEventListener("keypress", handleKeyPress);
-    return () => window.removeEventListener("keypress", handleKeyPress);
+    window.addEventListener("keydown", onTypeToSearch);
+    return () => window.removeEventListener("keydown", onTypeToSearch);
   }, []);
 
   useEffect(() => {
