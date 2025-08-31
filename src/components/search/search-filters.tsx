@@ -116,7 +116,7 @@ export function SearchFilters({
             </FilterBadge>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 p-3 bg-muted/20 rounded-lg">
+        <div className="grid grid-cols-1 gap-4 p-3 rounded-lg">
           <RolesToggle value={roles} onChange={onRolesChange} />
           <ResultsSizeControl value={resultsSize} onChange={onResultsSizeChange} />
         </div>
@@ -180,7 +180,7 @@ export function SearchFilters({
           </div>
         </AccordionTrigger>
         <AccordionContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 p-3 sm:p-5 bg-muted/20 rounded-lg mt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 p-3 sm:p-5 rounded-lg border mt-2">
             {/* Left: Calendar */}
             <div className="flex flex-col gap-2.5">
               <Label className="text-sm font-medium">Time Range</Label>
