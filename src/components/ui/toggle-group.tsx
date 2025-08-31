@@ -30,6 +30,9 @@ function ToggleGroupItem({
       className={cn(
         "text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
         "px-3 h-9 text-sm inline-flex items-center justify-center",
+        // Dark mode: on => white bg with black text, off => #303030 background
+        "dark:data-[state=on]:bg-[hsl(0,0%,18%)] dark:data-[state=on]:text-white dark:data-[state=off]:bg-black",
+        // Light mode keeps existing behavior
         "data-[state=on]:bg-black data-[state=on]:text-white",
         "border-l border-input first:border-l-0",
         "disabled:pointer-events-none disabled:opacity-50",
