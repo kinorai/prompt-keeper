@@ -157,7 +157,9 @@ export async function ensureIndexExists() {
   if (!isInitialized) {
     const exists = await checkIndexExists();
     if (!exists) {
-      throw new Error("OpenSearch index not initialized. Please call /api/init endpoint first.");
+      // Log admin-facing detail but surface a user-friendly message outward
+      log.error("OpenSearch index not initialized. Please call /api/init endpoint first.");
+      throw new Error("Search is currently unavailable. Please try again later.");
     }
     isInitialized = true;
   }
