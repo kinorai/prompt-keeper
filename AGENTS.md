@@ -90,6 +90,7 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, 
 - Use Shadcn UI, Radix, and Tailwind for components and styling.
 - Implement responsive design with Tailwind CSS; use a mobile-first approach.
 - imports the shadcn/ui components from "@/components/ui".
+- WHEN USING SHADCN UI, ALWAYS INSTALL THE COMPONENTS WITH THE APPROPRIATE COMMAND, DON'T WRITE IT MANUALLY
 
 ## TypeScript Usage
 
