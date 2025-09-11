@@ -25,6 +25,7 @@ export interface ConversationListItemProps {
     model: string;
     messages: Array<{ role: string; content: string; finish_reason?: string }>;
   }) => void;
+  variant?: "card" | "flat";
 }
 
 const formatWhatsAppLikeDate = (date: Date) => {
@@ -49,6 +50,7 @@ export function ConversationListItem({
   onSelect,
   onDelete,
   onRestore,
+  variant = "card",
 }: ConversationListItemProps) {
   const createdDate = useMemo(() => new Date(created), [created]);
   const userMessagesCount = useMemo(() => messages.filter((m) => m.role === "user").length, [messages]);
@@ -88,8 +90,11 @@ export function ConversationListItem({
   return (
     <div
       className={cn(
-        "group relative flex w-full cursor-pointer select-none rounded-lg border bg-card p-3 transition-colors hover:bg-muted/40",
-        isActive && "ring-2 ring-primary/60",
+        "group relative flex w-full cursor-pointer select-none",
+        variant === "card"
+          ? "rounded-lg border bg-card p-3 transition-colors hover:bg-muted/40"
+          : "rounded-lg px-2 py-2 sm:px-2 hover:bg-[var(--pk-conv-list-hover-bg)]",
+        isActive && (variant === "card" ? "ring-2 ring-primary/60" : "bg-[var(--pk-conv-list-active-bg)]"),
       )}
       onClick={() => onSelect?.(id)}
     >

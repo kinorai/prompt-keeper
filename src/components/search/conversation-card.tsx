@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  PanelLeftOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModelBadge } from "@/components/badges";
@@ -22,7 +23,6 @@ import { Streamdown } from "streamdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useUndoableDelete } from "@/hooks/use-undo-delete";
 import {
@@ -52,6 +52,7 @@ export interface ConversationCardProps {
     completion_tokens?: number;
   };
   messages: Message[];
+  onShowSidebar?: () => void;
   onDelete?: (id: string) => void; // Add onDelete callback
   onRestore?: (item: {
     id: string;
@@ -64,6 +65,7 @@ export interface ConversationCardProps {
     };
     messages: Message[];
   }) => void;
+  variant?: "card" | "flat";
 }
 
 // Using shared helpers from lib/markdown and lib/clipboard
@@ -319,8 +321,10 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   model,
   usage,
   messages = [],
+  onShowSidebar,
   onDelete,
   onRestore,
+  variant = "card",
 }) => {
   const createdDate = new Date(created);
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
@@ -476,22 +480,41 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   }, []);
 
   return (
-    <Card
+    <div
       ref={cardRef}
-      className="w-full relative conversation-card bg-transparent border-0 shadow-none rounded-none sm:bg-card sm:border sm:shadow-sm sm:rounded-lg"
+      className={cn("w-full relative", variant === "card" ? "" : "")}
+      onContextMenu={handleContextMenu}
     >
-      <CardHeader
-        className="flex flex-row items-center justify-between space-y-0 pb-1 px-2 sm:px-3 pt-1 sm:pt-1 sticky top-[-8px] sm:top-[calc(var(--search-filters-height,_90px)-24px)] z-[5] bg-background/95 backdrop-blur-sm border-b cursor-pointer rounded-none sm:rounded-t-lg"
+      <div
+        className={cn(
+          "flex flex-row items-center justify-between space-y-0 pb-1 px-2 sm:px-3 pt-1 sm:pt-1 sticky z-[5] cursor-pointer",
+          variant === "card"
+            ? "top-[-8px] sm:top-[calc(var(--search-filters-height,_90px)-24px)] bg-background/95 backdrop-blur-sm border-b rounded-none sm:rounded-t-lg"
+            : "top-0 bg-background/90",
+        )}
         onClick={handleHeaderClick}
         onMouseDown={handleLongPressStart}
         onMouseUp={handleLongPressEnd}
         onMouseLeave={handleLongPressEnd}
         onTouchStart={handleLongPressStart}
         onTouchEnd={handleLongPressEnd}
-        onContextMenu={handleContextMenu}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
           <div className="flex items-center flex-wrap gap-1 sm:gap-1.5 mb-0 sm:mb-0">
+            {onShowSidebar && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="mr-1 h-7 w-7 hidden sm:inline-flex"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowSidebar();
+                }}
+                aria-label="Show sidebar"
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </Button>
+            )}
             <ModelBadge>{model}</ModelBadge>
             <TooltipProvider>
               <Tooltip>
@@ -608,14 +631,14 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </CardHeader>
-      <CardContent className="px-2 sm:px-3 py-0.5 sm:py-1 pb-1 sm:pb-2">
+      </div>
+      <div className={cn("px-2 sm:px-3 py-0.5 sm:py-1 pb-1 sm:pb-2", variant === "card" ? "" : "")}>
         <div className="space-y-3">
           {messages.map((message, index) => (
             <ChatBubble key={`message-${index}`} message={message} index={index} />
           ))}
         </div>
-      </CardContent>
+      </div>
 
       {/* Context menu delete confirmation - positioned independently */}
       {showContextDeleteConfirm && (
@@ -654,6 +677,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 };
