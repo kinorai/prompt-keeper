@@ -6,7 +6,7 @@ import { SearchFilters } from "@/components/search/search-filters";
 import { ConversationCard } from "@/components/search/conversation-card";
 import { ConversationListItem } from "@/components/search/conversation-list-item";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Search, MessageSquare, Settings, ChevronLeft } from "lucide-react";
+import { ArrowUp, Search, MessageSquare, Settings, ChevronLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import debounce from "lodash.debounce";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +15,7 @@ import { LogoutButton } from "@/components/logout-button";
 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DEFAULT_ROLES, FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DEFAULTS } from "@/lib/defaults";
+import { Separator } from "@/components/ui/separator";
 
 // Define the types for our search results
 interface SearchHit {
@@ -102,6 +103,7 @@ function HomeContent() {
   const [initialLoad, setInitialLoad] = useState(true);
   const selectedIdFromUrl = searchParams.get("cid");
   const [isMobile, setIsMobile] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Handle scroll events
   useEffect(() => {
@@ -435,48 +437,35 @@ function HomeContent() {
         } as React.CSSProperties
       }
     >
+      {/* Desktop top header: full width search + filters separated by shadcn Separator */}
+      <div className="hidden sm:block sticky top-0 z-30 bg-background">
+        <div className="px-4 py-2">
+          <div className="flex gap-2 items-center">
+            <div className="flex-1">
+              <SearchBar query={query} onQueryChange={setQuery} onSearch={handleSearch} />
+            </div>
+            <ThemeToggle />
+            <LogoutButton />
+          </div>
+          <div className="mt-2">
+            <SearchFilters
+              timeRange={timeRange}
+              resultsSize={resultsSize}
+              roles={roles}
+              onTimeRangeChange={setTimeRange}
+              onResultsSizeChange={setResultsSize}
+              onRolesChange={setRoles}
+            />
+          </div>
+        </div>
+        <Separator />
+      </div>
+
       {/* Main content area with results */}
       <div ref={resultsContainerRef} className="flex-1 overflow-y-auto pb-16 sm:pb-0 main-content">
-        <div className="container pb-4 sm:py-6">
-          {/* Desktop search bar and filters */}
-          <div className="hidden sm:block sticky top-0 z-20 bg-background/80 backdrop-blur-xs">
-            <div className="space-y-2">
-              <div className="flex gap-2 items-center">
-                <div className="flex-1">
-                  <SearchBar query={query} onQueryChange={setQuery} onSearch={handleSearch} />
-                </div>
-                <ThemeToggle />
-                <LogoutButton />
-              </div>
-              <SearchFilters
-                timeRange={timeRange}
-                resultsSize={resultsSize}
-                roles={roles}
-                onTimeRangeChange={setTimeRange}
-                onResultsSizeChange={setResultsSize}
-                onRolesChange={setRoles}
-              />
-            </div>
-          </div>
-
+        <div className="px-4 sm:px-6 pb-4 sm:py-4">
           {/* Search results */}
           <div className="mt-0 sm:mt-2">
-            {/* Search metadata - only visible on desktop */}
-            {searchMetadata && (
-              <div className="hidden sm:block text-sm text-muted-foreground mb-1 sm:mb-1">
-                {searchMetadata.total > 0 ? (
-                  <p>
-                    Found {searchMetadata.total} results in{" "}
-                    {searchMetadata.took < 1000
-                      ? `${searchMetadata.took}ms`
-                      : `${(searchMetadata.took / 1000).toFixed(2)}s`}
-                  </p>
-                ) : (
-                  <p>No results found</p>
-                )}
-              </div>
-            )}
-
             {/* Loading state */}
             {loading && (
               <div className="space-y-1 sm:space-y-2">
@@ -501,28 +490,57 @@ function HomeContent() {
               </div>
             )}
 
-            {/* Results - WhatsApp-like master/detail */}
+            {/* Desktop layout: sidebar + conversation, separated by shadcn Separator */}
             {!loading && searchResults && searchResults.length > 0 && (
-              <div className="sm:grid sm:grid-cols-[minmax(260px,340px)_minmax(0,1fr)] sm:gap-3">
-                {/* List (always visible, takes full width on mobile) */}
-                <div className={"space-y-2 sm:space-y-2 " + (selectedIdFromUrl ? "hidden sm:block" : "block")}>
-                  {searchResults.map((result) => (
-                    <ConversationListItem
-                      key={result.id}
-                      id={result.id}
-                      created={result.created}
-                      model={result.model}
-                      messages={result.messages}
-                      isActive={selectedIdFromUrl === result.id}
-                      onSelect={handleSelectConversation}
-                      onDelete={handleDeleteConversation}
-                      onRestore={handleRestoreConversation}
-                    />
-                  ))}
-                </div>
-
-                {/* Detail (desktop) */}
-                <div className="hidden sm:block sm:min-w-0">
+              <div className="hidden sm:flex sm:flex-row sm:items-stretch">
+                {isSidebarOpen && (
+                  <>
+                    <div className="w-[320px] shrink-0 pr-2 border-r">
+                      <div className="flex items-center justify-between py-1">
+                        <div className="text-sm text-muted-foreground">
+                          {searchMetadata && searchMetadata.total > 0 ? (
+                            <p>
+                              Found {searchMetadata.total} results in{" "}
+                              {searchMetadata.took < 1000
+                                ? `${searchMetadata.took}ms`
+                                : `${(searchMetadata.took / 1000).toFixed(2)}s`}
+                            </p>
+                          ) : (
+                            <p>No results found</p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsSidebarOpen(false)}
+                          aria-label="Hide sidebar"
+                        >
+                          <PanelLeftClose className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Separator />
+                      <div className="mt-2">
+                        {searchResults.map((result, idx) => (
+                          <div key={result.id}>
+                            <ConversationListItem
+                              id={result.id}
+                              created={result.created}
+                              model={result.model}
+                              messages={result.messages}
+                              isActive={selectedIdFromUrl === result.id}
+                              onSelect={handleSelectConversation}
+                              onDelete={handleDeleteConversation}
+                              onRestore={handleRestoreConversation}
+                              variant="flat"
+                            />
+                            {idx < searchResults.length - 1 && <Separator className="my-1" />}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                <div className="flex-1 min-w-0 pl-0 sm:pl-2">
                   {selectedIdFromUrl ? (
                     (() => {
                       const active = searchResults.find((r) => r.id === selectedIdFromUrl);
@@ -535,16 +553,53 @@ function HomeContent() {
                           model={active.model}
                           usage={active.usage}
                           messages={active.messages}
+                          onShowSidebar={!isSidebarOpen ? () => setIsSidebarOpen(true) : undefined}
                           onDelete={handleDeleteConversation}
                           onRestore={handleRestoreConversation}
+                          variant="flat"
                         />
                       );
                     })()
                   ) : (
-                    <div className="hidden sm:flex h-[60vh] items-center justify-center rounded-lg border text-muted-foreground">
-                      Select a conversation to view
+                    <div className="hidden sm:flex h-[60vh] items-center justify-center text-muted-foreground relative">
+                      {!isSidebarOpen && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute left-2 top-2 h-7 w-7"
+                          onClick={() => setIsSidebarOpen(true)}
+                          aria-label="Show sidebar"
+                        >
+                          <PanelLeftOpen className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <span className="ml-2">Select a conversation to view</span>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* List (mobile) */}
+            {!loading && !selectedIdFromUrl && searchResults && searchResults.length > 0 && (
+              <div className="sm:hidden">
+                <div>
+                  {searchResults.map((result, idx) => (
+                    <div key={result.id}>
+                      <ConversationListItem
+                        id={result.id}
+                        created={result.created}
+                        model={result.model}
+                        messages={result.messages}
+                        isActive={selectedIdFromUrl === result.id}
+                        onSelect={handleSelectConversation}
+                        onDelete={handleDeleteConversation}
+                        onRestore={handleRestoreConversation}
+                        variant="flat"
+                      />
+                      {idx < searchResults.length - 1 && <Separator className="my-1" />}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
