@@ -125,6 +125,8 @@
     --sidebar-ring: 222.2 84% 4.9%;
     /* Prompt Keeper custom vars */
     --pk-user-bubble-bg: #e9e9e980;
+    --pk-conv-list-hover-bg: #0000000a; /* light hover */
+    --pk-conv-list-active-bg: #0000000f; /* light active */
   }
   .dark {
     --background: 0 0% 0%;
@@ -161,6 +163,8 @@
     --sidebar-ring: 212.7 26.8% 83.9%;
     /* Prompt Keeper custom vars */
     --pk-user-bubble-bg: #323232d9;
+    --pk-conv-list-hover-bg: #fff0; /* dark hover */
+    --pk-conv-list-active-bg: #ffffff0d; /* dark active */
   }
 }
 
