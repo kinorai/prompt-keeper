@@ -31,11 +31,14 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Skip authentication for login page and auth endpoints that must be reachable without an access token
+  // Skip authentication for login, auth endpoints, and health probes
   if (
     request.nextUrl.pathname === "/login" ||
     request.nextUrl.pathname === "/api/auth/login" ||
-    request.nextUrl.pathname === "/api/auth/refresh"
+    request.nextUrl.pathname === "/api/auth/refresh" ||
+    request.nextUrl.pathname === "/api/healthz" ||
+    request.nextUrl.pathname === "/api/readyz" ||
+    request.nextUrl.pathname === "/api/livez"
   ) {
     return response;
   }
