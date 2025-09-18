@@ -33,5 +33,5 @@ if (!global.Headers) {
     has(name: string): boolean {
       return this.headers.has(name.toLowerCase());
     }
-  } as any;
+  } as unknown as typeof globalThis.Headers;
 }
