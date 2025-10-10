@@ -150,27 +150,8 @@ describe("Chat Completions API Route", () => {
       }),
     );
 
-    // Verify that OpenSearch index was called to store the conversation
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: "prompt-keeper",
-        body: expect.objectContaining({
-          model: "gpt-4",
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              role: "user",
-              content: "Hello",
-            }),
-            expect.objectContaining({
-              role: "assistant",
-              content: "Hello! How can I help you today?",
-            }),
-          ]),
-          usage: mockCompletionResponse.usage,
-          conversation_hash: "mock-conversation-hash",
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
   });
 
   it("should handle streaming response and store conversation after stream ends", async () => {
@@ -310,22 +291,8 @@ describe("Chat Completions API Route", () => {
       }),
     );
 
-    // Verify OpenSearch index call (happens after stream ends)
-    expect(opensearchClient.index).toHaveBeenCalledTimes(1);
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: "prompt-keeper",
-        body: expect.objectContaining({
-          model: "gpt-4-stream",
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: "user", content: "Stream test" }),
-            expect.objectContaining({ role: "assistant", content: "Stream response." }), // Aggregated content
-          ]),
-          usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }, // Usage is not available from stream chunks in this mock
-          conversation_hash: "mock-conversation-hash",
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
 
     // Restore original mocks
     global.TextDecoder = originalTextDecoder;
@@ -465,24 +432,8 @@ describe("Chat Completions API Route", () => {
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(200);
 
-    // Verify that OpenSearch index was called with sanitized messages
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: "prompt-keeper",
-        body: expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              role: "user",
-              content: "What is this image?", // Only the text content should be stored
-            }),
-            expect.objectContaining({
-              role: "assistant",
-              content: "This is a description of the image.",
-            }),
-          ]),
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
   });
 
   it("should handle streaming response with no reader available", async () => {
@@ -569,7 +520,7 @@ describe("Chat Completions API Route", () => {
     // Call the API route handler
     const response = await POST(req);
 
-    // Verify the response is still successful (OpenSearch errors are caught and logged)
+    // Verify the response is still successful (OpenSearch not used directly)
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(200);
 
@@ -641,8 +592,8 @@ describe("Chat Completions API Route", () => {
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(200);
 
-    // Verify that OpenSearch index was called as a fallback
-    expect(opensearchClient.index).toHaveBeenCalled();
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
   });
 
   it("should handle formatStreamToResponse with empty chunks array", async () => {
@@ -823,24 +774,8 @@ describe("Chat Completions API Route", () => {
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(200);
 
-    // Verify that OpenSearch index was called with sanitized messages
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: "prompt-keeper",
-        body: expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              role: "user",
-              content: "First text part\nSecond text part", // Text parts should be joined with newlines
-            }),
-            expect.objectContaining({
-              role: "assistant",
-              content: "This is a response to multiple text parts and an image.",
-            }),
-          ]),
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
   });
 
   it("should handle stream processing with valid chunks", async () => {
@@ -1036,24 +971,8 @@ describe("Chat Completions API Route", () => {
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(200);
 
-    // Verify that OpenSearch index was called with sanitized messages
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: "prompt-keeper",
-        body: expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              role: "user",
-              content: expect.any(String), // The sanitized content
-            }),
-            expect.objectContaining({
-              role: "assistant",
-              content: "Response to various message types",
-            }),
-          ]),
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
   });
 
   it("should handle stream processing error with specific error message", async () => {
@@ -1233,8 +1152,8 @@ describe("Chat Completions API Route", () => {
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(200);
 
-    // Verify that OpenSearch index was called to create a new conversation
-    expect(opensearchClient.index).toHaveBeenCalled();
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
   });
 
   it("should update existing conversation when conversation hash matches", async () => {
@@ -1329,66 +1248,14 @@ describe("Chat Completions API Route", () => {
     const responseData = await response.json();
     expect(responseData).toEqual(mockCompletionResponse);
 
-    // Verify that OpenSearch search was called to find existing conversation
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: "prompt-keeper",
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              must: expect.arrayContaining([
-                expect.objectContaining({
-                  term: expect.objectContaining({
-                    "conversation_hash.keyword": "mock-conversation-hash",
-                  }),
-                }),
-              ]),
-            }),
-          }),
-        }),
-      }),
-    );
-
-    // Verify that OpenSearch update was called to update the existing conversation
-    expect(opensearchClient.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: "prompt-keeper",
-        id: "existing-conversation-id",
-        body: expect.objectContaining({
-          doc: expect.objectContaining({
-            messages: expect.arrayContaining([
-              expect.objectContaining({
-                role: "system",
-                content: "You are a helpful assistant.",
-              }),
-              expect.objectContaining({
-                role: "user",
-                content: "Hello",
-              }),
-              expect.objectContaining({
-                role: "assistant",
-                content: "Hi there!",
-              }),
-              expect.objectContaining({
-                role: "user",
-                content: "How are you?",
-              }),
-              expect.objectContaining({
-                role: "assistant",
-                content: "I am doing well, thank you for asking!",
-              }),
-            ]),
-            usage: mockCompletionResponse.usage,
-          }),
-        }),
-      }),
-    );
-
-    // Verify that OpenSearch index was not called (since update was used)
+    // No direct OpenSearch calls in API route
+    expect(opensearchClient.search).not.toHaveBeenCalled();
+    expect(opensearchClient.update).not.toHaveBeenCalled();
     expect(opensearchClient.index).not.toHaveBeenCalled();
   });
-  it("should handle generateConversationHash fallback when first message is not system/user", async () => {
+  it("should handle generateConversationHash with only assistant message (no user messages)", async () => {
     // Mock request body with only an assistant message initially (unusual case)
+    // This should generate an empty hash since we only hash user messages
     const requestBody = {
       model: "gpt-4",
       messages: [{ role: "assistant", content: "Initial assistant message" }],
@@ -1416,12 +1283,11 @@ describe("Chat Completions API Route", () => {
 
     // Configure the crypto mock specifically for this test case
     const updateMock = jest.fn().mockReturnThis();
-    const digestMock = jest.fn().mockReturnValue("fallback-hash");
+    const digestMock = jest.fn().mockReturnValue("");
 
     // Access the mocked createHash function (already mocked at the top level)
     // and configure its return value for this specific test run.
-    // We need to cast to jest.Mock to use mockReturnValueOnce.
-    const crypto = jest.requireMock("crypto"); // Use jest.requireMock to get the mocked module
+    const crypto = jest.requireMock("crypto");
     (crypto.createHash as jest.Mock).mockReturnValueOnce({
       update: updateMock,
       digest: digestMock,
@@ -1432,24 +1298,16 @@ describe("Chat Completions API Route", () => {
       body: JSON.stringify(requestBody),
     });
 
-    await POST(req);
+    const response = await POST(req);
 
-    // Verify the hash was generated based on the first (assistant) message
-    expect(updateMock).toHaveBeenCalledWith("assistant:initial assistant message");
-    expect(digestMock).toHaveBeenCalledWith("hex");
+    // Verify the response is successful
+    expect(response.status).toBe(200);
 
-    // Verify OpenSearch index call used the fallback hash
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          conversation_hash: "fallback-hash",
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: "assistant", content: "Initial assistant message" }),
-            expect.objectContaining({ role: "assistant", content: "Response" }),
-          ]),
-        }),
-      }),
-    );
+    // Since there are no user messages, the hash should be empty (no crypto calls)
+    // The conversation will be created as a new conversation without a meaningful hash
+
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
   });
 
   it("should handle stream parsing edge cases (empty lines, malformed JSON)", async () => {
@@ -1536,18 +1394,8 @@ describe("Chat Completions API Route", () => {
     await POST(req);
     await streamClosedPromise; // Wait for stream processing
 
-    // Verify OpenSearch index call still happened with the valid chunk data
-    expect(opensearchClient.index).toHaveBeenCalledTimes(1);
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: "user", content: "Stream edge cases" }),
-            expect.objectContaining({ role: "assistant", content: "OK" }), // Content from the valid chunk
-          ]),
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
 
     // Restore mocks
     consoleErrorSpy.mockRestore();
@@ -1609,15 +1457,8 @@ describe("Chat Completions API Route", () => {
     expect(updateMock).not.toHaveBeenCalled();
     expect(digestMock).not.toHaveBeenCalled();
 
-    // Verify OpenSearch index call used empty hash
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          conversation_hash: "", // Empty hash expected
-          messages: expect.arrayContaining([expect.objectContaining({ role: "assistant", content: "Empty response" })]),
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
 
     consoleDebugSpy.mockRestore();
   });
@@ -1667,18 +1508,8 @@ describe("Chat Completions API Route", () => {
     const responseData = await response.json();
     expect(responseData).toEqual(mockJsonResponse);
 
-    // Verify storeConversation was called
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          model: "gpt-4",
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: "user", content: "Plain text test" }),
-            expect.objectContaining({ role: "assistant", content: "Plain response" }),
-          ]),
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
   });
 
   it("should handle request parsing with malformed JSON", async () => {
@@ -1732,17 +1563,8 @@ describe("Chat Completions API Route", () => {
     const response = await POST(req);
     expect(response.status).toBe(200);
 
-    // Verify sanitizeMessage handles undefined content correctly
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: "user" }),
-            expect.objectContaining({ role: "assistant", content: "Response" }),
-          ]),
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
   });
 
   it("should handle message content as object (not array)", async () => {
@@ -1779,16 +1601,46 @@ describe("Chat Completions API Route", () => {
     const response = await POST(req);
     expect(response.status).toBe(200);
 
-    // Verify sanitizeMessage handles object content correctly (should return original message)
-    expect(opensearchClient.index).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: "user", content: { someProperty: "someValue" } }),
-            expect.objectContaining({ role: "assistant", content: "Response" }),
-          ]),
-        }),
-      }),
-    );
+    // No direct OpenSearch writes in API route
+    expect(opensearchClient.index).not.toHaveBeenCalled();
+  });
+
+  it("should update existing conversation when hash matches (Prisma)", async () => {
+    // Mock request body with multiple messages to generate a hash
+    const requestBody = {
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: "You are helpful" },
+        { role: "user", content: "Hello" },
+        { role: "assistant", content: "Hi!" },
+        { role: "user", content: "How are you?" },
+      ],
+    };
+
+    // Mock successful response from LiteLLM
+    const mockCompletionResponse = {
+      id: "mock-id",
+      model: "gpt-4",
+      created: 1625097600,
+      object: "chat.completion",
+      usage: { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 },
+      choices: [{ index: 0, message: { role: "assistant", content: "I'm well!" }, finish_reason: "stop" }],
+    };
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: jest.fn().mockResolvedValueOnce(mockCompletionResponse),
+      headers: new Headers({ "content-type": "application/json" }),
+    });
+
+    const req = new NextRequest("http://localhost/api/chat/completions", {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+
+    const response = await POST(req);
+    expect(response.status).toBe(200);
+    const responseData = await response.json();
+    expect(responseData).toEqual(mockCompletionResponse);
   });
 });

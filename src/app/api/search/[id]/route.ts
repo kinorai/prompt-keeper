@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/opensearch";
 import { createLogger } from "@/lib/logger";
+import getPrisma from "@/lib/prisma";
 
 const log = createLogger("api:search:delete");
 
@@ -12,28 +12,52 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "Conversation ID is required" }, { status: 400 });
     }
 
-    // Ensure index exists before deleting
-    await ensureIndexExists();
+    log.debug({ id }, "[Delete API] Deleting conversation from Postgres");
 
-    log.debug({ id }, "[Delete API] Deleting conversation");
+    const prisma = getPrisma();
 
-    const response = await opensearchClient.delete({
-      index: PROMPT_KEEPER_INDEX,
-      id: id,
-      refresh: "wait_for", // Ensure the deletion is immediately visible
+    // Delete from Postgres (source of truth) and enqueue outbox event
+    await prisma.$transaction(async (tx) => {
+      // Check if conversation exists
+      const conversation = await tx.conversation.findUnique({
+        where: { id },
+      });
+
+      if (!conversation) {
+        throw new Error("NOT_FOUND");
+      }
+
+      // Delete messages (cascade should handle this, but explicit is safer)
+      await tx.message.deleteMany({
+        where: { conversationId: id },
+      });
+
+      // Delete conversation
+      await tx.conversation.delete({
+        where: { id },
+      });
+
+      // Enqueue outbox event for OpenSearch deletion
+      await tx.outboxEvent.create({
+        data: {
+          eventType: "conversation.deleted",
+          aggregateType: "conversation",
+          aggregateId: id,
+        },
+      });
+
+      log.debug({ id }, "[Delete API] Conversation deleted from Postgres and outbox event created");
     });
-
-    log.debug(response, "[Delete API] Response:");
 
     return NextResponse.json({
       success: true,
-      deleted: response.body.result === "deleted",
+      deleted: true,
     });
   } catch (error) {
     log.error(error, "[Delete API Error]");
 
     // Handle 404 errors specifically
-    if (error instanceof Error && error.message.includes("404")) {
+    if (error instanceof Error && error.message === "NOT_FOUND") {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
