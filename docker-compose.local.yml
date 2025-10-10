@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=prompt_keeper
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
   opensearch:
     image: opensearchproject/opensearch:2
     environment:
@@ -40,6 +56,8 @@ services:
       - "--config=/app/config.local.litellm.yaml"
     ports:
       - "${LITELLM_PORT:-4000}:4000"
+    environment:
+      - "LOG_LEVEL=debug"
     env_file:
       - .env
     networks:
@@ -62,6 +80,7 @@ services:
 volumes:
   open-webui: {}
   opensearch-data:
+  pgdata:
 
 networks:
   opensearch-net:

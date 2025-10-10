@@ -7,8 +7,11 @@ export interface UndoableDeleteItem {
   id: string;
   created: string;
   model: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  usage?: any;
+  usage?: {
+    prompt_tokens?: number | null;
+    completion_tokens?: number | null;
+    total_tokens?: number | null;
+  };
   messages: Array<{ role: string; content: string; finish_reason?: string }>;
 }
 

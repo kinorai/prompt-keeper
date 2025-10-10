@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/opensearch";
 import crypto from "crypto";
 import { createLogger } from "@/lib/logger";
+import getPrisma from "@/lib/prisma";
 
 const log = createLogger("api:chat/completions");
 
@@ -66,32 +66,53 @@ const skipHeaders = [
   "content-encoding",
 ];
 
-// Helper function to generate a conversation hash based on initial messages
-function generateConversationHash(messages: Message[]): string {
+// Helper function to generate a conversation hash
+// When excludeLastUserMessage is true, we exclude the last user message (used for FINDING existing conversations)
+// When excludeLastUserMessage is false, we include all messages (used for STORING the conversation hash)
+function generateConversationHash(messages: Message[], excludeLastUserMessage = false): string {
   if (!messages || messages.length === 0) return "";
 
-  // For conversation continuity identification, we'll use:
-  // 1. If the first message is a system message:
-  //    - Use the system message and the first user message (if it exists)
-  // 2. If there's no system message:
-  //    - Use only the first user message
+  // For conversation continuity identification:
+  // When a client sends a conversation continuation, they send the FULL history including the new message.
+  //
+  // To FIND existing conversation: hash OLD messages (exclude last user message)
+  // To STORE conversation: hash ALL messages (include last user message)
+  //
+  // Example flow:
+  // - Request 1: ["user:1"]
+  //   → Find with hash of [] (empty, no old messages) → not found
+  //   → Store with hash of ["user:1"]
+  //
+  // - Request 2: ["user:1", "user:2"]
+  //   → Find with hash of ["user:1"] → FOUND!
+  //   → Update with hash of ["user:1", "user:2"]
+  //
+  // - Request 3: ["user:1", "user:2", "user:3"]
+  //   → Find with hash of ["user:1", "user:2"] → FOUND!
+  //   → Update with hash of ["user:1", "user:2", "user:3"]
 
   const messagesToHash: Message[] = [];
 
-  // Find system and first user message
+  // Find system message and ALL user messages
   const systemMessage = messages.find((msg) => msg.role === "system");
-  const firstUserMessage = messages.find((msg) => msg.role === "user");
+  const userMessages = messages.filter((msg) => msg.role === "user");
 
   if (systemMessage) {
     messagesToHash.push(systemMessage);
-    if (firstUserMessage) {
-      messagesToHash.push(firstUserMessage);
-    }
-  } else if (firstUserMessage) {
-    messagesToHash.push(firstUserMessage);
-  } else {
-    // Fallback: use the first message whatever it is
-    messagesToHash.push(messages[0]);
+  }
+
+  // Add user messages (all or all except last, depending on the flag)
+  if (excludeLastUserMessage && userMessages.length > 1) {
+    // Exclude the last user message (for finding existing conversation)
+    messagesToHash.push(...userMessages.slice(0, -1));
+  } else if (!excludeLastUserMessage) {
+    // Include all user messages (for storing conversation)
+    messagesToHash.push(...userMessages);
+  }
+
+  if (messagesToHash.length === 0) {
+    // No messages to hash (new conversation with no history)
+    return "";
   }
 
   // Create a string from the selected messages
@@ -174,108 +195,152 @@ function sanitizeMessage(message: { content: string | { type: string; text: stri
   return message;
 }
 
-async function storeConversation(requestMessages: Message[], response: FormattedResponse, latency: number) {
+// Removed direct OpenSearch writes; indexing is done by the outbox worker
+
+// Store conversation in Postgres (source of truth) and enqueue outbox event
+// If a conversation with the same hash exists (within 1 year), update it instead of creating new
+async function storeConversationPostgres(requestMessages: Message[], response: FormattedResponse, latency: number) {
   try {
-    // Sanitize all messages before storing
-    const sanitizedRequestMessages = requestMessages.map(sanitizeMessage);
-    const sanitizedResponseMessages = response.choices.map((choice) => sanitizeMessage(choice.message));
+    const sanitizedRequestMessages = requestMessages.map(sanitizeMessage) as Array<{ role: string; content: string }>;
+    const sanitizedResponseMessages = response.choices.map((choice) => sanitizeMessage(choice.message)) as Array<{
+      role: string;
+      content: string;
+    }>;
 
-    // Combine sanitized messages
-    const allMessages = [...sanitizedRequestMessages, ...sanitizedResponseMessages];
+    // Generate TWO hashes:
+    // 1. findHash: excludes last user message - used to FIND existing conversation
+    // 2. storeHash: includes all messages - used to STORE the conversation
+    const findHash = generateConversationHash(requestMessages, true); // exclude last
+    const storeHash = generateConversationHash(requestMessages, false); // include all
 
-    // Generate conversation hash based on the initial messages
-    const conversationHash = generateConversationHash(requestMessages);
+    const createdDate = typeof response.created === "number" ? new Date(response.created * 1000) : new Date();
 
-    log.debug(requestMessages, "[OpenSearch] Processing conversation");
+    const prisma = getPrisma();
+    await prisma.$transaction(async (tx) => {
+      let conversationId: string;
+      let isUpdate = false;
 
-    // Ensure index exists before any OpenSearch operations
-    await ensureIndexExists();
+      // Try to find existing conversation with same hash (updated within 1 year)
+      // Use findHash which excludes the current/new message
+      if (findHash && requestMessages.length > 1) {
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-    // If we have a valid hash and more than one message (likely a continuation)
-    if (conversationHash && requestMessages.length > 1) {
-      try {
-        // Try to find an existing conversation with the same conversation hash
-        const searchResponse = await opensearchClient.search({
-          index: PROMPT_KEEPER_INDEX,
-          body: {
-            query: {
-              bool: {
-                must: [
-                  {
-                    term: {
-                      "conversation_hash.keyword": conversationHash,
-                    },
-                  },
-                  {
-                    range: {
-                      timestamp: {
-                        gte: "now-1y",
-                        lte: "now",
-                      },
-                    },
-                  },
-                ],
-              },
-            },
-            sort: [{ timestamp: { order: "desc" } }],
-            size: 1,
+        const existing = await tx.conversation.findFirst({
+          where: {
+            conversationHash: findHash,
+            updatedAt: { gte: oneYearAgo },
           },
+          orderBy: { updatedAt: "desc" },
         });
 
-        const hits = searchResponse.body.hits.hits;
+        if (existing) {
+          log.debug({ existingId: existing.id, findHash, storeHash }, "[Postgres] Updating existing conversation");
+          isUpdate = true;
+          conversationId = existing.id;
 
-        if (hits && hits.length > 0) {
-          const existingConversation = hits[0];
-          const existingId = existingConversation._id;
-
-          log.debug(existingConversation, "[OpenSearch] Found existing conversation");
-
-          // Update the existing conversation with new messages
-          await opensearchClient.update({
-            index: PROMPT_KEEPER_INDEX,
-            id: existingId,
-            body: {
-              doc: {
-                timestamp: new Date(), // Update timestamp to now
-                messages: allMessages,
-                usage: response.usage,
-                latency,
-                conversation_hash: conversationHash,
-                updated_at: new Date(),
-              },
-            },
+          // Delete old messages for this conversation
+          await tx.message.deleteMany({
+            where: { conversationId: existing.id },
           });
 
-          log.debug(existingConversation, "[OpenSearch] Updated existing conversation");
-          return;
+          // Update conversation metadata (including the new hash with all messages)
+          await tx.conversation.update({
+            where: { id: existing.id },
+            data: {
+              model: response.model,
+              conversationHash: storeHash, // Update hash to include the new message
+              latencyMs: latency,
+              promptTokens: response.usage?.prompt_tokens ?? null,
+              completionTokens: response.usage?.completion_tokens ?? null,
+              totalTokens: response.usage?.total_tokens ?? null,
+              updatedAt: new Date(),
+            },
+          });
         } else {
-          log.debug({ conversationHash }, "[OpenSearch] No existing conversation found with hash");
+          // No existing conversation found, create new
+          const newConversation = await tx.conversation.create({
+            data: {
+              model: response.model,
+              conversationHash: storeHash,
+              created: createdDate,
+              latencyMs: latency,
+              promptTokens: response.usage?.prompt_tokens ?? null,
+              completionTokens: response.usage?.completion_tokens ?? null,
+              totalTokens: response.usage?.total_tokens ?? null,
+            },
+          });
+          conversationId = newConversation.id;
         }
-      } catch (searchError) {
-        log.error(searchError, "[OpenSearch] Error searching for existing conversation:");
-        // Continue to create a new document if search fails
+      } else {
+        // New conversation (no hash or single message)
+        const newConversation = await tx.conversation.create({
+          data: {
+            model: response.model,
+            conversationHash: storeHash,
+            created: createdDate,
+            latencyMs: latency,
+            promptTokens: response.usage?.prompt_tokens ?? null,
+            completionTokens: response.usage?.completion_tokens ?? null,
+            totalTokens: response.usage?.total_tokens ?? null,
+          },
+        });
+        conversationId = newConversation.id;
       }
-    }
 
-    // If no existing conversation found, or if this is a new conversation
-    // Create a new document
-    const indexResult = await opensearchClient.index({
-      index: PROMPT_KEEPER_INDEX,
-      body: {
-        timestamp: new Date(),
-        model: response.model,
-        messages: allMessages,
-        usage: response.usage,
-        latency,
-        conversation_hash: conversationHash,
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
+      // Insert all messages (both request and response)
+      const messagesToInsert: Array<{
+        conversationId: string;
+        role: string;
+        content: string;
+        finishReason?: string | null;
+        messageIndex: number;
+      }> = [];
+
+      sanitizedRequestMessages.forEach((m, idx) => {
+        messagesToInsert.push({
+          conversationId,
+          role: m.role,
+          content: typeof m.content === "string" ? m.content : String(m.content),
+          finishReason: null,
+          messageIndex: idx,
+        });
+      });
+
+      sanitizedResponseMessages.forEach((m, idx) => {
+        messagesToInsert.push({
+          conversationId,
+          role: m.role || "assistant",
+          content: typeof m.content === "string" ? m.content : String(m.content),
+          finishReason: response.choices[idx]?.finish_reason ?? null,
+          messageIndex: sanitizedRequestMessages.length + idx,
+        });
+      });
+
+      if (messagesToInsert.length > 0) {
+        await tx.message.createMany({ data: messagesToInsert });
+      }
+
+      // Enqueue outbox event (will sync to OpenSearch)
+      await tx.outboxEvent.create({
+        data: {
+          eventType: "conversation.upserted",
+          aggregateType: "conversation",
+          aggregateId: conversationId,
+          payload: {
+            model: response.model,
+            conversationHash: storeHash,
+            usage: response.usage,
+            latency,
+            isUpdate,
+          },
+        },
+      });
+
+      log.debug({ conversationId, isUpdate, findHash, storeHash }, "[Postgres] Conversation stored");
     });
-
-    log.debug(indexResult, "[OpenSearch] Created new conversation");
   } catch (error) {
-    log.error(error, "[OpenSearch Storage Error]");
+    log.error(error, "[Postgres Storage Error]");
   }
 }
 
@@ -293,7 +358,7 @@ export async function POST(req: NextRequest) {
 
     const requestData = parsedBody; // Use already parsed body
     const requestMessages = requestData.messages || [];
-
+    log.debug(CONFIG.LITELLM_URL, "[LiteLLM URL]");
     const response = await fetch(`${CONFIG.LITELLM_URL}/v1/chat/completions`, {
       method: "POST",
       headers: forwardHeaders,
@@ -328,7 +393,7 @@ export async function POST(req: NextRequest) {
             if (done) {
               // Stream is complete, now we can store the conversation
               const formattedResponse = formatStreamToResponse(chunks);
-              await storeConversation(requestMessages, formattedResponse, latency);
+              await storeConversationPostgres(requestMessages, formattedResponse, latency);
               break;
             }
 
@@ -372,7 +437,7 @@ export async function POST(req: NextRequest) {
       });
     } else {
       const jsonResponse = await response.json();
-      await storeConversation(requestMessages, jsonResponse, latency);
+      await storeConversationPostgres(requestMessages, jsonResponse, latency);
       return NextResponse.json(jsonResponse);
     }
   } catch (error) {
