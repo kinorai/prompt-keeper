@@ -6,8 +6,9 @@
 ## Features 🌟
 
 -   😌 **Interactive frontend** for searching and filtering conversations
--   🧠 **Conversation storage** in OpenSearch
+-   🧠 **Conversation storage** in Postgres (single source of truth) + OpenSearch (search index)
 -   ✅ **OpenAI-compatible API** proxy that routes requests to LiteLLM
+-   🔄 **Outbox pattern** for reliable async syncing from Postgres to OpenSearch
 
 ## How to Install 🚀
 

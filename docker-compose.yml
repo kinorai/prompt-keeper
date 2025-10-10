@@ -13,6 +13,18 @@ services:
     networks:
       - prompt-keeper-net
 
+  outbox-worker:
+    image: kinorai/prompt-keeper:latest
+    env_file:
+      - .env
+    command: ["node", "dist/workers/outbox.js"]
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - prompt-keeper-net
+    restart: unless-stopped
+
   opensearch:
     image: opensearchproject/opensearch:2
     environment:
