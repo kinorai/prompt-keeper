@@ -1,0 +1,74 @@
+// Prisma schema for Prompt Keeper
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model Conversation {
+  id               String    @id @default(cuid())
+  model            String
+  conversationHash String?   @map("conversation_hash")
+  created          DateTime? // Upstream LLM response created time
+  latencyMs        Float?    @map("latency_ms")
+
+  // Token usage
+  promptTokens     Int?      @map("prompt_tokens")
+  completionTokens Int?      @map("completion_tokens")
+  totalTokens      Int?      @map("total_tokens")
+
+  // Timestamps
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  messages         Message[]
+
+  @@index([conversationHash])
+  @@map("conversations")
+}
+
+model Message {
+  id              String       @id @default(cuid())
+  conversationId  String       @map("conversation_id")
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role            String
+  content         String
+  finishReason    String?      @map("finish_reason")
+  messageIndex    Int?         @map("message_index")
+
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model OutboxEvent {
+  id            String    @id @default(cuid())
+  eventType     String    @map("event_type")
+  aggregateType String    @map("aggregate_type")
+  aggregateId   String    @map("aggregate_id")
+  payload       Json?
+  attempts      Int       @default(0)
+  lockedAt      DateTime? @map("locked_at")
+  lockId        String?   @map("lock_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  processedAt   DateTime? @map("processed_at")
+
+  @@index([processedAt, lockedAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}

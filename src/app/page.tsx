@@ -343,13 +343,11 @@ function HomeContent() {
   // Initial load search: Fetch latest entries if query is initially empty
   useEffect(() => {
     if (initialLoad) {
-      console.debug("[HomeContent] Initial load detected. Current query:", query);
       // On initial load, if query is empty (or not from URL persisting a specific search),
       // handleSearch will send an empty query, which the backend now treats as 'fetch latest'.
       handleSearch();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialLoad]);
+  }, [handleSearch, initialLoad]);
 
   // Apply the debounced search when query changes, respecting minimum length unless query is empty
   useEffect(() => {
