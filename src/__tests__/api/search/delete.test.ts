@@ -1,32 +1,49 @@
 import { DELETE } from "@/app/api/search/[id]/route";
 import { NextRequest } from "next/server";
-import opensearchClient from "@/lib/opensearch";
+import getPrisma from "@/lib/prisma";
 
-jest.mock("@/lib/opensearch", () => ({
+// Mock Prisma
+jest.mock("@/lib/prisma", () => ({
   __esModule: true,
-  default: {
-    delete: jest.fn(),
-  },
-  PROMPT_KEEPER_INDEX: "prompt-keeper",
-  ensureIndexExists: jest.fn().mockResolvedValue(undefined),
-  checkIndexExists: jest.fn().mockResolvedValue(true),
-  initializeIndex: jest.fn().mockResolvedValue(undefined),
-  resetInitializationState: jest.fn(),
+  default: jest.fn(),
 }));
 
 describe("DELETE /api/search/[id]", () => {
-  const mockOpensearchClient = opensearchClient as jest.Mocked<typeof opensearchClient>;
+  const mockPrisma = {
+    $transaction: jest.fn(),
+    conversation: {
+      findUnique: jest.fn(),
+      delete: jest.fn(),
+    },
+    message: {
+      deleteMany: jest.fn(),
+    },
+    outboxEvent: {
+      create: jest.fn(),
+    },
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (getPrisma as jest.Mock).mockReturnValue(mockPrisma);
   });
 
   it("should delete a conversation successfully", async () => {
-    mockOpensearchClient.delete.mockResolvedValue({
-      body: {
-        result: "deleted",
-      },
-    } as never);
+    // Mock successful transaction
+    mockPrisma.$transaction.mockImplementation(async (callback) => {
+      return await callback({
+        conversation: {
+          findUnique: jest.fn().mockResolvedValue({ id: "test-id" }),
+          delete: jest.fn().mockResolvedValue({ id: "test-id" }),
+        },
+        message: {
+          deleteMany: jest.fn().mockResolvedValue({ count: 2 }),
+        },
+        outboxEvent: {
+          create: jest.fn().mockResolvedValue({ id: "outbox-id" }),
+        },
+      });
+    });
 
     const request = new NextRequest("http://localhost:3000/api/search/test-id", {
       method: "DELETE",
@@ -40,15 +57,29 @@ describe("DELETE /api/search/[id]", () => {
       success: true,
       deleted: true,
     });
-    expect(mockOpensearchClient.delete).toHaveBeenCalledWith({
-      index: "prompt-keeper",
-      id: "test-id",
-      refresh: "wait_for",
-    });
+    expect(mockPrisma.$transaction).toHaveBeenCalled();
   });
 
   it("should return 404 for non-existent conversation", async () => {
-    mockOpensearchClient.delete.mockRejectedValue(new Error("404 Not Found") as never);
+    // Mock transaction that throws NOT_FOUND
+    mockPrisma.$transaction.mockImplementation(async (callback) => {
+      return await callback({
+        conversation: {
+          findUnique: jest.fn().mockResolvedValue(null),
+        },
+        message: {
+          deleteMany: jest.fn(),
+        },
+        outboxEvent: {
+          create: jest.fn(),
+        },
+      });
+    });
+
+    // Need to actually throw the error in the transaction
+    mockPrisma.$transaction.mockImplementation(async () => {
+      throw new Error("NOT_FOUND");
+    });
 
     const request = new NextRequest("http://localhost:3000/api/search/non-existent", {
       method: "DELETE",
@@ -64,7 +95,7 @@ describe("DELETE /api/search/[id]", () => {
   });
 
   it("should handle server errors", async () => {
-    mockOpensearchClient.delete.mockRejectedValue(new Error("Server error") as never);
+    mockPrisma.$transaction.mockRejectedValue(new Error("Server error"));
 
     const request = new NextRequest("http://localhost:3000/api/search/test-id", {
       method: "DELETE",

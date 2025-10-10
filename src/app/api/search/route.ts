@@ -79,8 +79,17 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const esQueryBody: any = {
+    type EsQueryClause = Record<string, unknown>;
+
+    interface EsBoolQuery {
+      should: EsQueryClause[];
+      minimum_should_match: number;
+      must?: EsQueryClause[];
+      must_not?: EsQueryClause[];
+      filter?: EsQueryClause[];
+    }
+
+    const esQueryBody: { bool: EsBoolQuery } = {
       bool: {
         should: [],
         minimum_should_match: 1,
