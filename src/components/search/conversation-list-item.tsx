@@ -5,7 +5,6 @@ import { ModelBadge } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { Copy, MessageSquare, Share2, Trash2 } from "lucide-react";
 import { KebabMenu } from "@/components/kebab-menu";
-import { useUndoableDelete } from "@/hooks/use-undo-delete";
 import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
 import { copyToClipboard } from "@/lib/clipboard";
 import { buildConversationMarkdown, buildConversationPlainText } from "@/lib/conversation";
@@ -19,12 +18,6 @@ export interface ConversationListItemProps {
   isActive?: boolean;
   onSelect?: (id: string) => void;
   onDelete?: (id: string) => void;
-  onRestore?: (item: {
-    id: string;
-    created: string;
-    model: string;
-    messages: Array<{ role: string; content: string; finish_reason?: string }>;
-  }) => void;
   variant?: "card" | "flat";
 }
 
@@ -49,14 +42,11 @@ export function ConversationListItem({
   isActive = false,
   onSelect,
   onDelete,
-  onRestore,
   variant = "card",
 }: ConversationListItemProps) {
   const createdDate = useMemo(() => new Date(created), [created]);
   const userMessagesCount = useMemo(() => messages.filter((m) => m.role === "user").length, [messages]);
   const firstUserPrompt = useMemo(() => messages.find((m) => m.role === "user")?.content || "", [messages]);
-  // No local delete popover state in list view
-  const { undoableDelete } = useUndoableDelete();
 
   const getFullConversationText = () => buildConversationPlainText(messages);
   const getShareableMarkdown = () => buildConversationMarkdown({ model, created: createdDate, messages });
@@ -76,13 +66,19 @@ export function ConversationListItem({
 
   const handleDelete = async () => {
     if (!onDelete) return;
-    await undoableDelete({
-      item: { id, created, model, messages },
-      onOptimisticRemove: () => onDelete(id),
-      onRestore,
-      doDelete: () => fetch(`/api/search/${id}`, { method: "DELETE" }),
-      toastLabel: "Conversation deleted",
-    });
+    try {
+      const res = await fetch(`/api/search/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Conversation deleted");
+        onDelete(id);
+      } else {
+        const data = await res.json();
+        toast.error(data?.error || "Failed to delete");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to delete");
+    }
   };
 
   // Confirmation managed within KebabMenu

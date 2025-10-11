@@ -24,7 +24,6 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { toast } from "sonner";
-import { useUndoableDelete } from "@/hooks/use-undo-delete";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,17 +53,6 @@ export interface ConversationCardProps {
   messages: Message[];
   onShowSidebar?: () => void;
   onDelete?: (id: string) => void; // Add onDelete callback
-  onRestore?: (item: {
-    id: string;
-    created: string;
-    model: string;
-    usage?: {
-      total_tokens?: number;
-      prompt_tokens?: number;
-      completion_tokens?: number;
-    };
-    messages: Message[];
-  }) => void;
   variant?: "card" | "flat";
 }
 
@@ -323,7 +311,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   messages = [],
   onShowSidebar,
   onDelete,
-  onRestore,
   variant = "card",
 }) => {
   const createdDate = new Date(created);
@@ -335,7 +322,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContextDeleteConfirm, setShowContextDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { undoableDelete } = useUndoableDelete();
 
   // Generate full conversation text for copying
   const getFullConversationText = () => buildConversationPlainText(messages);
@@ -348,17 +334,26 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
     if (!onDelete) return;
 
     setIsDeleting(true);
-    await undoableDelete({
-      item: { id, created, model, usage, messages },
-      onOptimisticRemove: () => onDelete(id),
-      onRestore,
-      doDelete: () => fetch(`/api/search/${id}`, { method: "DELETE" }),
-      toastLabel: "Conversation deleted",
-    });
+    try {
+      const response = await fetch(`/api/search/${id}`, {
+        method: "DELETE",
+      });
 
-    setIsDeleting(false);
-    setShowDeleteConfirm(false);
-    setShowContextDeleteConfirm(false);
+      if (response.ok) {
+        toast.success("Conversation deleted");
+        onDelete(id);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to delete conversation");
+      }
+    } catch (error) {
+      console.error("Failed to delete conversation:", error);
+      toast.error("Failed to delete conversation");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+      setShowContextDeleteConfirm(false);
+    }
   };
 
   // Handle share
