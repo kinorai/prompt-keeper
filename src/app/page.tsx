@@ -178,15 +178,6 @@ function HomeContent() {
     }
   };
 
-  const handleRestoreConversation = (item: MappedSearchResult) => {
-    // Re-insert the restored conversation and re-sort by created desc
-    setSearchResults((prev) => {
-      const next = prev ? [item, ...prev] : [item];
-      return next.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-    });
-    setSearchMetadata((prev) => (prev ? { ...prev, total: prev.total + 1 } : prev));
-  };
-
   const handleSelectConversation = useCallback(
     (id: string) => {
       const params = new URLSearchParams(searchParams);
@@ -528,7 +519,6 @@ function HomeContent() {
                               isActive={selectedIdFromUrl === result.id}
                               onSelect={handleSelectConversation}
                               onDelete={handleDeleteConversation}
-                              onRestore={handleRestoreConversation}
                               variant="flat"
                             />
                             {idx < searchResults.length - 1 && <Separator className="my-1" />}
@@ -553,7 +543,6 @@ function HomeContent() {
                           messages={active.messages}
                           onShowSidebar={!isSidebarOpen ? () => setIsSidebarOpen(true) : undefined}
                           onDelete={handleDeleteConversation}
-                          onRestore={handleRestoreConversation}
                           variant="flat"
                         />
                       );
@@ -592,7 +581,6 @@ function HomeContent() {
                         isActive={selectedIdFromUrl === result.id}
                         onSelect={handleSelectConversation}
                         onDelete={handleDeleteConversation}
-                        onRestore={handleRestoreConversation}
                         variant="flat"
                       />
                       {idx < searchResults.length - 1 && <Separator className="my-1" />}
