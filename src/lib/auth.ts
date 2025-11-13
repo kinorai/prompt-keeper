@@ -12,7 +12,7 @@ const REFRESH_TOKEN_SECRET = new TextEncoder().encode(process.env.REFRESH_TOKEN_
 
 // Token expiration times
 const ACCESS_TOKEN_EXPIRATION = "15m"; // 15 minutes
-const REFRESH_TOKEN_EXPIRATION = "7d"; // 7 days
+const REFRESH_TOKEN_EXPIRATION = "14d"; // 14 days
 
 // Cookie names
 export const AUTH_COOKIE_NAME = "prompt-keeper-access-token";
