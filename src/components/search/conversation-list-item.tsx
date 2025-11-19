@@ -9,7 +9,7 @@ import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
 import { copyToClipboard } from "@/lib/clipboard";
 import { buildConversationMarkdown, buildConversationPlainText } from "@/lib/conversation";
 import { toast } from "sonner";
-import { splitHighlightSegments } from "@/lib/search-highlights";
+import { splitHighlightSegments, SEARCH_HIGHLIGHT_CLASS } from "@/lib/search-highlights";
 
 export interface ConversationListItemProps {
   id: string;
@@ -113,7 +113,7 @@ export function ConversationListItem({
           <ModelBadge title={model}>
             {modelSegments
               ? modelSegments.map((segment, idx) => (
-                  <span key={`model-hl-${idx}`} className={segment.isHighlighted ? "font-semibold" : undefined}>
+                  <span key={`model-hl-${idx}`} className={segment.isHighlighted ? SEARCH_HIGHLIGHT_CLASS : undefined}>
                     {segment.text}
                   </span>
                 ))
@@ -134,7 +134,7 @@ export function ConversationListItem({
         <div className="line-clamp-2 min-h-[1.5rem] text-sm text-muted-foreground pr-8 sm:pr-0">
           {snippetSegments
             ? snippetSegments.map((segment, idx) => (
-                <span key={`snippet-${idx}`} className={segment.isHighlighted ? "font-semibold" : undefined}>
+                <span key={`snippet-${idx}`} className={segment.isHighlighted ? SEARCH_HIGHLIGHT_CLASS : undefined}>
                   {segment.text}
                 </span>
               ))
