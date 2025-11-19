@@ -91,7 +91,6 @@ export function SearchFilters({
     );
   }
 
-  // Smart mode only: no fuzzy or phrase-specific controls
   const timeRangeLabel = labelForTimeRange(timeRange);
 
   const handleCalendarChange = (range?: DateRange) => {
