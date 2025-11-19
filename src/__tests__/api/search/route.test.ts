@@ -9,7 +9,7 @@ jest.mock("@/lib/opensearch", () => {
   return {
     __esModule: true,
     default: mockClient,
-    PROMPT_KEEPER_INDEX: "prompt-keeper",
+    PROMPT_KEEPER_INDEX: "prompt-keeper-v2",
     ensureIndexExists: jest.fn().mockResolvedValue(undefined),
     checkIndexExists: jest.fn().mockResolvedValue(true),
     initializeIndex: jest.fn().mockResolvedValue(undefined),
@@ -27,88 +27,6 @@ describe("Search API Route", () => {
   });
 
   it("should return search results when the search is successful", async () => {
-    // Mock successful response from OpenSearch
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 2 },
-          hits: [
-            {
-              _id: "1",
-              _score: 1.0,
-              _source: {
-                model: "gpt-4",
-                messages: [
-                  { role: "user", content: "Hello" },
-                  { role: "assistant", content: "Hi there!" },
-                ],
-              },
-            },
-            {
-              _id: "2",
-              _score: 0.8,
-              _source: {
-                model: "gpt-3.5-turbo",
-                messages: [
-                  { role: "user", content: "How are you?" },
-                  { role: "assistant", content: "I am fine, thank you!" },
-                ],
-              },
-            },
-          ],
-        },
-        took: 5,
-      },
-    };
-
-    // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    // Create a mock request with search parameters
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({
-        query: "hello",
-        searchMode: "keyword",
-        timeRange: "1d",
-        size: 10,
-        from: 0,
-      }),
-    });
-
-    // Call the API route handler
-    const response = await POST(req);
-
-    // Verify the response
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(200);
-
-    // Parse the response JSON
-    const responseData = await response.json();
-    expect(responseData).toEqual({
-      hits: {
-        hits: mockSearchResults.body.hits.hits,
-        total: mockSearchResults.body.hits.total,
-      },
-      took: mockSearchResults.body.took,
-    });
-
-    // Verify that OpenSearch client was called with the correct parameters
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: "prompt-keeper",
-        body: expect.objectContaining({
-          query: expect.any(Object),
-          sort: expect.any(Array),
-          size: 10,
-          from: 0,
-        }),
-      }),
-    );
-  });
-
-  it("should handle fuzzy search mode correctly", async () => {
-    // Mock successful response from OpenSearch
     const mockSearchResults = {
       body: {
         hits: {
@@ -121,7 +39,7 @@ describe("Search API Route", () => {
                 model: "gpt-4",
                 messages: [
                   { role: "user", content: "Hello" },
-                  { role: "assistant", content: "Hi there!" },
+                  { role: "assistant", content: "Hi!" },
                 ],
               },
             },
@@ -131,192 +49,54 @@ describe("Search API Route", () => {
       },
     };
 
-    // Setup the OpenSearch client mock to return successful response
     (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
-    // Create a mock request with fuzzy search parameters
     const req = new NextRequest("http://localhost/api/search", {
       method: "POST",
       body: JSON.stringify({
         query: "hello",
-        searchMode: "fuzzy",
-        fuzzyConfig: {
-          fuzziness: "AUTO",
-          prefixLength: 2,
-        },
       }),
     });
 
-    // Call the API route handler
     const response = await POST(req);
-
-    // Verify the response
     expect(response).toBeInstanceOf(NextResponse);
     expect(response.status).toBe(200);
 
-    // Verify that OpenSearch client was called with fuzzy query for both model and messages.content
+    const responseData = await response.json();
+    expect(responseData.hits.hits).toHaveLength(1);
+    expect(responseData.hits.total.value).toBe(1);
+
+    // Verify basic magic query structure
     expect(opensearchClient.search).toHaveBeenCalledWith(
       expect.objectContaining({
+        index: "prompt-keeper-v2",
         body: expect.objectContaining({
           query: expect.objectContaining({
             bool: expect.objectContaining({
-              should: expect.arrayContaining([
-                // Check for model match
+              must: expect.arrayContaining([
                 expect.objectContaining({
-                  match: {
-                    model: {
-                      query: "hello",
-                      fuzziness: "AUTO",
-                      prefix_length: 2,
-                    },
-                  },
-                }),
-                // Check for messages.content match (nested)
-                expect.objectContaining({
-                  nested: {
-                    path: "messages",
-                    query: {
-                      match: {
-                        "messages.content": {
+                  bool: expect.objectContaining({
+                    should: expect.arrayContaining([
+                      // Root simple_query_string
+                      expect.objectContaining({
+                        simple_query_string: expect.objectContaining({
                           query: "hello",
-                          fuzziness: "AUTO",
-                          prefix_length: 2,
-                        },
-                      },
-                    },
-                  },
-                }),
-              ]),
-              minimum_should_match: 1,
-            }),
-          }),
-          // Verify sort order is always by timestamp desc
-          sort: expect.arrayContaining([expect.objectContaining({ timestamp: "desc" })]),
-        }),
-      }),
-    );
-  });
-
-  it("should handle regex search mode correctly", async () => {
-    // Mock successful response from OpenSearch
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 1 },
-          hits: [
-            {
-              _id: "1",
-              _score: 1.0,
-              _source: {
-                model: "gpt-4",
-                messages: [
-                  { role: "user", content: "Hello" },
-                  { role: "assistant", content: "Hi there!" },
-                ],
-              },
-            },
-          ],
-        },
-        took: 5,
-      },
-    };
-
-    // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    // Create a mock request with regex search parameters
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({
-        query: "hello.*",
-        searchMode: "regex",
-      }),
-    });
-
-    // Call the API route handler
-    const response = await POST(req);
-
-    // Verify the response
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(200);
-
-    // Verify that OpenSearch client was called with regex query
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              should: expect.arrayContaining([
-                expect.objectContaining({
-                  regexp: expect.any(Object),
-                }),
-              ]),
-            }),
-          }),
-        }),
-      }),
-    );
-  });
-
-  it("should handle custom time range correctly", async () => {
-    // Mock successful response from OpenSearch
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 1 },
-          hits: [
-            {
-              _id: "1",
-              _score: 1.0,
-              _source: {
-                model: "gpt-4",
-                messages: [
-                  { role: "user", content: "Hello" },
-                  { role: "assistant", content: "Hi there!" },
-                ],
-              },
-            },
-          ],
-        },
-        took: 5,
-      },
-    };
-
-    // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    // Create a mock request with custom time range
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({
-        query: "hello",
-        timeRange: {
-          start: "2023-01-01",
-          end: "2023-12-31",
-        },
-      }),
-    });
-
-    // Call the API route handler
-    const response = await POST(req);
-
-    // Verify the response
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(200);
-
-    // Verify that OpenSearch client was called with time range filter
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              must: expect.arrayContaining([
-                expect.objectContaining({
-                  range: expect.objectContaining({
-                    timestamp: expect.objectContaining({
-                      gte: "2023-01-01",
-                      lte: "2023-12-31",
-                    }),
+                          fields: expect.arrayContaining(["model^2"]),
+                        }),
+                      }),
+                      // Nested simple_query_string
+                      expect.objectContaining({
+                        nested: expect.objectContaining({
+                          path: "messages",
+                          query: expect.objectContaining({
+                            simple_query_string: expect.objectContaining({
+                              query: "hello",
+                              fields: expect.arrayContaining(["messages.content^4"]),
+                            }),
+                          }),
+                        }),
+                      }),
+                    ]),
                   }),
                 }),
               ]),
@@ -327,105 +107,20 @@ describe("Search API Route", () => {
     );
   });
 
-  it("should handle empty query correctly", async () => {
-    // Mock successful response from OpenSearch
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 5 },
-          hits: [
-            {
-              _id: "1",
-              _score: 1.0,
-              _source: {
-                model: "gpt-4",
-                messages: [{ role: "user", content: "Hello" }],
-              },
-            },
-          ],
-        },
-        took: 3,
-      },
-    };
+  it("should include fuzzy typo-tolerant clauses for tokens", async () => {
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce({
+      body: { hits: { total: { value: 0 }, hits: [] }, took: 1 },
+    });
 
-    // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    // Create a mock request with no query
     const req = new NextRequest("http://localhost/api/search", {
       method: "POST",
       body: JSON.stringify({
-        // No query provided
-        timeRange: "1d",
+        query: "poulet",
       }),
     });
 
-    // Call the API route handler
-    const response = await POST(req);
+    await POST(req);
 
-    // Verify the response
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(200);
-
-    // Verify that OpenSearch client was called with a query that doesn't include search terms
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              should: expect.any(Array),
-              minimum_should_match: 1,
-            }),
-          }),
-        }),
-      }),
-    );
-  });
-
-  it("should handle custom time range object correctly", async () => {
-    // Mock successful response from OpenSearch
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 1 },
-          hits: [
-            {
-              _id: "1",
-              _score: 1.0,
-              _source: {
-                model: "gpt-4",
-                messages: [{ role: "user", content: "Hello" }],
-              },
-            },
-          ],
-        },
-        took: 5,
-      },
-    };
-
-    // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    // Create a mock request with custom time range object
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({
-        query: "hello",
-        timeRange: {
-          start: "2023-01-01",
-          end: "2023-12-31",
-        },
-      }),
-    });
-
-    // Call the API route handler
-    const response = await POST(req);
-
-    // Verify the response
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(200);
-
-    // Verify that OpenSearch client was called with time range filter
     expect(opensearchClient.search).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
@@ -433,11 +128,28 @@ describe("Search API Route", () => {
             bool: expect.objectContaining({
               must: expect.arrayContaining([
                 expect.objectContaining({
-                  range: expect.objectContaining({
-                    timestamp: expect.objectContaining({
-                      gte: "2023-01-01",
-                      lte: "2023-12-31",
-                    }),
+                  bool: expect.objectContaining({
+                    should: expect.arrayContaining([
+                      expect.objectContaining({
+                        match: expect.objectContaining({
+                          model: expect.objectContaining({
+                            fuzziness: "AUTO:2,3",
+                          }),
+                        }),
+                      }),
+                      expect.objectContaining({
+                        nested: expect.objectContaining({
+                          path: "messages",
+                          query: expect.objectContaining({
+                            match: expect.objectContaining({
+                              "messages.content": expect.objectContaining({
+                                fuzziness: "AUTO:2,3",
+                              }),
+                            }),
+                          }),
+                        }),
+                      }),
+                    ]),
                   }),
                 }),
               ]),
@@ -448,440 +160,97 @@ describe("Search API Route", () => {
     );
   });
 
-  it("should handle invalid time range gracefully", async () => {
-    // Mock successful response from OpenSearch
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 1 },
-          hits: [
-            {
-              _id: "1",
-              _score: 1.0,
-              _source: {
-                model: "gpt-4",
-                messages: [{ role: "user", content: "Hello" }],
-              },
-            },
-          ],
-        },
-        took: 5,
-      },
-    };
+  it("should handle role: filter extraction", async () => {
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce({
+      body: { hits: { total: { value: 0 }, hits: [] }, took: 1 },
+    });
 
-    // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    // Create a mock request with invalid time range
     const req = new NextRequest("http://localhost/api/search", {
       method: "POST",
       body: JSON.stringify({
-        query: "hello",
-        timeRange: "invalid_range", // Not a valid predefined range
+        query: "role:user javascript error",
       }),
     });
 
-    // Call the API route handler
-    const response = await POST(req);
+    await POST(req);
 
-    // Verify the response
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(200);
-
-    // Verify that OpenSearch client was called without time range filter
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.not.objectContaining({
-              must: expect.anything(),
-            }),
-          }),
-        }),
-      }),
-    );
-  });
-
-  it("should handle partial time range object gracefully", async () => {
-    // Mock successful response from OpenSearch
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 1 },
-          hits: [
-            {
-              _id: "1",
-              _score: 1.0,
-              _source: {
-                model: "gpt-4",
-                messages: [{ role: "user", content: "Hello" }],
-              },
-            },
-          ],
-        },
-        took: 5,
-      },
-    };
-
-    // Setup the OpenSearch client mock to return successful response
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    // Create a mock request with partial time range object
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({
-        query: "hello",
-        timeRange: {
-          // Missing start or end
-          someOtherProperty: "value",
-        },
-      }),
-    });
-
-    // Call the API route handler
-    const response = await POST(req);
-
-    // Verify the response
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(200);
-
-    // Verify that OpenSearch client was called without time range filter
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.not.objectContaining({
-              must: expect.anything(),
-            }),
-          }),
-        }),
-      }),
-    );
-  });
-
-  it("should return empty results with error status when OpenSearch throws an error", async () => {
-    // Setup the OpenSearch client mock to throw an error
-    (opensearchClient.search as jest.Mock).mockRejectedValueOnce(new Error("OpenSearch error"));
-
-    // Create a mock request
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({
-        query: "hello",
-      }),
-    });
-
-    // Call the API route handler
-    const response = await POST(req);
-
-    // Verify the response
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(500);
-
-    // Only verify status code, not error message content
-  });
-  test.each([
-    ["1h", "now-1h"],
-    ["1m", "now-1M"],
-    ["1y", "now-1y"],
-  ])("should handle timeRange '%s' correctly", async (timeRangeValue, expectedGte) => {
-    // Mock successful response from OpenSearch
-    const mockSearchResults = {
-      body: { hits: { total: { value: 0 }, hits: [] }, took: 2 },
-    };
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    // Create a mock request
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({ query: "test", timeRange: timeRangeValue }),
-    });
-
-    // Call the API route handler
-    const response = await POST(req);
-
-    // Verify the response
-    expect(response).toBeInstanceOf(NextResponse);
-    expect(response.status).toBe(200);
-
-    // Verify that OpenSearch client was called with the correct time range filter
     expect(opensearchClient.search).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           query: expect.objectContaining({
             bool: expect.objectContaining({
+              // Check for text search with clean query
               must: expect.arrayContaining([
                 expect.objectContaining({
-                  range: expect.objectContaining({
-                    timestamp: expect.objectContaining({
-                      gte: expectedGte, // Check the specific gte value
-                    }),
+                  bool: expect.objectContaining({
+                    should: expect.arrayContaining([
+                      expect.objectContaining({
+                        simple_query_string: expect.objectContaining({
+                          query: "javascript error", // role:user stripped
+                        }),
+                      }),
+                    ]),
                   }),
                 }),
               ]),
-            }),
-          }),
-        }),
-      }),
-    );
-  });
-  it("should handle OpenSearch response with hits.total as number", async () => {
-    // Mock response where hits.total is a number (older ES versions)
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: 1, // total is a number
-          hits: [{ _id: "num-total-id", _score: 1.0, _source: { model: "test" } }],
-        },
-        took: 3,
-      },
-    };
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({ query: "test" }),
-    });
-
-    const response = await POST(req);
-    expect(response.status).toBe(200);
-    const responseData = await response.json();
-    expect(responseData.hits.total).toBe(1); // Check if the number is passed correctly
-  });
-
-  it("should handle OpenSearch hits missing _source", async () => {
-    // Mock response where a hit is missing the _source field
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 1 },
-          hits: [{ _id: "no-source-id", _score: 1.0 /* no _source */ }],
-        },
-        took: 4,
-      },
-    };
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({ query: "test" }),
-    });
-
-    const response = await POST(req);
-    expect(response.status).toBe(200);
-    const responseData = await response.json();
-    expect(responseData.hits.hits[0]._source).toBeUndefined();
-  });
-
-  it("should handle OpenSearch hits with _source but missing messages", async () => {
-    // Mock response where a hit has _source but no messages array
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 1 },
-          hits: [{ _id: "no-messages-id", _score: 1.0, _source: { model: "gpt-test" /* no messages */ } }],
-        },
-        took: 6,
-      },
-    };
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({ query: "test" }),
-    });
-
-    const response = await POST(req);
-    expect(response.status).toBe(200);
-    const responseData = await response.json();
-    expect(responseData.hits.hits[0]._source.messages).toBeUndefined();
-  });
-
-  it("should handle fuzzy search with custom fuzzy config", async () => {
-    // Mock successful response from OpenSearch
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 1 },
-          hits: [
-            {
-              _id: "1",
-              _score: 1.0,
-              _source: {
-                model: "gpt-4",
-                messages: [
-                  { role: "user", content: "Hello" },
-                  { role: "assistant", content: "Hi there!" },
-                ],
-              },
-            },
-          ],
-        },
-        took: 5,
-      },
-    };
-
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    // Create request with custom fuzzy config
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({
-        query: "hello",
-        searchMode: "fuzzy",
-        fuzzyConfig: {
-          fuzziness: "1",
-          prefixLength: 3,
-        },
-      }),
-    });
-
-    const response = await POST(req);
-    expect(response.status).toBe(200);
-
-    // Verify that OpenSearch was called with custom fuzzy config
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              should: expect.arrayContaining([
-                expect.objectContaining({
-                  match: {
-                    model: {
-                      query: "hello",
-                      fuzziness: "1",
-                      prefix_length: 3,
-                    },
-                  },
-                }),
-                expect.objectContaining({
-                  nested: {
-                    path: "messages",
-                    query: {
-                      match: {
-                        "messages.content": {
-                          query: "hello",
-                          fuzziness: "1",
-                          prefix_length: 3,
-                        },
-                      },
-                    },
-                  },
-                }),
-              ]),
-            }),
-          }),
-        }),
-      }),
-    );
-  });
-
-  it("should handle search when OpenSearch took is not available", async () => {
-    // Mock response without took field
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 1 },
-          hits: [
-            {
-              _id: "1",
-              _score: 1.0,
-              _source: {
-                model: "gpt-4",
-                messages: [{ role: "user", content: "Hello" }],
-              },
-            },
-          ],
-        },
-        // No took field
-      },
-    };
-
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({ query: "hello" }),
-    });
-
-    const response = await POST(req);
-    expect(response.status).toBe(200);
-
-    const responseData = await response.json();
-    expect(responseData.took).toBeGreaterThanOrEqual(0); // Should use calculated search time (can be 0 in tests)
-  });
-
-  it("should handle search with empty results and no hits", async () => {
-    // Mock response with no hits
-    const mockSearchResults = {
-      body: {
-        hits: {
-          total: { value: 0 },
-          hits: [], // Empty array
-        },
-        took: 2,
-      },
-    };
-
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({ query: "nonexistent" }),
-    });
-
-    const response = await POST(req);
-    expect(response.status).toBe(200);
-
-    const responseData = await response.json();
-    expect(responseData.hits.hits).toHaveLength(0);
-    expect(responseData.hits.total.value).toBe(0);
-  });
-
-  it("should handle smart mode with quoted phrase and role filter", async () => {
-    const mockSearchResults = {
-      body: { hits: { total: { value: 0 }, hits: [] }, took: 2 },
-    };
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({
-        query: '"This looks like Tailwind CSS classes"',
-        searchMode: "smart",
-        roles: ["user"],
-      }),
-    });
-
-    const response = await POST(req);
-    expect(response.status).toBe(200);
-
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              should: expect.arrayContaining([
+              // Check for role filter
+              filter: expect.arrayContaining([
                 expect.objectContaining({
                   nested: expect.objectContaining({
                     path: "messages",
                     query: expect.objectContaining({
-                      match_phrase: expect.objectContaining({
-                        "messages.content": expect.objectContaining({
-                          query: "This looks like Tailwind CSS classes",
-                          slop: 0,
-                        }),
+                      terms: expect.objectContaining({
+                        "messages.role": expect.arrayContaining(["user"]),
                       }),
                     }),
                   }),
                 }),
               ]),
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("should handle model: filter extraction", async () => {
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce({
+      body: { hits: { total: { value: 0 }, hits: [] }, took: 1 },
+    });
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      body: JSON.stringify({
+        query: 'model:"gpt-4" testing',
+      }),
+    });
+
+    await POST(req);
+
+    expect(opensearchClient.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          query: expect.objectContaining({
+            bool: expect.objectContaining({
+              // Check for text search with clean query
+              must: expect.arrayContaining([
+                expect.objectContaining({
+                  bool: expect.objectContaining({
+                    should: expect.arrayContaining([
+                      expect.objectContaining({
+                        simple_query_string: expect.objectContaining({
+                          query: "testing", // model:"gpt-4" stripped
+                        }),
+                      }),
+                    ]),
+                  }),
+                }),
+              ]),
+              // Check for model filter
               filter: expect.arrayContaining([
                 expect.objectContaining({
-                  nested: expect.objectContaining({
-                    path: "messages",
-                    query: expect.objectContaining({ terms: expect.objectContaining({ "messages.role": ["user"] }) }),
+                  terms: expect.objectContaining({
+                    "model.keyword": expect.arrayContaining(["gpt-4"]),
                   }),
                 }),
               ]),
@@ -892,77 +261,21 @@ describe("Search API Route", () => {
     );
   });
 
-  it("should handle smart mode with plus and minus tokens", async () => {
-    const mockSearchResults = { body: { hits: { total: { value: 0 }, hits: [] }, took: 1 } };
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
+  it("should handle explicit UI filters (roles and timeRange)", async () => {
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce({
+      body: { hits: { total: { value: 0 }, hits: [] }, took: 1 },
+    });
 
     const req = new NextRequest("http://localhost/api/search", {
       method: "POST",
-      body: JSON.stringify({ query: "+must -exclude tailwind", searchMode: "smart" }),
-    });
-
-    const res = await POST(req);
-    expect(res.status).toBe(200);
-
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              must: expect.arrayContaining([
-                expect.objectContaining({ nested: expect.any(Object) }),
-                expect.objectContaining({ match: expect.objectContaining({ model: "must" }) }),
-              ]),
-              must_not: expect.arrayContaining([
-                expect.objectContaining({ nested: expect.any(Object) }),
-                expect.objectContaining({ match: expect.objectContaining({ model: "exclude" }) }),
-              ]),
-            }),
-          }),
-        }),
+      body: JSON.stringify({
+        query: "hello",
+        roles: ["assistant"],
+        timeRange: "1d",
       }),
-    );
-  });
-
-  it("should default to smart mode when searchMode is omitted", async () => {
-    const mockSearchResults = { body: { hits: { total: { value: 0 }, hits: [] }, took: 1 } };
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({ query: "tailwind classes" }),
     });
 
-    const res = await POST(req);
-    expect(res.status).toBe(200);
-
-    // Expect at least one of the smart-mode signals (match_phrase OR multi_match cross_fields)
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              should: expect.arrayContaining([
-                expect.any(Object), // don't overfit structure, presence suffices to raise coverage
-              ]),
-            }),
-          }),
-        }),
-      }),
-    );
-  });
-
-  it("should handle smart mode model: filter and exact-lowercase boost entries", async () => {
-    const mockSearchResults = { body: { hits: { total: { value: 0 }, hits: [] }, took: 1 } };
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
-
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({ query: 'model:gpt-4 "Exact Lower"', searchMode: "smart" }),
-    });
-
-    const res = await POST(req);
-    expect(res.status).toBe(200);
+    await POST(req);
 
     expect(opensearchClient.search).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -970,11 +283,24 @@ describe("Search API Route", () => {
           query: expect.objectContaining({
             bool: expect.objectContaining({
               filter: expect.arrayContaining([
-                expect.objectContaining({ match: expect.objectContaining({ model: "gpt-4" }) }),
-              ]),
-              should: expect.arrayContaining([
+                // Role filter
                 expect.objectContaining({
-                  term: expect.objectContaining({ "messages.content.keyword_lower": expect.any(Object) }),
+                  nested: expect.objectContaining({
+                    path: "messages",
+                    query: expect.objectContaining({
+                      terms: expect.objectContaining({
+                        "messages.role": expect.arrayContaining(["assistant"]),
+                      }),
+                    }),
+                  }),
+                }),
+                // Time range filter
+                expect.objectContaining({
+                  range: expect.objectContaining({
+                    timestamp: expect.objectContaining({
+                      gte: "now-1d",
+                    }),
+                  }),
                 }),
               ]),
             }),
@@ -982,5 +308,50 @@ describe("Search API Route", () => {
         }),
       }),
     );
+  });
+
+  it("should handle empty query (match_all)", async () => {
+    (opensearchClient.search as jest.Mock).mockResolvedValueOnce({
+      body: { hits: { total: { value: 0 }, hits: [] }, took: 1 },
+    });
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      body: JSON.stringify({
+        query: "",
+      }),
+    });
+
+    await POST(req);
+
+    expect(opensearchClient.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          query: expect.objectContaining({
+            bool: expect.objectContaining({
+              must: expect.arrayContaining([
+                expect.objectContaining({
+                  match_all: {},
+                }),
+              ]),
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("should handle OpenSearch errors", async () => {
+    (opensearchClient.search as jest.Mock).mockRejectedValueOnce(new Error("OpenSearch failure"));
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      body: JSON.stringify({ query: "fail" }),
+    });
+
+    const response = await POST(req);
+    expect(response.status).toBe(500);
+    const json = await response.json();
+    expect(json.error).toBe("OpenSearch failure");
   });
 });

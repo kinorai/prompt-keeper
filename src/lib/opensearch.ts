@@ -1,4 +1,6 @@
 import { Client } from "@opensearch-project/opensearch";
+import type { IndexSettings } from "@opensearch-project/opensearch/api/_types/indices._common";
+import type { TokenChar } from "@opensearch-project/opensearch/api/_types/_common.analysis";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("opensearch");
@@ -20,10 +22,57 @@ const client = new Client({
   requestTimeout: 30000,
 });
 
-export const PROMPT_KEEPER_INDEX = "prompt-keeper";
+export const PROMPT_KEEPER_INDEX = "prompt-keeper-v2";
 
 // Track initialization state
 let isInitialized = false;
+
+const TOKEN_CHARS_LETTER_DIGIT: TokenChar[] = ["letter", "digit"];
+
+// Define the analysis settings
+const INDEX_SETTINGS: IndexSettings = {
+  number_of_shards: 1,
+  number_of_replicas: 1,
+  analysis: {
+    tokenizer: {
+      edge_ngram_tokenizer: {
+        type: "edge_ngram",
+        min_gram: 2,
+        max_gram: 20,
+        token_chars: TOKEN_CHARS_LETTER_DIGIT,
+      },
+      ngram_tokenizer: {
+        type: "ngram",
+        min_gram: 3,
+        max_gram: 4,
+        token_chars: TOKEN_CHARS_LETTER_DIGIT,
+      },
+    },
+    analyzer: {
+      edge_ngram_analyzer: {
+        type: "custom",
+        tokenizer: "edge_ngram_tokenizer",
+        filter: ["lowercase", "asciifolding"],
+      },
+      ngram_analyzer: {
+        type: "custom",
+        tokenizer: "ngram_tokenizer",
+        filter: ["lowercase", "asciifolding"],
+      },
+      folded_analyzer: {
+        type: "custom",
+        tokenizer: "standard",
+        filter: ["lowercase", "asciifolding"],
+      },
+    },
+    normalizer: {
+      lowercase_asciifolding_normalizer: {
+        type: "custom",
+        filter: ["lowercase", "asciifolding"],
+      },
+    },
+  },
+};
 
 // Define the complete mapping schema
 const INDEX_MAPPING = {
@@ -39,10 +88,18 @@ const INDEX_MAPPING = {
     },
     model: {
       type: "text" as const,
+      analyzer: "standard",
       fields: {
         keyword: { type: "keyword" as const },
-        asyt: { type: "search_as_you_type" as const },
-        keyword_lower: { type: "keyword" as const, normalizer: "lowercase_normalizer" as const },
+        edge: {
+          type: "text" as const,
+          analyzer: "edge_ngram_analyzer",
+          search_analyzer: "folded_analyzer",
+        },
+        folded: {
+          type: "text" as const,
+          analyzer: "folded_analyzer",
+        },
       },
     },
     messages: {
@@ -51,10 +108,22 @@ const INDEX_MAPPING = {
         role: { type: "keyword" as const },
         content: {
           type: "text" as const,
-          analyzer: "standard" as const,
+          analyzer: "standard",
           fields: {
-            asyt: { type: "search_as_you_type" as const },
-            keyword_lower: { type: "keyword" as const, normalizer: "lowercase_normalizer" as const },
+            folded: {
+              type: "text" as const,
+              analyzer: "folded_analyzer",
+            },
+            edge: {
+              type: "text" as const,
+              analyzer: "edge_ngram_analyzer",
+              search_analyzer: "folded_analyzer",
+            },
+            ngram: {
+              type: "text" as const,
+              analyzer: "ngram_analyzer",
+              search_analyzer: "folded_analyzer",
+            },
           },
         },
       },
@@ -115,18 +184,7 @@ export async function initializeIndex() {
       await client.indices.create({
         index: PROMPT_KEEPER_INDEX,
         body: {
-          settings: {
-            number_of_shards: 1,
-            number_of_replicas: 1,
-            analysis: {
-              normalizer: {
-                lowercase_normalizer: {
-                  type: "custom",
-                  filter: ["lowercase"],
-                },
-              },
-            },
-          },
+          settings: INDEX_SETTINGS,
           mappings: INDEX_MAPPING,
         },
       });

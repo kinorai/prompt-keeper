@@ -307,7 +307,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   id,
   created,
   model,
-  usage,
   messages = [],
   onShowSidebar,
   onDelete,
