@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { toast } from "sonner";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export function LogoutButton() {
       router.refresh();
     } catch (error) {
       console.error("Logout error:", error);
+      toast.error("Failed to logout");
     } finally {
       setIsLoading(false);
     }
