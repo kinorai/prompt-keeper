@@ -3,6 +3,24 @@ import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api:search");
+const FUZZINESS_SETTING = "AUTO:2,3";
+const FUZZY_PREFIX_LENGTH = 1;
+const MIN_FUZZY_TERM_LENGTH = 3;
+const MAX_FUZZY_TERMS = 5;
+
+function extractFuzzyTokens(input: string): string[] {
+  const tokens = input
+    .split(/\s+/)
+    .map((token) =>
+      token
+        .replace(/^[+\-]+/, "")
+        .replace(/["']/g, "")
+        .trim(),
+    )
+    .filter((token) => token.length >= MIN_FUZZY_TERM_LENGTH);
+
+  return Array.from(new Set(tokens)).slice(0, MAX_FUZZY_TERMS);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,379 +29,174 @@ export async function POST(req: NextRequest) {
 
     const {
       query,
-      searchMode = "smart",
       timeRange,
       size = 20,
       from = 0,
-      fuzzyConfig,
-      phraseConfig,
-      roles,
+      roles, // From UI filters
     } = await req.json();
 
-    function parseSmartQuery(raw: string) {
-      const rolesAllowed = new Set(["system", "user", "assistant"]);
-      const phrases: string[] = [];
-      const plus: string[] = [];
-      const minus: string[] = [];
-      const rolesFromQuery: string[] = [];
-      const modelsFromQuery: string[] = [];
+    // 1. Parse Magic Query
+    const roleRegex = /\brole:(system|user|assistant)\b/gi;
+    const modelRegex = /\bmodel:([^\s"']+|"[^"]*"|'[^']+')/gi;
 
-      let working = raw;
-      // Extract quoted phrases
-      const phraseRegex = /"([^"]+)"/g;
-      let m: RegExpExecArray | null;
-      while ((m = phraseRegex.exec(raw)) !== null) {
-        if (m[1]) phrases.push(m[1]);
-      }
-      working = working.replace(phraseRegex, " ");
+    const rolesFromQuery: string[] = [];
+    const modelsFromQuery: string[] = [];
 
-      const tokens = working
-        .split(/\s+/)
-        .map((t) => t.trim())
-        .filter(Boolean);
+    let cleanQuery = query || "";
 
-      const residual: string[] = [];
-      for (const tok of tokens) {
-        if (tok.startsWith("+")) {
-          const val = tok.slice(1);
-          if (val) plus.push(val);
-          continue;
-        }
-        if (tok.startsWith("-")) {
-          const val = tok.slice(1);
-          if (val) minus.push(val);
-          continue;
-        }
-        if (tok.startsWith("role:")) {
-          const role = tok.slice(5).toLowerCase();
-          if (rolesAllowed.has(role)) rolesFromQuery.push(role);
-          continue;
-        }
-        if (tok.startsWith("model:")) {
-          const model = tok.slice(6);
-          if (model) modelsFromQuery.push(model);
-          continue;
-        }
-        residual.push(tok);
-      }
-
-      return {
-        phrases,
-        plus,
-        minus,
-        rolesFromQuery,
-        modelsFromQuery,
-        residual,
-        raw,
-        lower: raw.toLowerCase(),
-      };
+    // Extract roles
+    let roleMatch;
+    while ((roleMatch = roleRegex.exec(query || "")) !== null) {
+      rolesFromQuery.push(roleMatch[1].toLowerCase());
+      cleanQuery = cleanQuery.replace(roleMatch[0], "");
     }
 
-    type EsQueryClause = Record<string, unknown>;
+    // Extract models (handling quoted strings)
+    let modelMatch;
+    while ((modelMatch = modelRegex.exec(query || "")) !== null) {
+      let model = modelMatch[1];
+      // Remove quotes if present
+      if ((model.startsWith('"') && model.endsWith('"')) || (model.startsWith("'") && model.endsWith("'"))) {
+        model = model.slice(1, -1);
+      }
+      modelsFromQuery.push(model);
+      cleanQuery = cleanQuery.replace(modelMatch[0], "");
+    }
 
+    // Clean up extra spaces
+    cleanQuery = cleanQuery.replace(/\s+/g, " ").trim();
+
+    // 2. Construct OpenSearch Query
     interface EsBoolQuery {
-      should: EsQueryClause[];
-      minimum_should_match: number;
-      must?: EsQueryClause[];
-      must_not?: EsQueryClause[];
-      filter?: EsQueryClause[];
+      must: Record<string, unknown>[];
+      filter: Record<string, unknown>[];
+      should: Record<string, unknown>[];
     }
 
     const esQueryBody: { bool: EsBoolQuery } = {
       bool: {
-        should: [],
-        minimum_should_match: 1,
+        must: [],
+        filter: [],
+        should: [], // Used for matching logic (OR between fields)
       },
     };
 
-    if (query) {
-      const rolesFilterActive = Array.isArray(roles) && roles.length > 0 && roles.length < 3;
-      // Add search query based on mode
-      switch (searchMode) {
-        case "smart": {
-          const parsed = parseSmartQuery(query);
+    // Text Search
+    if (cleanQuery) {
+      // We need to search in both root fields (model) and nested fields (messages.content)
+      // simple_query_string cannot handle both root and nested fields simultaneously in the same query block
+      // So we split them into two 'should' clauses. At least one must match.
 
-          // Merge roles filter from UI and query
-          const mergedRoles = Array.from(
-            new Set([...(Array.isArray(roles) ? roles : []), ...parsed.rolesFromQuery]).values(),
-          );
-          const rolesFilterActiveSmart = mergedRoles.length > 0 && mergedRoles.length < 3;
-
-          // Strong phrase boosts (exact and near)
-          for (const ph of parsed.phrases.length > 0 ? parsed.phrases : [query]) {
-            esQueryBody.bool.should.push(
-              {
-                nested: {
-                  path: "messages",
-                  query: {
-                    match_phrase: { "messages.content": { query: ph, slop: 0, boost: 6 } },
+      const textSearchBool: {
+        bool: {
+          should: Record<string, unknown>[];
+          minimum_should_match: number;
+        };
+      } = {
+        bool: {
+          should: [
+            // Root fields (Model)
+            {
+              simple_query_string: {
+                query: cleanQuery,
+                fields: ["model^2", "model.edge", "model.folded"],
+                default_operator: "AND",
+                flags: "ALL",
+              },
+            },
+            // Nested fields (Messages)
+            {
+              nested: {
+                path: "messages",
+                query: {
+                  simple_query_string: {
+                    query: cleanQuery,
+                    fields: [
+                      "messages.content^4",
+                      "messages.content.folded^4",
+                      "messages.content.edge^2",
+                      "messages.content.ngram^1",
+                    ],
+                    default_operator: "AND",
+                    flags: "ALL",
                   },
                 },
               },
-              {
-                nested: {
-                  path: "messages",
-                  query: {
-                    match_phrase: { "messages.content": { query: ph, slop: 2, boost: 3 } },
-                  },
-                },
-              },
-              {
-                match_phrase: { model: { query: ph, slop: 0, boost: 2 } },
-              },
-            );
-          }
+            },
+          ],
+          minimum_should_match: 1,
+        },
+      };
 
-          // Cross-field AND match (content + model)
-          esQueryBody.bool.should.push({
-            multi_match: {
-              query,
-              type: "cross_fields",
-              operator: "AND",
-              fields: ["messages.content^3", "model^1"],
-              boost: 2,
+      const fuzzyTokens = extractFuzzyTokens(cleanQuery);
+      if (fuzzyTokens.length > 0) {
+        for (const token of fuzzyTokens) {
+          textSearchBool.bool.should.push({
+            match: {
+              model: {
+                query: token,
+                fuzziness: FUZZINESS_SETTING,
+                prefix_length: FUZZY_PREFIX_LENGTH,
+                boost: 0.5,
+              },
             },
           });
-
-          // As-you-type boost for partial inputs
-          esQueryBody.bool.should.push(
-            { match: { "messages.content.asyt": { query, boost: 1 } } },
-            { match: { "model.asyt": { query, boost: 0.8 } } },
-          );
-
-          // Exact lowercase keyword boost (verbatim substring equality-ish)
-          esQueryBody.bool.should.push(
-            { term: { "messages.content.keyword_lower": { value: parsed.lower, boost: 4 } } },
-            { term: { "model.keyword_lower": { value: parsed.lower, boost: 1.5 } } },
-          );
-
-          // Required terms (+word)
-          if (parsed.plus.length > 0) {
-            esQueryBody.bool.must = esQueryBody.bool.must || [];
-            for (const t of parsed.plus) {
-              esQueryBody.bool.must.push(
-                {
-                  nested: {
-                    path: "messages",
-                    query: { match: { "messages.content": t } },
+          textSearchBool.bool.should.push({
+            nested: {
+              path: "messages",
+              query: {
+                match: {
+                  "messages.content": {
+                    query: token,
+                    fuzziness: FUZZINESS_SETTING,
+                    prefix_length: FUZZY_PREFIX_LENGTH,
+                    boost: 0.7,
                   },
-                },
-                { match: { model: t } },
-              );
-            }
-          }
-
-          // Excluded terms (-word)
-          if (parsed.minus.length > 0) {
-            esQueryBody.bool.must_not = esQueryBody.bool.must_not || [];
-            for (const t of parsed.minus) {
-              esQueryBody.bool.must_not.push(
-                {
-                  nested: {
-                    path: "messages",
-                    query: { match: { "messages.content": t } },
-                  },
-                },
-                { match: { model: t } },
-              );
-            }
-          }
-
-          // Query-specified model filters
-          if (parsed.modelsFromQuery.length > 0) {
-            esQueryBody.bool.filter = esQueryBody.bool.filter || [];
-            for (const m of parsed.modelsFromQuery) {
-              esQueryBody.bool.filter.push({ match: { model: m } });
-            }
-          }
-
-          // Roles filter (merged)
-          if (rolesFilterActiveSmart) {
-            esQueryBody.bool.filter = esQueryBody.bool.filter || [];
-            esQueryBody.bool.filter.push({
-              nested: {
-                path: "messages",
-                query: {
-                  terms: { "messages.role": mergedRoles },
                 },
               },
-            });
-          }
-          break;
+            },
+          });
         }
-        case "fuzzy":
-          if (rolesFilterActive) {
-            esQueryBody.bool.should.push({
-              nested: {
-                path: "messages",
-                query: {
-                  bool: {
-                    filter: [{ terms: { "messages.role": roles } }],
-                    must: [
-                      {
-                        match: {
-                          "messages.content": {
-                            query,
-                            fuzziness: fuzzyConfig?.fuzziness || "AUTO",
-                            prefix_length: fuzzyConfig?.prefixLength || 2,
-                          },
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            });
-          } else {
-            esQueryBody.bool.should.push({
-              match: {
-                model: {
-                  query,
-                  fuzziness: fuzzyConfig?.fuzziness || "AUTO",
-                  prefix_length: fuzzyConfig?.prefixLength || 2,
-                },
-              },
-            });
-            esQueryBody.bool.should.push({
-              nested: {
-                path: "messages",
-                query: {
-                  match: {
-                    "messages.content": {
-                      query,
-                      fuzziness: fuzzyConfig?.fuzziness || "AUTO",
-                      prefix_length: fuzzyConfig?.prefixLength || 2,
-                    },
-                  },
-                },
-              },
-            });
-          }
-          break;
-
-        case "phrase":
-          if (rolesFilterActive) {
-            esQueryBody.bool.should.push({
-              nested: {
-                path: "messages",
-                query: {
-                  bool: {
-                    filter: [{ terms: { "messages.role": roles } }],
-                    must: [
-                      {
-                        match_phrase: {
-                          "messages.content": {
-                            query,
-                            slop: typeof phraseConfig?.slop === "number" ? phraseConfig.slop : 0,
-                          },
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            });
-          } else {
-            esQueryBody.bool.should.push(
-              {
-                match_phrase: {
-                  model: {
-                    query,
-                    slop: typeof phraseConfig?.slop === "number" ? phraseConfig.slop : 0,
-                  },
-                },
-              },
-              {
-                nested: {
-                  path: "messages",
-                  query: {
-                    match_phrase: {
-                      "messages.content": {
-                        query,
-                        slop: typeof phraseConfig?.slop === "number" ? phraseConfig.slop : 0,
-                      },
-                    },
-                  },
-                },
-              },
-            );
-          }
-          break;
-
-        case "regex":
-          if (rolesFilterActive) {
-            esQueryBody.bool.should.push({
-              nested: {
-                path: "messages",
-                query: {
-                  bool: {
-                    filter: [{ terms: { "messages.role": roles } }],
-                    must: [{ regexp: { "messages.content": query } }],
-                  },
-                },
-              },
-            });
-          } else {
-            esQueryBody.bool.should.push(
-              { regexp: { model: query } },
-              {
-                nested: {
-                  path: "messages",
-                  query: {
-                    regexp: { "messages.content": query },
-                  },
-                },
-              },
-            );
-          }
-          break;
-
-        default: // keyword
-          if (rolesFilterActive) {
-            esQueryBody.bool.should.push({
-              nested: {
-                path: "messages",
-                query: {
-                  bool: {
-                    filter: [{ terms: { "messages.role": roles } }],
-                    must: [{ match: { "messages.content": query } }],
-                  },
-                },
-              },
-            });
-          } else {
-            esQueryBody.bool.should.push(
-              { match: { model: query } },
-              {
-                nested: {
-                  path: "messages",
-                  query: {
-                    match: { "messages.content": query },
-                  },
-                },
-              },
-            );
-          }
       }
+
+      esQueryBody.bool.must.push(textSearchBool);
     } else {
-      // No search query, use match_all but keep in the should array for test consistency
-      esQueryBody.bool.should.push({ match_all: {} });
+      esQueryBody.bool.must.push({ match_all: {} });
     }
 
-    // Add role filters if provided (filter nested messages by selected roles)
-    if (Array.isArray(roles) && roles.length > 0 && roles.length < 3) {
-      esQueryBody.bool.filter = esQueryBody.bool.filter || [];
+    // Filters
+
+    // Roles
+    const validRoles = ["system", "user", "assistant"];
+    const uiRoles = Array.isArray(roles) ? roles.filter((r) => validRoles.includes(r)) : [];
+
+    const activeRoles = new Set<string>();
+    if (uiRoles.length > 0 && uiRoles.length < 3) {
+      uiRoles.forEach((r) => activeRoles.add(r));
+    }
+    if (rolesFromQuery.length > 0) {
+      rolesFromQuery.forEach((r) => activeRoles.add(r));
+    }
+
+    if (activeRoles.size > 0) {
       esQueryBody.bool.filter.push({
         nested: {
           path: "messages",
           query: {
-            terms: { "messages.role": roles },
+            terms: { "messages.role": Array.from(activeRoles) },
           },
         },
       });
     }
 
-    // Add time range filter if specified
+    // Models
+    if (modelsFromQuery.length > 0) {
+      esQueryBody.bool.filter.push({
+        terms: { "model.keyword": modelsFromQuery },
+      });
+    }
+
+    // Time Range
     if (timeRange && timeRange !== "all") {
       const range: { gte?: string; lte?: string } = {};
       switch (timeRange) {
@@ -407,16 +220,13 @@ export async function POST(req: NextRequest) {
       }
 
       if (Object.keys(range).length > 0) {
-        // Ensure bool and must clauses exist
-        esQueryBody.bool.must = esQueryBody.bool.must || [];
-        // Add the range filter to the 'must' clause.
-        esQueryBody.bool.must.push({
+        esQueryBody.bool.filter.push({
           range: { timestamp: range },
         });
       }
     }
 
-    log.debug(esQueryBody, "[Search API] Query:");
+    log.debug(esQueryBody, "[Search API] Magic Query:");
 
     const startTime = Date.now();
     const response = await opensearchClient.search({
@@ -433,16 +243,6 @@ export async function POST(req: NextRequest) {
 
     const searchTime = Date.now() - startTime;
 
-    // Log response details exactly as expected by tests
-    log.debug(response, "[Search API] Response:");
-
-    // Log the first result if available, exactly as expected by tests
-    if (response.body.hits.hits.length > 0) {
-      const firstResult = response.body.hits.hits[0];
-      log.debug(firstResult, "[Search API] First result:");
-    }
-
-    // Ensure we always return a consistent structure
     return NextResponse.json({
       hits: {
         hits: response.body.hits.hits,
@@ -452,7 +252,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     log.error(error, "[Search API Error]");
-    // Return empty results on error
     return NextResponse.json(
       {
         hits: {
