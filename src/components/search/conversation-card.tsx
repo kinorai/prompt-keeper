@@ -34,7 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { copyToClipboard } from "@/lib/clipboard";
 import { normalizeMarkdownCodeFenceLanguages } from "@/lib/markdown";
 import { buildConversationMarkdown, buildConversationPlainText } from "@/lib/conversation";
-import { injectHighlightHtml, splitHighlightSegments } from "@/lib/search-highlights";
+import { injectHighlightHtml, splitHighlightSegments, SEARCH_HIGHLIGHT_CLASS } from "@/lib/search-highlights";
 
 export interface Message {
   role: string;
@@ -291,7 +291,10 @@ const ChatBubble: React.FC<{
               ? splitHighlightSegments(message.highlightedContent)
               : [{ text: message.content, isHighlighted: false }]
             ).map((segment, idx) => (
-              <span key={`${segment.text}-${idx}`} className={segment.isHighlighted ? "font-semibold" : undefined}>
+              <span
+                key={`${segment.text}-${idx}`}
+                className={segment.isHighlighted ? SEARCH_HIGHLIGHT_CLASS : undefined}
+              >
                 {segment.text}
               </span>
             ))}
@@ -332,7 +335,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
   const modelDisplay = highlightedModel
     ? splitHighlightSegments(highlightedModel).map((segment, idx) => (
-        <span key={`model-hl-${idx}`} className={segment.isHighlighted ? "font-semibold" : undefined}>
+        <span key={`model-hl-${idx}`} className={segment.isHighlighted ? SEARCH_HIGHLIGHT_CLASS : undefined}>
           {segment.text}
         </span>
       ))
