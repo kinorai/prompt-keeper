@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/opensearch";
+import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/search-highlights";
 import { createLogger } from "@/lib/logger";
+import type { Highlight, HighlightField } from "@opensearch-project/opensearch/api/_types/_core.search";
+import type { QueryContainer } from "@opensearch-project/opensearch/api/_types/_common.query_dsl";
 
 const log = createLogger("api:search");
 const FUZZINESS_SETTING = "AUTO:2,3";
 const FUZZY_PREFIX_LENGTH = 1;
 const MIN_FUZZY_TERM_LENGTH = 3;
 const MAX_FUZZY_TERMS = 5;
+const HIGHLIGHT_FRAGMENT_SIZE = 2000;
 
 function extractFuzzyTokens(input: string): string[] {
   const tokens = input
@@ -82,7 +86,52 @@ export async function POST(req: NextRequest) {
     };
 
     // Text Search
+    let highlightConfig: Highlight | undefined;
+
     if (cleanQuery) {
+      const buildHighlightQuery = (fields: string[]): QueryContainer => ({
+        simple_query_string: {
+          query: cleanQuery,
+          fields,
+          default_operator: "AND",
+          flags: "ALL",
+        },
+      });
+
+      const buildSnippetField = (fields: string[]): HighlightField => ({
+        number_of_fragments: 2,
+        fragment_size: 90,
+        fragmenter: "span",
+        type: "unified",
+        force_source: true,
+        highlight_query: buildHighlightQuery(fields),
+      });
+
+      const baseMessageHighlightField: HighlightField = {
+        number_of_fragments: 0,
+        fragment_size: HIGHLIGHT_FRAGMENT_SIZE,
+        type: "unified",
+        force_source: true,
+      };
+
+      const topLevelHighlightFields: Record<string, HighlightField> = {
+        model: buildSnippetField(["model", "model.folded", "model.edge"]),
+        "model.edge": buildSnippetField(["model", "model.folded", "model.edge"]),
+        "messages.content": buildSnippetField([
+          "messages.content",
+          "messages.content.folded",
+          "messages.content.edge",
+          "messages.content.ngram",
+        ]),
+      };
+
+      highlightConfig = {
+        pre_tags: [SEARCH_HIGHLIGHT_PRE_TAG],
+        post_tags: [SEARCH_HIGHLIGHT_POST_TAG],
+        require_field_match: false,
+        fields: topLevelHighlightFields,
+      };
+
       // We need to search in both root fields (model) and nested fields (messages.content)
       // simple_query_string cannot handle both root and nested fields simultaneously in the same query block
       // So we split them into two 'should' clauses. At least one must match.
@@ -104,29 +153,26 @@ export async function POST(req: NextRequest) {
                 flags: "ALL",
               },
             },
-            // Nested fields (Messages)
-            {
-              nested: {
-                path: "messages",
-                query: {
-                  simple_query_string: {
-                    query: cleanQuery,
-                    fields: [
-                      "messages.content^4",
-                      "messages.content.folded^4",
-                      "messages.content.edge^2",
-                      "messages.content.ngram^1",
-                    ],
-                    default_operator: "AND",
-                    flags: "ALL",
-                  },
-                },
-              },
-            },
           ],
           minimum_should_match: 1,
         },
       };
+
+      const nestedShouldClauses: Record<string, unknown>[] = [
+        {
+          simple_query_string: {
+            query: cleanQuery,
+            fields: [
+              "messages.content^4",
+              "messages.content.folded^4",
+              "messages.content.edge^2",
+              "messages.content.ngram^1",
+            ],
+            default_operator: "AND",
+            flags: "ALL",
+          },
+        },
+      ];
 
       const fuzzyTokens = extractFuzzyTokens(cleanQuery);
       if (fuzzyTokens.length > 0) {
@@ -141,23 +187,51 @@ export async function POST(req: NextRequest) {
               },
             },
           });
-          textSearchBool.bool.should.push({
-            nested: {
-              path: "messages",
-              query: {
-                match: {
-                  "messages.content": {
-                    query: token,
-                    fuzziness: FUZZINESS_SETTING,
-                    prefix_length: FUZZY_PREFIX_LENGTH,
-                    boost: 0.7,
-                  },
-                },
+
+          nestedShouldClauses.push({
+            match: {
+              "messages.content": {
+                query: token,
+                fuzziness: FUZZINESS_SETTING,
+                prefix_length: FUZZY_PREFIX_LENGTH,
+                boost: 0.7,
               },
             },
           });
         }
       }
+
+      textSearchBool.bool.should.push({
+        nested: {
+          path: "messages",
+          query: {
+            bool: {
+              should: nestedShouldClauses,
+              minimum_should_match: 1,
+            },
+          },
+          inner_hits: {
+            name: "messages",
+            size: 5,
+            highlight: {
+              pre_tags: [SEARCH_HIGHLIGHT_PRE_TAG],
+              post_tags: [SEARCH_HIGHLIGHT_POST_TAG],
+              require_field_match: false,
+              fields: {
+                content: {
+                  ...baseMessageHighlightField,
+                  highlight_query: buildHighlightQuery([
+                    "messages.content",
+                    "messages.content.folded",
+                    "messages.content.edge",
+                    "messages.content.ngram",
+                  ]),
+                },
+              },
+            },
+          },
+        },
+      });
 
       esQueryBody.bool.must.push(textSearchBool);
     } else {
@@ -233,6 +307,7 @@ export async function POST(req: NextRequest) {
       index: PROMPT_KEEPER_INDEX,
       body: {
         query: esQueryBody,
+        ...(highlightConfig ? { highlight: highlightConfig } : {}),
         // Always order by date (most recent first)
         sort: [{ timestamp: "desc" }],
         size,

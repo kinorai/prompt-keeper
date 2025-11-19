@@ -1,5 +1,17 @@
 import { POST } from "@/app/api/search/route";
 import { NextRequest, NextResponse } from "next/server";
+import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/search-highlights";
+
+type ShouldClause = {
+  simple_query_string?: {
+    query?: string;
+  };
+  nested?: {
+    path?: string;
+    inner_hits?: unknown;
+  };
+  [key: string]: unknown;
+};
 
 // Mock the OpenSearch client
 jest.mock("@/lib/opensearch", () => {
@@ -66,43 +78,17 @@ describe("Search API Route", () => {
     expect(responseData.hits.hits).toHaveLength(1);
     expect(responseData.hits.total.value).toBe(1);
 
-    // Verify basic magic query structure
-    expect(opensearchClient.search).toHaveBeenCalledWith(
+    const callArgs = (opensearchClient.search as jest.Mock).mock.calls[0][0];
+    expect(callArgs.index).toBe("prompt-keeper-v2");
+    const mustClauses = callArgs.body.query.bool.must;
+    expect(mustClauses).toHaveLength(1);
+    const shouldClauses = mustClauses[0].bool.should as ShouldClause[];
+    expect(shouldClauses.some((clause) => clause.simple_query_string?.query === "hello")).toBe(true);
+    expect(shouldClauses.some((clause) => clause.nested?.path === "messages" && clause.nested?.inner_hits)).toBe(true);
+    expect(callArgs.body.highlight).toEqual(
       expect.objectContaining({
-        index: "prompt-keeper-v2",
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              must: expect.arrayContaining([
-                expect.objectContaining({
-                  bool: expect.objectContaining({
-                    should: expect.arrayContaining([
-                      // Root simple_query_string
-                      expect.objectContaining({
-                        simple_query_string: expect.objectContaining({
-                          query: "hello",
-                          fields: expect.arrayContaining(["model^2"]),
-                        }),
-                      }),
-                      // Nested simple_query_string
-                      expect.objectContaining({
-                        nested: expect.objectContaining({
-                          path: "messages",
-                          query: expect.objectContaining({
-                            simple_query_string: expect.objectContaining({
-                              query: "hello",
-                              fields: expect.arrayContaining(["messages.content^4"]),
-                            }),
-                          }),
-                        }),
-                      }),
-                    ]),
-                  }),
-                }),
-              ]),
-            }),
-          }),
-        }),
+        pre_tags: [SEARCH_HIGHLIGHT_PRE_TAG],
+        post_tags: [SEARCH_HIGHLIGHT_POST_TAG],
       }),
     );
   });
@@ -140,11 +126,18 @@ describe("Search API Route", () => {
                       expect.objectContaining({
                         nested: expect.objectContaining({
                           path: "messages",
+                          inner_hits: expect.any(Object),
                           query: expect.objectContaining({
-                            match: expect.objectContaining({
-                              "messages.content": expect.objectContaining({
-                                fuzziness: "AUTO:2,3",
-                              }),
+                            bool: expect.objectContaining({
+                              should: expect.arrayContaining([
+                                expect.objectContaining({
+                                  match: expect.objectContaining({
+                                    "messages.content": expect.objectContaining({
+                                      fuzziness: "AUTO:2,3",
+                                    }),
+                                  }),
+                                }),
+                              ]),
                             }),
                           }),
                         }),
@@ -339,6 +332,9 @@ describe("Search API Route", () => {
         }),
       }),
     );
+
+    const lastCall = (opensearchClient.search as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(lastCall?.body?.highlight).toBeUndefined();
   });
 
   it("should handle OpenSearch errors", async () => {
