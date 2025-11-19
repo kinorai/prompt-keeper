@@ -18,8 +18,26 @@ import { DEFAULT_ROLES, FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DE
 import { Separator } from "@/components/ui/separator";
 
 // Define the types for our search results
+interface NestedInnerHit {
+  _nested?: {
+    offset?: number;
+  };
+  highlight?: {
+    content?: string[];
+    "messages.content"?: string[];
+  };
+}
+
 interface SearchHit {
   _id: string;
+  highlight?: Record<string, string[]>;
+  inner_hits?: {
+    messages?: {
+      hits: {
+        hits: NestedInnerHit[];
+      };
+    };
+  };
   _source: {
     timestamp: string;
     model: string;
@@ -39,6 +57,8 @@ interface MappedSearchResult {
   id: string;
   created: string;
   model: string;
+  highlightedModel?: string;
+  highlightSnippet?: string;
   usage?: {
     total_tokens?: number;
     prompt_tokens?: number;
@@ -47,6 +67,7 @@ interface MappedSearchResult {
   messages: Array<{
     role: string;
     content: string;
+    highlightedContent?: string;
     finish_reason?: string;
   }>;
 }
@@ -280,15 +301,39 @@ function HomeContent() {
 
       // Map search results to ConversationCard props
       const mappedResults =
-        data.hits.hits.map(
-          (hit: SearchHit): MappedSearchResult => ({
+        data.hits.hits.map((hit: SearchHit): MappedSearchResult => {
+          const highlight = hit.highlight ?? {};
+          const modelHighlight = highlight.model?.[0] ?? highlight["model.edge"]?.[0];
+
+          const messageHighlightMap = new Map<number, string>();
+          const innerHits = hit.inner_hits?.messages?.hits?.hits ?? [];
+          innerHits.forEach((innerHit) => {
+            const idx = innerHit._nested?.offset;
+            const fragments = innerHit.highlight?.content || innerHit.highlight?.["messages.content"];
+            if (typeof idx === "number" && fragments && fragments.length > 0) {
+              messageHighlightMap.set(idx, fragments[0]);
+            }
+          });
+
+          const messages = (hit._source?.messages || []).map((message, index) => ({
+            ...message,
+            highlightedContent: messageHighlightMap.get(index),
+          }));
+
+          const snippetFromMessages = messageHighlightMap.size
+            ? messageHighlightMap.values().next().value
+            : highlight["messages.content"]?.[0];
+
+          return {
             id: hit._id,
             created: hit._source?.timestamp || new Date().toISOString(),
             model: hit._source?.model || "Unknown",
+            highlightedModel: modelHighlight,
+            highlightSnippet: snippetFromMessages || modelHighlight,
             usage: hit._source?.usage || undefined,
-            messages: hit._source?.messages || [],
-          }),
-        ) || [];
+            messages,
+          };
+        }) || [];
 
       console.debug("Mapped results:", mappedResults);
 
@@ -510,6 +555,8 @@ function HomeContent() {
                               id={result.id}
                               created={result.created}
                               model={result.model}
+                              highlightedModel={result.highlightedModel}
+                              highlightSnippet={result.highlightSnippet}
                               messages={result.messages}
                               isActive={selectedIdFromUrl === result.id}
                               onSelect={handleSelectConversation}
@@ -534,6 +581,7 @@ function HomeContent() {
                           id={active.id}
                           created={active.created}
                           model={active.model}
+                          highlightedModel={active.highlightedModel}
                           usage={active.usage}
                           messages={active.messages}
                           onShowSidebar={!isSidebarOpen ? () => setIsSidebarOpen(true) : undefined}
@@ -572,6 +620,8 @@ function HomeContent() {
                         id={result.id}
                         created={result.created}
                         model={result.model}
+                        highlightedModel={result.highlightedModel}
+                        highlightSnippet={result.highlightSnippet}
                         messages={result.messages}
                         isActive={selectedIdFromUrl === result.id}
                         onSelect={handleSelectConversation}
@@ -597,6 +647,7 @@ function HomeContent() {
                       id={active.id}
                       created={active.created}
                       model={active.model}
+                      highlightedModel={active.highlightedModel}
                       usage={active.usage}
                       messages={active.messages}
                       onDelete={handleDeleteConversation}

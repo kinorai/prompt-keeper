@@ -34,10 +34,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { copyToClipboard } from "@/lib/clipboard";
 import { normalizeMarkdownCodeFenceLanguages } from "@/lib/markdown";
 import { buildConversationMarkdown, buildConversationPlainText } from "@/lib/conversation";
+import { injectHighlightHtml, splitHighlightSegments } from "@/lib/search-highlights";
 
 export interface Message {
   role: string;
   content: string;
+  highlightedContent?: string;
   finish_reason?: string;
 }
 
@@ -45,6 +47,7 @@ export interface ConversationCardProps {
   id: string;
   created: string;
   model: string;
+  highlightedModel?: string;
   usage?: {
     total_tokens?: number;
     prompt_tokens?: number;
@@ -222,7 +225,6 @@ const MarkdownContent: React.FC<{
 // ChatBubble component to render individual messages as chat bubbles
 const ChatBubble: React.FC<{
   message: Message;
-  index: number;
 }> = ({ message }) => {
   const [isSystemExpanded, setIsSystemExpanded] = useState(false);
 
@@ -285,10 +287,23 @@ const ChatBubble: React.FC<{
         </div>
         {isSystemMessage && !isSystemExpanded ? (
           <div className="w-full block text-sm sm:text-base whitespace-nowrap overflow-hidden text-ellipsis pr-8">
-            {message.content}
+            {(message.highlightedContent
+              ? splitHighlightSegments(message.highlightedContent)
+              : [{ text: message.content, isHighlighted: false }]
+            ).map((segment, idx) => (
+              <span key={`${segment.text}-${idx}`} className={segment.isHighlighted ? "font-semibold" : undefined}>
+                {segment.text}
+              </span>
+            ))}
           </div>
         ) : (
-          <MarkdownContent content={message.content} />
+          <MarkdownContent
+            content={
+              message.highlightedContent
+                ? injectHighlightHtml(message.highlightedContent, "font-semibold")
+                : message.content
+            }
+          />
         )}
         <div className="absolute top-1 right-1">
           <CopyButton
@@ -307,6 +322,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   id,
   created,
   model,
+  highlightedModel,
   messages = [],
   onShowSidebar,
   onDelete,
@@ -314,6 +330,13 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 }) => {
   const createdDate = new Date(created);
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
+  const modelDisplay = highlightedModel
+    ? splitHighlightSegments(highlightedModel).map((segment, idx) => (
+        <span key={`model-hl-${idx}`} className={segment.isHighlighted ? "font-semibold" : undefined}>
+          {segment.text}
+        </span>
+      ))
+    : model;
   const dropdownButtonRef = useRef<HTMLButtonElement>(null); // Ref for the dropdown button
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
@@ -509,7 +532,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 <PanelLeftOpen className="h-4 w-4" />
               </Button>
             )}
-            <ModelBadge>{model}</ModelBadge>
+            <ModelBadge>{modelDisplay}</ModelBadge>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -629,7 +652,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       <div className={cn("px-2 sm:px-3 py-0.5 sm:py-1 pb-1 sm:pb-2", variant === "card" ? "" : "")}>
         <div className="space-y-3">
           {messages.map((message, index) => (
-            <ChatBubble key={`message-${index}`} message={message} index={index} />
+            <ChatBubble key={`message-${index}`} message={message} />
           ))}
         </div>
       </div>
