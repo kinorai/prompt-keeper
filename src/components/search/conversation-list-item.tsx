@@ -9,12 +9,15 @@ import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
 import { copyToClipboard } from "@/lib/clipboard";
 import { buildConversationMarkdown, buildConversationPlainText } from "@/lib/conversation";
 import { toast } from "sonner";
+import { splitHighlightSegments } from "@/lib/search-highlights";
 
 export interface ConversationListItemProps {
   id: string;
   created: string; // ISO date
   model: string;
-  messages: Array<{ role: string; content: string; finish_reason?: string }>;
+  highlightedModel?: string;
+  highlightSnippet?: string;
+  messages: Array<{ role: string; content: string; highlightedContent?: string; finish_reason?: string }>;
   isActive?: boolean;
   onSelect?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -38,6 +41,8 @@ export function ConversationListItem({
   id,
   created,
   model,
+  highlightedModel,
+  highlightSnippet,
   messages,
   isActive = false,
   onSelect,
@@ -47,6 +52,14 @@ export function ConversationListItem({
   const createdDate = useMemo(() => new Date(created), [created]);
   const userMessagesCount = useMemo(() => messages.filter((m) => m.role === "user").length, [messages]);
   const firstUserPrompt = useMemo(() => messages.find((m) => m.role === "user")?.content || "", [messages]);
+  const snippetSegments = useMemo(() => {
+    if (!highlightSnippet) return null;
+    return splitHighlightSegments(highlightSnippet);
+  }, [highlightSnippet]);
+  const modelSegments = useMemo(() => {
+    if (!highlightedModel) return null;
+    return splitHighlightSegments(highlightedModel);
+  }, [highlightedModel]);
 
   const getFullConversationText = () => buildConversationPlainText(messages);
   const getShareableMarkdown = () => buildConversationMarkdown({ model, created: createdDate, messages });
@@ -97,7 +110,15 @@ export function ConversationListItem({
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         {/* First row */}
         <div className="flex items-center gap-2 min-w-0">
-          <ModelBadge title={model}>{model}</ModelBadge>
+          <ModelBadge title={model}>
+            {modelSegments
+              ? modelSegments.map((segment, idx) => (
+                  <span key={`model-hl-${idx}`} className={segment.isHighlighted ? "font-semibold" : undefined}>
+                    {segment.text}
+                  </span>
+                ))
+              : model}
+          </ModelBadge>
           <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1 whitespace-nowrap">
               <span>{formatWhatsAppLikeDate(createdDate)}</span>
@@ -110,7 +131,15 @@ export function ConversationListItem({
         </div>
 
         {/* Second row */}
-        <div className="line-clamp-2 min-h-[1.5rem] text-sm text-muted-foreground pr-8 sm:pr-0">{firstUserPrompt}</div>
+        <div className="line-clamp-2 min-h-[1.5rem] text-sm text-muted-foreground pr-8 sm:pr-0">
+          {snippetSegments
+            ? snippetSegments.map((segment, idx) => (
+                <span key={`snippet-${idx}`} className={segment.isHighlighted ? "font-semibold" : undefined}>
+                  {segment.text}
+                </span>
+              ))
+            : firstUserPrompt}
+        </div>
       </div>
 
       {/* Mobile-only context menu positioned below the date at the top-right */}
