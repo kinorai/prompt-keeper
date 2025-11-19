@@ -16,6 +16,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DEFAULT_ROLES, FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DEFAULTS } from "@/lib/defaults";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 // Define the types for our search results
 interface NestedInnerHit {
@@ -262,7 +263,6 @@ function HomeContent() {
         size: resultsSize,
         roles,
       };
-      console.debug("Sending search request with:", body);
 
       const response = await fetch("/api/search", {
         method: "POST",
@@ -274,28 +274,18 @@ function HomeContent() {
 
       const data = await response.json();
 
-      // Debug: Log the search results structure
-      console.debug("Search API response:", JSON.stringify(data, null, 2));
-
       // Check if we have valid search results
       if (!data?.hits?.hits) {
-        console.error("Invalid search results structure:", data);
         setSearchResults([]);
         setSearchMetadata(null);
         return;
       }
 
-      // Debug: Log the first result if available
       if (data.hits.hits.length > 0) {
         const firstResult = data.hits.hits[0];
-        console.debug("First result:", {
-          id: firstResult._id,
-          source: firstResult._source,
-        });
 
         // Check if the first result has messages
         if (firstResult._source?.messages) {
-          console.debug("First result messages:", firstResult._source.messages);
         }
       }
 
@@ -335,8 +325,6 @@ function HomeContent() {
           };
         }) || [];
 
-      console.debug("Mapped results:", mappedResults);
-
       // Safely handle the search results
       setSearchResults(mappedResults);
 
@@ -346,7 +334,8 @@ function HomeContent() {
         took: data?.took || 0,
       });
     } catch (error) {
-      console.error("Search failed:", error);
+      console.error("Search error:", error);
+      toast.error("Failed to search");
       setSearchResults([]);
       setSearchMetadata(null);
     } finally {
@@ -358,7 +347,6 @@ function HomeContent() {
   // Create a memoized debounced function for search
   const debouncedSearch = useMemo(() => {
     return debounce(() => {
-      console.debug("Debounced search triggered for query:", query);
       handleSearch();
     }, SEARCH_BEHAVIOR_DEFAULTS.searchDebounceMs);
   }, [handleSearch, query]);
@@ -366,7 +354,6 @@ function HomeContent() {
   // Debounced search for filter changes (time range, size, roles)
   const debouncedFilterSearch = useMemo(() => {
     return debounce(() => {
-      console.debug("Debounced search triggered for filters change");
       handleSearch();
     }, SEARCH_BEHAVIOR_DEFAULTS.filterDebounceMs);
   }, [handleSearch]);
@@ -385,12 +372,8 @@ function HomeContent() {
     if (!initialLoad) {
       // Only apply debounced search after initial load has completed
       if (query.length === 0 || query.length >= SEARCH_BEHAVIOR_DEFAULTS.minQueryLength) {
-        console.debug(`Query is now '${query}', scheduling debounced search.`);
         debouncedSearch();
       } else {
-        console.debug(
-          `Query is '${query}' (<${SEARCH_BEHAVIOR_DEFAULTS.minQueryLength} chars), cancelling pending debounced search.`,
-        );
         debouncedSearch.cancel();
       }
     }
@@ -452,7 +435,6 @@ function HomeContent() {
 
   useEffect(() => {
     if (searchResults && searchResults.length > 0) {
-      console.debug("Rendering search results:", searchResults);
     }
   }, [searchResults]);
 

@@ -93,8 +93,8 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, 
 
 ## Debug
 
-- Do not add debug buttons in the UI, or debug api routes, just use console.debug
-- Do not add any debug code or files, just use console.debug
+- Do not add debug buttons in the UI, or debug api routes
+- Do not add any debug code or files
 
 ## EGO
 - do not make assumption. do not jump to conclusions.
