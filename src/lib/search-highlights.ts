@@ -1,5 +1,6 @@
 export const SEARCH_HIGHLIGHT_PRE_TAG = "__pkhlstart__";
 export const SEARCH_HIGHLIGHT_POST_TAG = "__pkhlend__";
+export const SEARCH_HIGHLIGHT_CLASS = "font-semibold text-foreground";
 
 export interface HighlightSegment {
   text: string;
@@ -42,7 +43,7 @@ export function splitHighlightSegments(text: string): HighlightSegment[] {
   return segments;
 }
 
-export function injectHighlightHtml(text: string, className = "font-semibold"): string {
+export function injectHighlightHtml(text: string, className = SEARCH_HIGHLIGHT_CLASS): string {
   return text
     .split(SEARCH_HIGHLIGHT_PRE_TAG)
     .join(`<strong class="${className}">`)
