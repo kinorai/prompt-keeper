@@ -66,7 +66,7 @@ function HomeContent() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
-  // Smart mode only
+
   const initialTime = (() => {
     const t = searchParams.get("time") || FILTERS_DEFAULTS.timeRange;
     if (t === "custom") {
@@ -80,7 +80,7 @@ function HomeContent() {
   const [resultsSize, setResultsSize] = useState(
     parseInt(searchParams.get("size") || String(FILTERS_DEFAULTS.resultsSize)),
   );
-  // Removed fuzzy/phrase config in Smart mode
+
   const initialRoles = (() => {
     const rolesParam = searchParams.get("roles");
     if (!rolesParam) return [...DEFAULT_ROLES] as string[];
@@ -199,7 +199,6 @@ function HomeContent() {
       if (query) params.set("q", query);
       else params.delete("q");
 
-      // Smart mode: no explicit mode param
       if (typeof timeRange === "string") {
         params.set("time", timeRange);
         params.delete("start");
@@ -210,8 +209,6 @@ function HomeContent() {
         params.set("end", timeRange.end);
       }
       params.set("size", resultsSize.toString());
-
-      // No per-mode params in Smart mode
 
       // roles
       if (roles.length === DEFAULT_ROLES.length) {
@@ -240,10 +237,8 @@ function HomeContent() {
     try {
       const body = {
         query,
-        searchMode: "smart",
         timeRange,
         size: resultsSize,
-
         roles,
       };
       console.debug("Sending search request with:", body);
