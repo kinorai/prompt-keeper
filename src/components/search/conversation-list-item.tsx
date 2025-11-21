@@ -7,7 +7,8 @@ import { Copy, MessageSquare, Share2, Trash2 } from "lucide-react";
 import { KebabMenu } from "@/components/kebab-menu";
 import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
 import { copyToClipboard } from "@/lib/clipboard";
-import { buildConversationMarkdown, buildConversationPlainText } from "@/lib/conversation";
+import { buildConversationMarkdown, buildConversationPlainText, extractTextFromContent } from "@/lib/conversation";
+
 import { toast } from "sonner";
 import { splitHighlightSegments, SEARCH_HIGHLIGHT_CLASS } from "@/lib/search-highlights";
 
@@ -17,7 +18,13 @@ export interface ConversationListItemProps {
   model: string;
   highlightedModel?: string;
   highlightSnippet?: string;
-  messages: Array<{ role: string; content: string; highlightedContent?: string; finish_reason?: string }>;
+  messages: Array<{
+    role: string;
+    content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+    highlightedContent?: string;
+    finish_reason?: string;
+  }>;
+
   isActive?: boolean;
   onSelect?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -51,7 +58,11 @@ export function ConversationListItem({
 }: ConversationListItemProps) {
   const createdDate = useMemo(() => new Date(created), [created]);
   const userMessagesCount = useMemo(() => messages.filter((m) => m.role === "user").length, [messages]);
-  const firstUserPrompt = useMemo(() => messages.find((m) => m.role === "user")?.content || "", [messages]);
+  const firstUserPrompt = useMemo(() => {
+    const msg = messages.find((m) => m.role === "user");
+    return msg ? extractTextFromContent(msg.content) : "";
+  }, [messages]);
+
   const snippetSegments = useMemo(() => {
     if (!highlightSnippet) return null;
     return splitHighlightSegments(highlightSnippet);

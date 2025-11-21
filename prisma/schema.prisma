@@ -37,7 +37,7 @@ model Message {
   conversationId  String       @map("conversation_id")
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   role            String
-  content         String
+  content         Json
   finishReason    String?      @map("finish_reason")
   messageIndex    Int?         @map("message_index")
 
