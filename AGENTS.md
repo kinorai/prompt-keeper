@@ -105,6 +105,12 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, 
 Follow Next.js docs for Data Fetching, Rendering, and Routing.
 
 IMPORTANT:
-- try to fix things at the cause, not the symptom.
-- when you delete code, check if dependencies are not needed anymore.
-- Default values should be in the src/lib/defaults.ts file.
+try to fix things at the cause, not the symptom.
+
+when you delete code, check if dependencies are not needed anymore.
+
+Default values should be in the src/lib/defaults.ts file.
+
+Always use context7 when I need code generation, setup or configuration steps, or
+library/API documentation. This means you should automatically use the Context7 MCP
+tools to resolve library id and get library docs without me having to explicitly ask.
