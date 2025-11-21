@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { uploadFile } from "@/lib/s3";
 
 const log = createLogger("api:chat/completions");
@@ -60,7 +61,7 @@ interface Message {
         type: string;
         text?: string;
         image_url?: { url: string };
-        [key: string]: any;
+        [key: string]: unknown;
       }>;
 }
 
@@ -327,7 +328,7 @@ async function storeConversationPostgres(requestMessages: Message[], response: F
       const messagesToInsert: Array<{
         conversationId: string;
         role: string;
-        content: string;
+        content: string | Prisma.InputJsonValue;
         finishReason?: string | null;
         messageIndex: number;
       }> = [];
@@ -336,7 +337,7 @@ async function storeConversationPostgres(requestMessages: Message[], response: F
         messagesToInsert.push({
           conversationId,
           role: m.role,
-          content: m.content as any, // Prisma expects Json, passing object/array directly
+          content: m.content as Prisma.InputJsonValue, // Prisma input Json type for object/array
 
           finishReason: null,
           messageIndex: idx,
@@ -347,7 +348,7 @@ async function storeConversationPostgres(requestMessages: Message[], response: F
         messagesToInsert.push({
           conversationId,
           role: m.role || "assistant",
-          content: m.content as any, // Prisma expects Json
+          content: m.content as Prisma.InputJsonValue, // Prisma input Json type
 
           finishReason: response.choices[idx]?.finish_reason ?? null,
           messageIndex: sanitizedRequestMessages.length + idx,

@@ -82,7 +82,7 @@ async function processConversationUpsert(aggregateId: string): Promise<void> {
       // Handle multimodal content (array)
       if (Array.isArray(m.content)) {
         // Extract text for the main content field (to satisfy text mapping)
-        content = (m.content as any[])
+        content = (m.content as Array<{ type: string; text?: string }>)
           .filter((c) => c.type === "text")
           .map((c) => c.text || "")
           .join("\n");

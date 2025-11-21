@@ -1,3 +1,18 @@
+import crypto from "crypto";
+
+// Polyfill crypto.randomUUID for tests
+if (!global.crypto) {
+  Object.defineProperty(global, "crypto", {
+    value: {
+      randomUUID: () => crypto.randomUUID(),
+    },
+    writable: true,
+  });
+} else if (!global.crypto.randomUUID) {
+  // @ts-ignore
+  global.crypto.randomUUID = () => crypto.randomUUID();
+}
+
 // Mock Next.js environment variables
 Object.defineProperty(process.env, "NODE_ENV", { value: "test" });
 process.env.AUTH_USERNAME = "testuser";
@@ -140,3 +155,16 @@ jest.mock("@/lib/prisma", () => {
     default: () => client,
   };
 });
+
+jest.mock("@aws-sdk/client-s3", () => ({
+  S3Client: jest.fn(() => ({
+    send: jest.fn(),
+  })),
+  PutObjectCommand: jest.fn(),
+  GetObjectCommand: jest.fn(),
+  DeleteObjectCommand: jest.fn(),
+}));
+
+jest.mock("@aws-sdk/s3-request-presigner", () => ({
+  getSignedUrl: jest.fn(),
+}));
