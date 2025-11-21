@@ -13,7 +13,10 @@ import {
   ChevronDown,
   ChevronUp,
   PanelLeftOpen,
+  X,
+  Maximize2,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { ModelBadge } from "@/components/badges";
 import { cn } from "@/lib/utils";
@@ -38,7 +41,7 @@ import { injectHighlightHtml, splitHighlightSegments, SEARCH_HIGHLIGHT_CLASS } f
 
 export interface Message {
   role: string;
-  content: string;
+  content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
   highlightedContent?: string;
   finish_reason?: string;
 }
@@ -225,8 +228,10 @@ const MarkdownContent: React.FC<{
 // ChatBubble component to render individual messages as chat bubbles
 const ChatBubble: React.FC<{
   message: Message;
-}> = ({ message }) => {
+  modelName?: string;
+}> = ({ message, modelName }) => {
   const [isSystemExpanded, setIsSystemExpanded] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   let alignmentClass = "";
   let bubbleBg = "";
@@ -257,67 +262,132 @@ const ChatBubble: React.FC<{
 
   const isSystemMessage = message.role === "system";
   const isAssistantMessage = message.role === "assistant";
+  const isUserMessage = message.role === "user";
   const widthClass = isSystemMessage ? "w-full" : isAssistantMessage ? "w-full" : "max-w-[97%]";
-  const bubbleClasses = isAssistantMessage ? "" : "rounded-lg p-1.5 shadow-xs";
+  const bubbleClasses = isAssistantMessage ? "pr-8" : "rounded-lg p-1.5 shadow-xs pr-8"; // Add pr-8 to prevent copy button overlap
+
+  // Separate content types
+  const images = Array.isArray(message.content)
+    ? message.content.filter((c) => c.type === "image_url" && c.image_url?.url)
+    : [];
+  const textContent = Array.isArray(message.content)
+    ? message.content
+        .filter((c) => c.type === "text")
+        .map((c) => c.text || "")
+        .join("\n")
+    : typeof message.content === "string"
+      ? message.content
+      : "";
 
   return (
-    <div className={`flex ${alignmentClass}`}>
-      <div className={`relative ${widthClass} ${bubbleClasses} ${bubbleBg}`}>
-        <div className="flex items-center mb-1">
-          {icon}
-          <span className="ml-1 text-xs font-semibold">{message.role.toUpperCase()}</span>
-          {isSystemMessage && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsSystemExpanded(!isSystemExpanded)}
-              className="ml-2 h-auto p-1 text-xs hover:bg-transparent"
-            >
-              {isSystemExpanded ? (
-                <>
-                  <ChevronUp className="h-3 w-3 mr-1" />
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-3 w-3 mr-1" />
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-        {isSystemMessage && !isSystemExpanded ? (
-          <div className="w-full block text-sm sm:text-base whitespace-nowrap overflow-hidden text-ellipsis pr-8">
-            {(message.highlightedContent
-              ? splitHighlightSegments(message.highlightedContent)
-              : [{ text: message.content, isHighlighted: false }]
-            ).map((segment, idx) => (
-              <span
-                key={`${segment.text}-${idx}`}
-                className={segment.isHighlighted ? SEARCH_HIGHLIGHT_CLASS : undefined}
-              >
-                {segment.text}
-              </span>
+    <>
+      <div className={`flex flex-col w-full ${isUserMessage ? "items-end" : "items-start"}`}>
+        {/* Images - Outside bubble for User, Inside for others (if any) */}
+        {images.length > 0 && (
+          <div className={`flex flex-row flex-wrap gap-2 mb-1 ${isUserMessage ? "justify-end" : "justify-start"}`}>
+            {images.map((item, idx) => (
+              <div key={idx} className="relative group flex-shrink-0">
+                <img
+                  src={item.image_url!.url}
+                  alt="User uploaded content"
+                  className="h-24 w-auto rounded-md border border-border object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setFullscreenImage(item.image_url!.url)}
+                />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <Maximize2 className="h-5 w-5 text-white drop-shadow-md" />
+                </div>
+              </div>
             ))}
           </div>
-        ) : (
-          <MarkdownContent
-            content={
-              message.highlightedContent
-                ? injectHighlightHtml(message.highlightedContent, "font-semibold")
-                : message.content
-            }
-          />
         )}
-        <div className="absolute top-1 right-1">
-          <CopyButton
-            text={message.content}
-            showText={false}
-            size="xs"
-            successMessage={`${message.role} message copied`}
-          />
+
+        <div className={`relative ${widthClass} ${bubbleClasses} ${bubbleBg}`}>
+          {/* Header: Only for Assistant (Model Name) and System */}
+          {!isUserMessage && (
+            <div className="flex items-center mb-1">
+              {icon}
+              <span className="ml-1 text-xs font-semibold">
+                {isAssistantMessage ? (modelName || "ASSISTANT").toUpperCase() : message.role.toUpperCase()}
+              </span>
+              {isSystemMessage && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsSystemExpanded(!isSystemExpanded)}
+                  className="ml-2 h-auto p-1 text-xs hover:bg-transparent"
+                >
+                  {isSystemExpanded ? (
+                    <>
+                      <ChevronUp className="h-3 w-3 mr-1" />
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3 w-3 mr-1" />
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {isSystemMessage && !isSystemExpanded ? (
+            <div className="w-full block text-sm sm:text-base whitespace-nowrap overflow-hidden text-ellipsis pr-8">
+              {(message.highlightedContent
+                ? splitHighlightSegments(message.highlightedContent)
+                : [{ text: textContent || "System message", isHighlighted: false }]
+              ).map((segment, idx) => (
+                <span
+                  key={`${segment.text}-${idx}`}
+                  className={segment.isHighlighted ? SEARCH_HIGHLIGHT_CLASS : undefined}
+                >
+                  {segment.text}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <MarkdownContent
+              content={
+                message.highlightedContent
+                  ? injectHighlightHtml(message.highlightedContent, "font-semibold")
+                  : textContent
+              }
+            />
+          )}
+
+          <div className="absolute top-1 right-1">
+            <CopyButton
+              text={textContent}
+              showText={false}
+              size="xs"
+              successMessage={`${message.role} message copied`}
+            />
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Fullscreen Image Overlay */}
+      {fullscreenImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20"
+            onClick={() => setFullscreenImage(null)}
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          <img
+            src={fullscreenImage}
+            alt="Fullscreen view"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
   );
 };
 
@@ -655,7 +725,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       <div className={cn("px-2 sm:px-3 py-0.5 sm:py-1 pb-1 sm:pb-2", variant === "card" ? "" : "")}>
         <div className="space-y-3">
           {messages.map((message, index) => (
-            <ChatBubble key={`message-${index}`} message={message} />
+            <ChatBubble key={`message-${index}`} message={message} modelName={model} />
           ))}
         </div>
       </div>

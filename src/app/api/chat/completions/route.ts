@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
+import { uploadFile } from "@/lib/s3";
 
 const log = createLogger("api:chat/completions");
 
@@ -53,7 +54,14 @@ interface FormattedResponse {
 
 interface Message {
   role: string;
-  content: string | { type: string; text: string }[];
+  content:
+    | string
+    | Array<{
+        type: string;
+        text?: string;
+        image_url?: { url: string };
+        [key: string]: any;
+      }>;
 }
 
 const skipHeaders = [
@@ -175,20 +183,48 @@ function formatStreamToResponse(chunks: StreamChunk[]): FormattedResponse {
 }
 
 // Add this helper function to sanitize messages
-function sanitizeMessage(message: { content: string | { type: string; text: string }[] }) {
-  // If message is a simple string content
+// Process message for storage: upload images to S3 and return clean message object
+async function processMessageForStorage(message: Message): Promise<Message> {
   if (typeof message.content === "string") {
     return message;
   }
 
-  // If message content is an array (multimodal content)
   if (Array.isArray(message.content)) {
+    const newContent = await Promise.all(
+      message.content.map(async (item) => {
+        if (item.type === "image_url" && item.image_url?.url?.startsWith("data:")) {
+          try {
+            // Extract base64 data
+            const matches = item.image_url.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (matches && matches.length === 3) {
+              const contentType = matches[1];
+              const buffer = Buffer.from(matches[2], "base64");
+              const ext = contentType.split("/")[1] || "bin";
+              const date = new Date().toISOString().split("T")[0].split("-"); // [YYYY, MM, DD]
+              const key = `conversations/images/${date[0]}/${date[1]}/${crypto.randomUUID()}.${ext}`;
+
+              await uploadFile(key, buffer, contentType);
+
+              return {
+                type: "image_url",
+                image_url: {
+                  url: `s3://${key}`,
+                },
+              };
+            }
+          } catch (error) {
+            log.error(error, "Failed to process image for S3 upload");
+            // Fallback: keep original or maybe strip it? Keeping original might be too large for DB if it's base64
+            return item;
+          }
+        }
+        return item;
+      }),
+    );
+
     return {
       ...message,
-      content: message.content
-        .filter((item: { type: string }) => item.type === "text")
-        .map((item: { text: string }) => item.text)
-        .join("\n"),
+      content: newContent,
     };
   }
 
@@ -201,11 +237,10 @@ function sanitizeMessage(message: { content: string | { type: string; text: stri
 // If a conversation with the same hash exists (within 1 year), update it instead of creating new
 async function storeConversationPostgres(requestMessages: Message[], response: FormattedResponse, latency: number) {
   try {
-    const sanitizedRequestMessages = requestMessages.map(sanitizeMessage) as Array<{ role: string; content: string }>;
-    const sanitizedResponseMessages = response.choices.map((choice) => sanitizeMessage(choice.message)) as Array<{
-      role: string;
-      content: string;
-    }>;
+    const sanitizedRequestMessages = await Promise.all(requestMessages.map(processMessageForStorage));
+    const sanitizedResponseMessages = await Promise.all(
+      response.choices.map((choice) => processMessageForStorage(choice.message)),
+    );
 
     // Generate TWO hashes:
     // 1. findHash: excludes last user message - used to FIND existing conversation
@@ -301,7 +336,8 @@ async function storeConversationPostgres(requestMessages: Message[], response: F
         messagesToInsert.push({
           conversationId,
           role: m.role,
-          content: typeof m.content === "string" ? m.content : String(m.content),
+          content: m.content as any, // Prisma expects Json, passing object/array directly
+
           finishReason: null,
           messageIndex: idx,
         });
@@ -311,7 +347,8 @@ async function storeConversationPostgres(requestMessages: Message[], response: F
         messagesToInsert.push({
           conversationId,
           role: m.role || "assistant",
-          content: typeof m.content === "string" ? m.content : String(m.content),
+          content: m.content as any, // Prisma expects Json
+
           finishReason: response.choices[idx]?.finish_reason ?? null,
           messageIndex: sanitizedRequestMessages.length + idx,
         });

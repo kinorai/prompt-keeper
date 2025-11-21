@@ -75,7 +75,27 @@ async function processConversationUpsert(aggregateId: string): Promise<void> {
   const body = {
     timestamp: new Date(),
     model: convo.model,
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    messages: messages.map((m) => {
+      let content = m.content;
+      let multimodal_content = undefined;
+
+      // Handle multimodal content (array)
+      if (Array.isArray(m.content)) {
+        // Extract text for the main content field (to satisfy text mapping)
+        content = (m.content as any[])
+          .filter((c) => c.type === "text")
+          .map((c) => c.text || "")
+          .join("\n");
+        // Store full structure in a new field
+        multimodal_content = m.content;
+      }
+
+      return {
+        role: m.role,
+        content: content,
+        multimodal_content,
+      };
+    }),
     usage: {
       prompt_tokens: convo.promptTokens ?? 0,
       completion_tokens: convo.completionTokens ?? 0,
