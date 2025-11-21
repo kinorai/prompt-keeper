@@ -8,6 +8,31 @@ import type { Highlight, HighlightField } from "@opensearch-project/opensearch/a
 import type { QueryContainer } from "@opensearch-project/opensearch/api/_types/_common.query_dsl";
 
 const log = createLogger("api:search");
+
+// Types for OpenSearch response structure
+interface MessageContentItem {
+  type: string;
+  text?: string;
+  image_url?: { url: string };
+}
+
+interface SearchMessage {
+  role: string;
+  content: string | MessageContentItem[];
+  multimodal_content?: MessageContentItem[];
+}
+
+interface SearchHitSource {
+  messages?: SearchMessage[];
+  [key: string]: unknown;
+}
+
+interface SearchHit {
+  _source?: SearchHitSource;
+  highlight?: Record<string, string[]>;
+  [key: string]: unknown;
+}
+
 const FUZZINESS_SETTING = "AUTO:2,3";
 const FUZZY_PREFIX_LENGTH = 1;
 const MIN_FUZZY_TERM_LENGTH = 3;
@@ -317,17 +342,16 @@ export async function POST(req: NextRequest) {
         _source: true,
       },
     });
-
     const searchTime = Date.now() - startTime;
 
     const hits = response.body.hits.hits;
 
     // Process hits to sign URLs for S3 images
     await Promise.all(
-      hits.map(async (hit: any) => {
+      hits.map(async (hit: SearchHit) => {
         if (hit._source?.messages) {
           await Promise.all(
-            hit._source.messages.map(async (msg: any) => {
+            hit._source.messages.map(async (msg: SearchMessage) => {
               // If multimodal_content exists, use it as the main content
               if (msg.multimodal_content) {
                 msg.content = msg.multimodal_content;
@@ -335,7 +359,7 @@ export async function POST(req: NextRequest) {
 
               if (Array.isArray(msg.content)) {
                 await Promise.all(
-                  msg.content.map(async (item: any) => {
+                  msg.content.map(async (item: MessageContentItem) => {
                     if (item.type === "image_url" && item.image_url?.url?.startsWith("s3://")) {
                       const key = item.image_url.url.replace("s3://", "");
                       const signedUrl = await getPresignedUrl(key);

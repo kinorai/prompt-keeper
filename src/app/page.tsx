@@ -349,7 +349,7 @@ function HomeContent() {
     return debounce(() => {
       handleSearch();
     }, SEARCH_BEHAVIOR_DEFAULTS.searchDebounceMs);
-  }, [handleSearch, query]);
+  }, [handleSearch]);
 
   // Debounced search for filter changes (time range, size, roles)
   const debouncedFilterSearch = useMemo(() => {
