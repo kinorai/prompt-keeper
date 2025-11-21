@@ -10,7 +10,7 @@ const log = createLogger("opensearch");
  * This client is used throughout the application for all OpenSearch operations.
  */
 const client = new Client({
-  node: process.env.OPENSEARCH_URL || "http://localhost:9200",
+  node: process.env.OPENSEARCH_URL || "",
   auth: {
     username: process.env.OPENSEARCH_USERNAME || "",
     password: process.env.OPENSEARCH_PASSWORD || "",
