@@ -9,7 +9,6 @@ const S3_ACCESS_KEY = process.env.S3_ACCESS_KEY;
 const S3_SECRET_KEY = process.env.S3_SECRET_KEY;
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const S3_REGION = process.env.S3_REGION;
-const S3_FORCE_PATH_STYLE = process.env.S3_FORCE_PATH_STYLE === "true";
 
 const s3Client = new S3Client({
   region: S3_REGION,
@@ -18,7 +17,7 @@ const s3Client = new S3Client({
     accessKeyId: S3_ACCESS_KEY || "",
     secretAccessKey: S3_SECRET_KEY || "",
   },
-  forcePathStyle: S3_FORCE_PATH_STYLE,
+  forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
 });
 
 export async function uploadFile(key: string, buffer: Buffer, contentType: string) {
