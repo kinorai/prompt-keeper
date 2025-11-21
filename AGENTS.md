@@ -90,6 +90,7 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, 
 ## PR instructions
 - Always run `npm run lint`
 - Always run `npm run test`
+- Never run `npm run build` ! except if asked to !
 
 ## Debug
 
