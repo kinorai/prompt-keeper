@@ -16,6 +16,7 @@ import {
   X,
   Maximize2,
 } from "lucide-react";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { ModelBadge } from "@/components/badges";
@@ -233,30 +234,25 @@ const ChatBubble: React.FC<{
   const [isSystemExpanded, setIsSystemExpanded] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
-  let alignmentClass = "";
   let bubbleBg = "";
   let icon = null;
 
   switch (message.role) {
     case "assistant":
-      alignmentClass = "justify-start";
       // Assistant should not be in a bubble (no background)
       bubbleBg = "";
       icon = <Bot className="h-4 w-4" />;
       break;
     case "user":
-      alignmentClass = "justify-end";
       // User bubble background must be #e9e9e980
       bubbleBg = "bg-[var(--pk-user-bubble-bg)]";
       icon = <User className="h-4 w-4" />;
       break;
     case "system":
-      alignmentClass = "justify-center";
       bubbleBg = "bg-gray-200 dark:bg-gray-800";
       icon = <Info className="h-4 w-4" />;
       break;
     default:
-      alignmentClass = "justify-start";
       bubbleBg = "bg-gray-50 dark:bg-gray-900";
   }
 
@@ -287,7 +283,9 @@ const ChatBubble: React.FC<{
           <div className={`flex flex-row flex-wrap gap-2 mb-1 ${isUserMessage ? "justify-end" : "justify-start"}`}>
             {images.map((item, idx) => (
               <div key={idx} className="relative group flex-shrink-0">
-                <img
+                <Image
+                  width={500}
+                  height={500}
                   src={item.image_url!.url}
                   alt="User uploaded content"
                   className="h-24 w-auto rounded-md border border-border object-cover cursor-pointer hover:opacity-90 transition-opacity"
@@ -379,9 +377,11 @@ const ChatBubble: React.FC<{
           >
             <X className="h-6 w-6" />
           </Button>
-          <img
+          <Image
             src={fullscreenImage}
             alt="Fullscreen view"
+            width={500}
+            height={500}
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />

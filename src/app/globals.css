@@ -61,14 +61,17 @@
     from {
       height: 0;
     }
+
     to {
       height: var(--radix-accordion-content-height);
     }
   }
+
   @keyframes accordion-up {
     from {
       height: var(--radix-accordion-content-height);
     }
+
     to {
       height: 0;
     }
@@ -125,9 +128,12 @@
     --sidebar-ring: 222.2 84% 4.9%;
     /* Prompt Keeper custom vars */
     --pk-user-bubble-bg: #e9e9e980;
-    --pk-conv-list-hover-bg: #0000000a; /* light hover */
-    --pk-conv-list-active-bg: #0000000f; /* light active */
+    --pk-conv-list-hover-bg: #0000000a;
+    /* light hover */
+    --pk-conv-list-active-bg: #0000000f;
+    /* light active */
   }
+
   .dark {
     --background: 0 0% 0%;
     --foreground: 210 40% 98%;
@@ -137,7 +143,8 @@
     --popover-foreground: 210 40% 98%;
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 0 0% 18%; /* ~#303030 */
+    --secondary: 0 0% 18%;
+    /* ~#303030 */
     --secondary-foreground: 210 40% 98%;
     --muted: 0 0% 18%;
     --muted-foreground: 215 20.2% 65.1%;
@@ -163,8 +170,10 @@
     --sidebar-ring: 212.7 26.8% 83.9%;
     /* Prompt Keeper custom vars */
     --pk-user-bubble-bg: #323232d9;
-    --pk-conv-list-hover-bg: #fff0; /* dark hover */
-    --pk-conv-list-active-bg: #ffffff0d; /* dark active */
+    --pk-conv-list-hover-bg: #fff0;
+    /* dark hover */
+    --pk-conv-list-active-bg: #ffffff0d;
+    /* dark active */
   }
 }
 
@@ -172,15 +181,18 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-geist-sans), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
   html {
     -webkit-text-size-adjust: 100%;
   }
+
   .container {
     @apply px-2 sm:px-4 lg:px-8 max-w-6xl mx-auto;
   }
@@ -418,8 +430,8 @@
   @apply text-primary underline hover:text-primary/80 transition-colors;
 }
 
-.prose img,
-.sd-prose img {
+.prose Image,
+.sd-prose Image {
   @apply max-w-full h-auto rounded-md my-4;
 }
 
