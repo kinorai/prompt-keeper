@@ -7,8 +7,8 @@ import { createLogger } from "@/lib/logger";
 const log = createLogger("auth");
 
 // Secret keys for JWT signing and verification
-const ACCESS_TOKEN_SECRET = new TextEncoder().encode(process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET);
-const REFRESH_TOKEN_SECRET = new TextEncoder().encode(process.env.REFRESH_TOKEN_SECRET);
+const ACCESS_TOKEN_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+const REFRESH_TOKEN_SECRET = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET);
 
 // Token expiration times
 const ACCESS_TOKEN_EXPIRATION = "15m"; // 15 minutes

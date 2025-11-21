@@ -66,9 +66,9 @@ Prompt Keeper uses three authentication methods:
     -   Set the following environment variables in your `.env` file:
         -   `AUTH_USERNAME`: The desired username for the UI login.
         -   `AUTH_PASSWORD_HASH`: The APR1-MD5 hash of the desired password. Generate this using the openssl command shown in the installation steps (e.g., `openssl passwd -apr1 "your_password_here" | sed 's/\$/\\$/g'`).
-        -   `ACCESS_TOKEN_SECRET`: A long, random, secret string used for signing access tokens (15m expiry).
-        -   `REFRESH_TOKEN_SECRET`: A long, random, secret string used for signing refresh tokens (7d expiry).
-        -   `JWT_SECRET`: (Optional) Can be used as fallback for ACCESS_TOKEN_SECRET if not set.
+        -   `JWT_SECRET`: A long, random, secret string used for signing access tokens (15m expiry).
+        -   `JWT_REFRESH_SECRET`: A long, random, secret string used for signing refresh tokens (7d expiry).
+
 
 2.  **LiteLLM API Authentication**: For LLM API routes (`/api/chat/completions`, `/api/completions`, `/api/models`).
 
