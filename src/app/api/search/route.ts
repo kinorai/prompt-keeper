@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/opensearch";
 import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/search-highlights";
 import { createLogger } from "@/lib/logger";
+import { getPresignedUrl } from "@/lib/s3";
 import type { Highlight, HighlightField } from "@opensearch-project/opensearch/api/_types/_core.search";
+
 import type { QueryContainer } from "@opensearch-project/opensearch/api/_types/_common.query_dsl";
 
 const log = createLogger("api:search");
@@ -318,9 +320,41 @@ export async function POST(req: NextRequest) {
 
     const searchTime = Date.now() - startTime;
 
+    const hits = response.body.hits.hits;
+
+    // Process hits to sign URLs for S3 images
+    await Promise.all(
+      hits.map(async (hit: any) => {
+        if (hit._source?.messages) {
+          await Promise.all(
+            hit._source.messages.map(async (msg: any) => {
+              // If multimodal_content exists, use it as the main content
+              if (msg.multimodal_content) {
+                msg.content = msg.multimodal_content;
+              }
+
+              if (Array.isArray(msg.content)) {
+                await Promise.all(
+                  msg.content.map(async (item: any) => {
+                    if (item.type === "image_url" && item.image_url?.url?.startsWith("s3://")) {
+                      const key = item.image_url.url.replace("s3://", "");
+                      const signedUrl = await getPresignedUrl(key);
+                      if (signedUrl) {
+                        item.image_url.url = signedUrl;
+                      }
+                    }
+                  }),
+                );
+              }
+            }),
+          );
+        }
+      }),
+    );
+
     return NextResponse.json({
       hits: {
-        hits: response.body.hits.hits,
+        hits: hits,
         total: response.body.hits.total,
       },
       took: response.body.took || searchTime,
