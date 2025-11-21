@@ -1,13 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  AUTH_COOKIE_NAME,
-  REFRESH_TOKEN_COOKIE_NAME,
-  verifyApiKey,
-  verifyToken,
-  verifyRefreshToken,
-  createToken,
-  createRefreshToken,
-} from "./lib/auth";
 
 // LiteLLM API routes that should use LiteLLM authentication
 const LITELLM_ROUTES = ["/api/chat/completions", "/api/completions", "/api/models"];
@@ -34,8 +25,7 @@ export async function middleware(request: NextRequest) {
   // Skip authentication for login, auth endpoints, and health probes
   if (
     request.nextUrl.pathname === "/login" ||
-    request.nextUrl.pathname === "/api/auth/login" ||
-    request.nextUrl.pathname === "/api/auth/refresh" ||
+    request.nextUrl.pathname.startsWith("/api/auth") ||
     request.nextUrl.pathname === "/api/healthz" ||
     request.nextUrl.pathname === "/api/readyz" ||
     request.nextUrl.pathname === "/api/livez"
@@ -54,53 +44,20 @@ export async function middleware(request: NextRequest) {
     }
 
     // For non-LiteLLM API routes, require X-Prompt-Keeper-API-Key
-    if (verifyApiKey(request)) {
+    const apiKey = request.headers.get("X-Prompt-Keeper-API-Key");
+    const envApiKey = process.env.PROMPT_KEEPER_API_KEY;
+    if (envApiKey && apiKey === envApiKey) {
       return response;
     }
 
-    // If no API key, check for cookie authentication
-    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-    if (token) {
-      const user = await verifyToken(token);
-      if (user) {
-        return response;
-      }
+    // If no API key, check for Better Auth session cookie
+    // We just check for existence here, actual validation happens in the route handler
+    const sessionToken = request.cookies.get("better-auth.session_token")?.value;
+    if (sessionToken) {
+      return response;
     }
 
-    // Attempt refresh-token based re-authentication
-    const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_NAME)?.value;
-    if (refreshToken) {
-      const userFromRefresh = await verifyRefreshToken(refreshToken);
-      if (userFromRefresh) {
-        const newAccessToken = await createToken(userFromRefresh);
-        const newRefreshToken = await createRefreshToken(userFromRefresh);
-
-        // Set rotated cookies and allow the request to proceed
-        response.cookies.set({
-          name: AUTH_COOKIE_NAME,
-          value: newAccessToken,
-          httpOnly: true,
-          path: "/",
-          secure: process.env.NODE_ENV === "production",
-          maxAge: 60 * 15, // 15 minutes
-          sameSite: "strict",
-        });
-
-        response.cookies.set({
-          name: REFRESH_TOKEN_COOKIE_NAME,
-          value: newRefreshToken,
-          httpOnly: true,
-          path: "/",
-          secure: process.env.NODE_ENV === "production",
-          maxAge: 60 * 60 * 24 * 7, // 7 days
-          sameSite: "strict",
-        });
-
-        return response;
-      }
-    }
-
-    // If no valid authentication and refresh failed, return 401
+    // If no valid authentication, return 401
     return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: {
@@ -109,51 +66,14 @@ export async function middleware(request: NextRequest) {
     });
   }
 
-  // For UI routes, check for cookie authentication
-  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  if (token) {
-    const user = await verifyToken(token);
-    if (user) {
-      return response;
-    }
+  // For UI routes, check for Better Auth session cookie
+  const sessionToken = request.cookies.get("better-auth.session_token")?.value;
+  if (sessionToken) {
+    return response;
   }
 
-  // Attempt refresh-token based re-authentication for UI routes
-  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_NAME)?.value;
-  if (refreshToken) {
-    const userFromRefresh = await verifyRefreshToken(refreshToken);
-    if (userFromRefresh) {
-      const newAccessToken = await createToken(userFromRefresh);
-      const newRefreshToken = await createRefreshToken(userFromRefresh);
-
-      response.cookies.set({
-        name: AUTH_COOKIE_NAME,
-        value: newAccessToken,
-        httpOnly: true,
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 15, // 15 minutes
-        sameSite: "strict",
-      });
-
-      response.cookies.set({
-        name: REFRESH_TOKEN_COOKIE_NAME,
-        value: newRefreshToken,
-        httpOnly: true,
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        sameSite: "strict",
-      });
-
-      return response;
-    }
-  }
-
-  // Redirect to login page if token is invalid and refresh failed
+  // Redirect to login page if token is invalid
   return NextResponse.redirect(new URL("/login", request.url));
-
-  return response;
 }
 
 export const config = {
