@@ -61,23 +61,20 @@ Prompt Keeper uses a LiteLLM YAML config file — by default it looks for `confi
 
 Prompt Keeper uses three authentication methods:
 
-1.  **UI Authentication**: Secure authentication with password hashing and JWT tokens.
-
-    -   Set the following environment variables in your `.env` file:
-        -   `AUTH_USERNAME`: The desired username for the UI login.
-        -   `AUTH_PASSWORD_HASH`: The APR1-MD5 hash of the desired password. Generate this using the openssl command shown in the installation steps (e.g., `openssl passwd -apr1 "your_password_here" | sed 's/\$/\\$/g'`).
-        -   `JWT_SECRET`: A long, random, secret string used for signing access tokens (15m expiry).
-        -   `JWT_REFRESH_SECRET`: A long, random, secret string used for signing refresh tokens (7d expiry).
-
+1.  **UI Authentication**: Secure authentication using **Better Auth**.
+    -   **First Run**: The first user to sign up becomes the **Admin**. Subsequent signups are disabled by default.
+    -   **Passkeys**: Supports secure passwordless login with Passkeys (TouchID, FaceID, etc.).
+    -   **Environment Variables**:
+        -   `BETTER_AUTH_SECRET`: A secure random string for signing session cookies.
+        -   `BETTER_AUTH_URL`: The full URL of your application (e.g., `http://localhost:3000`).
+        -   `ENABLE_SIGNUP`: Set to `true` to allow additional users to sign up (default: `false`).
 
 2.  **LiteLLM API Authentication**: For LLM API routes (`/api/chat/completions`, `/api/completions`, `/api/models`).
 
     -   Uses LiteLLM's authentication mechanism
     -   Configure through LiteLLM environment variables (e.g., `LITELLM_MASTER_KEY`)
 
-3.  **Token Refresh**: The refresh endpoint at `/api/auth/refresh` allows clients to obtain new access tokens using valid refresh tokens.
-
-4.  **Prompt Keeper API Authentication**: For all other API routes (e.g., `/api/search`).
+3.  **Prompt Keeper API Authentication**: For all other API routes (e.g., `/api/search`).
     -   Set `PROMPT_KEEPER_API_KEY` in your `.env` file.
     -   Include the API key in your requests using the custom header:
 
