@@ -15,8 +15,6 @@ if (!global.crypto) {
 
 // Mock Next.js environment variables
 Object.defineProperty(process.env, "NODE_ENV", { value: "test" });
-process.env.AUTH_USERNAME = "testuser";
-process.env.AUTH_PASSWORD_HASH = "$2a$10$mockhashedpassword";
 process.env.PROMPT_KEEPER_API_KEY = "test-api-key";
 process.env.JWT_SECRET = "test-secret-key";
 process.env.POSTGRES_PRISMA_URL = "postgresql://test/test@test:5432/db"; // not used due to prisma mock
