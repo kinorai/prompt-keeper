@@ -1,0 +1,57 @@
+# syntax=docker/dockerfile:1
+
+FROM node:23-alpine AS base
+ENV NODE_ENV=production
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Install dependencies based on the preferred package manager
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
+RUN \
+    if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+    elif [ -f package-lock.json ]; then npm ci --no-audit; \
+    elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+    else echo "Lockfile not found." && exit 1; \
+    fi
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Bundle the worker using esbuild
+# We use npx to run esbuild without adding it to devDependencies if not present,
+# but it's better to rely on installed deps if possible.
+# Assuming esbuild might not be in deps, we use npx -y.
+# We externalize all dependencies to keep the bundle small and avoid native module issues.
+RUN npx -y esbuild src/workers/outbox.ts \
+    --bundle \
+    --platform=node \
+    --target=node20 \
+    --outfile=dist/outbox.js \
+    --packages=external \
+    --sourcemap
+
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy node_modules from builder (production deps would be better but we reused deps which has all)
+# To be cleaner we could have a separate prod-deps stage, but for now copying from builder is safe enough
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/dist/outbox.js ./dist/outbox.js
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+
+USER nextjs
+
+CMD ["node", "dist/outbox.js"]
