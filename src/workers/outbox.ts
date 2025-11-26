@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { createServer } from "http";
 import { createLogger } from "../lib/logger";
 import getPrisma from "../lib/prisma";
 import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "../lib/opensearch";
@@ -24,9 +25,14 @@ const CONFIG = {
   shardId: Number(process.env.WORKER_SHARD_ID || 0),
   shardTotal: Math.max(1, Number(process.env.WORKER_SHARD_TOTAL || 1)),
   lockTtlMs: 60000,
+  healthPort: Number(process.env.HEALTH_PORT || 3001),
 };
 
 const WORKER_ID = `${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
+
+// Health state tracking
+let isLive = false;
+let lastPollTime = Date.now();
 
 function modHash(str: string, mod: number): number {
   let h = 0;
@@ -171,9 +177,100 @@ async function pollOnce(): Promise<void> {
   for (const e of batch) {
     await processEvent(e as OutboxEventRecord);
   }
+
+  // Update last poll time for liveness tracking
+  lastPollTime = Date.now();
+}
+
+// Health check functions
+async function checkPostgres(): Promise<{ ok: boolean; detail?: unknown }> {
+  try {
+    const prisma = getPrisma();
+    await prisma.$queryRaw`SELECT 1`;
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, detail: (error as Error).message };
+  }
+}
+
+async function checkOpenSearch(): Promise<{ ok: boolean; detail?: unknown }> {
+  try {
+    const resp = await opensearchClient.ping();
+    if (resp.body === true) {
+      return { ok: true };
+    }
+    return { ok: false, detail: resp.body };
+  } catch (error) {
+    return { ok: false, detail: (error as Error).message };
+  }
+}
+
+// HTTP Health Server
+function startHealthServer() {
+  const server = createServer(async (req, res) => {
+    const url = req.url || "/";
+
+    // Basic health check
+    if (url === "/healthz") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ status: "ok" }));
+      return;
+    }
+
+    // Liveness check - ensure main loop is running and polling
+    if (url === "/livez") {
+      const timeSinceLastPoll = Date.now() - lastPollTime;
+      const isHealthy = isLive && timeSinceLastPoll < CONFIG.pollIntervalMs * 3; // 3x poll interval
+      const status = isHealthy ? 200 : 503;
+      res.writeHead(status, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          status: isHealthy ? "live" : "unhealthy",
+          checks: {
+            timeSinceLastPoll,
+            threshold: CONFIG.pollIntervalMs * 3,
+          },
+          timestamp: new Date().toISOString(),
+        }),
+      );
+      return;
+    }
+
+    // Readiness check - ensure dependencies are reachable
+    if (url === "/readyz") {
+      const [pg, os] = await Promise.all([checkPostgres(), checkOpenSearch()]);
+      const allOk = pg.ok && os.ok;
+      const status = allOk ? 200 : 503;
+      res.writeHead(status, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          status: allOk ? "ready" : "degraded",
+          checks: {
+            postgres: pg,
+            opensearch: os,
+          },
+          timestamp: new Date().toISOString(),
+        }),
+      );
+      return;
+    }
+
+    // 404 for unknown routes
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Not found" }));
+  });
+
+  server.listen(CONFIG.healthPort, () => {
+    log.info({ port: CONFIG.healthPort }, "Health server listening");
+  });
+
+  return server;
 }
 
 async function main() {
+  // Start health server first
+  startHealthServer();
+
   log.info(
     {
       pollIntervalMs: CONFIG.pollIntervalMs,
@@ -181,9 +278,14 @@ async function main() {
       shardId: CONFIG.shardId,
       shardTotal: CONFIG.shardTotal,
       workerId: WORKER_ID,
+      healthPort: CONFIG.healthPort,
     },
     "Outbox worker started",
   );
+
+  // Mark as live after successful startup
+  isLive = true;
+  lastPollTime = Date.now();
 
   while (true) {
     try {
