@@ -20,6 +20,7 @@ export default defineConfig([
     "**/.next/**",
     "out/**",
     "build/**",
+    "dist/**",
     ".DS_Store",
     "*.pem",
     ".vscode/**",

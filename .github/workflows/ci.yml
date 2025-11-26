@@ -6,8 +6,7 @@ on:
   pull_request:
     branches: [main, develop]
 
-env:
-  REGISTRY_IMAGE: kinorai/prompt-keeper
+
 
 jobs:
   setup:
@@ -114,6 +113,11 @@ jobs:
         platform:
           - linux/amd64
           - linux/arm64
+        component:
+          - name: app
+            file: Dockerfile
+          - name: outbox-worker
+            file: Dockerfile.outbox-worker
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -128,10 +132,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ${{ matrix.component.file }}
           platforms: ${{ matrix.platform }}
           push: false
-          cache-from: type=gha,scope=buildkit-pr-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=buildkit-pr-${{ matrix.platform }}
+          cache-from: type=gha,scope=buildkit-pr-${{ matrix.component.name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=buildkit-pr-${{ matrix.component.name }}-${{ matrix.platform }}
 
   build_edge_pr:
     name: Build Edge Platform-Specific Images (PRs)
@@ -144,11 +149,19 @@ jobs:
         platform:
           - linux/amd64
           - linux/arm64
+        component:
+          - name: app
+            file: Dockerfile
+            image: kinorai/prompt-keeper
+          - name: outbox-worker
+            file: Dockerfile.outbox-worker
+            image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+          echo "REGISTRY_IMAGE=${{ matrix.component.image }}" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Login to Docker Hub
@@ -165,11 +178,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ${{ matrix.component.file }}
           platforms: ${{ matrix.platform }}
           tags: ${{ env.REGISTRY_IMAGE }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=buildkit-edge-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=buildkit-edge-${{ matrix.platform }}
+          cache-from: type=gha,scope=buildkit-edge-${{ matrix.component.name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=buildkit-edge-${{ matrix.component.name }}-${{ matrix.platform }}
       - name: Export digest
         run: |
           mkdir -p ${{ runner.temp }}/digests
@@ -178,7 +192,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-edge-${{ env.PLATFORM_PAIR }}
+          name: digests-edge-${{ matrix.component.name }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -188,12 +202,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_edge_pr
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - name: app
+            image: kinorai/prompt-keeper
+          - name: outbox-worker
+            image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-edge-*
+          pattern: digests-edge-${{ matrix.component.name }}-*
           merge-multiple: true
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -205,10 +227,10 @@ jobs:
       - name: Create manifest list and push (edge)
         working-directory: ${{ runner.temp }}/digests
         run: |
-          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:edge \
-            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+          docker buildx imagetools create -t ${{ matrix.component.image }}:edge \
+            $(printf '${{ matrix.component.image }}@sha256:%s ' *)
       - name: Inspect image (edge)
-        run: docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:edge
+        run: docker buildx imagetools inspect ${{ matrix.component.image }}:edge
 
   build_dev:
     name: Build Dev Platform-Specific Images
@@ -221,11 +243,19 @@ jobs:
         platform:
           - linux/amd64
           - linux/arm64
+        component:
+          - name: app
+            file: Dockerfile
+            image: kinorai/prompt-keeper
+          - name: outbox-worker
+            file: Dockerfile.outbox-worker
+            image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+          echo "REGISTRY_IMAGE=${{ matrix.component.image }}" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Login to Docker Hub
@@ -242,11 +272,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ${{ matrix.component.file }}
           platforms: ${{ matrix.platform }}
           tags: ${{ env.REGISTRY_IMAGE }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=buildkit-dev-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=buildkit-dev-${{ matrix.platform }}
+          cache-from: type=gha,scope=buildkit-dev-${{ matrix.component.name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=buildkit-dev-${{ matrix.component.name }}-${{ matrix.platform }}
       - name: Export digest
         run: |
           mkdir -p ${{ runner.temp }}/digests
@@ -255,7 +286,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-dev-${{ env.PLATFORM_PAIR }}
+          name: digests-dev-${{ matrix.component.name }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -265,12 +296,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_dev
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - name: app
+            image: kinorai/prompt-keeper
+          - name: outbox-worker
+            image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-dev-*
+          pattern: digests-dev-${{ matrix.component.name }}-*
           merge-multiple: true
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -282,22 +321,30 @@ jobs:
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
         run: |
-          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:dev \
-            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+          docker buildx imagetools create -t ${{ matrix.component.image }}:dev \
+            $(printf '${{ matrix.component.image }}@sha256:%s ' *)
       - name: Inspect image
-        run: docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:dev
+        run: docker buildx imagetools inspect ${{ matrix.component.image }}:dev
 
   merge_edge_dev:
     name: Merge and Push Edge Image from Dev Digests
     runs-on: ubuntu-latest
     needs: build_dev
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - name: app
+            image: kinorai/prompt-keeper
+          - name: outbox-worker
+            image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-dev-*
+          pattern: digests-dev-${{ matrix.component.name }}-*
           merge-multiple: true
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -309,10 +356,10 @@ jobs:
       - name: Create manifest list and push (edge)
         working-directory: ${{ runner.temp }}/digests
         run: |
-          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:edge \
-            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+          docker buildx imagetools create -t ${{ matrix.component.image }}:edge \
+            $(printf '${{ matrix.component.image }}@sha256:%s ' *)
       - name: Inspect image (edge)
-        run: docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:edge
+        run: docker buildx imagetools inspect ${{ matrix.component.image }}:edge
 
   versioning:
     name: Versioning
@@ -356,11 +403,20 @@ jobs:
         platform:
           - linux/amd64
           - linux/arm64
+        component:
+          - name: app
+            file: Dockerfile
+            image: kinorai/prompt-keeper
+          - name: outbox-worker
+            file: Dockerfile.outbox-worker
+            image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
+          platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+          echo "REGISTRY_IMAGE=${{ matrix.component.image }}" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -384,12 +440,13 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ${{ matrix.component.file }}
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ env.REGISTRY_IMAGE }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=buildkit-release-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=buildkit-release-${{ matrix.platform }}
+          cache-from: type=gha,scope=buildkit-release-${{ matrix.component.name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=buildkit-release-${{ matrix.component.name }}-${{ matrix.platform }}
       - name: Export digest
         run: |
           mkdir -p ${{ runner.temp }}/digests
@@ -398,7 +455,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-release-${{ env.PLATFORM_PAIR }}
+          name: digests-release-${{ matrix.component.name }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -408,12 +465,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_release, versioning]
     if: needs.versioning.outputs.skipped != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - name: app
+            image: kinorai/prompt-keeper
+          - name: outbox-worker
+            image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-release-*
+          pattern: digests-release-${{ matrix.component.name }}-*
           merge-multiple: true
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -426,7 +491,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_IMAGE }}
+          images: ${{ matrix.component.image }}
           tags: |
             type=raw,value=latest
             type=raw,value=${{ needs.versioning.outputs.version }}
@@ -434,7 +499,7 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+            $(printf '${{ matrix.component.image }}@sha256:%s ' *)
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ needs.versioning.outputs.version }}
+          docker buildx imagetools inspect ${{ matrix.component.image }}:${{ needs.versioning.outputs.version }}
