@@ -20,7 +20,7 @@ jest.mock("@/lib/opensearch", () => {
   };
   return {
     __esModule: true,
-    default: mockClient,
+    getOpenSearchClient: jest.fn(() => mockClient),
     PROMPT_KEEPER_INDEX: "prompt-keeper-v2",
     ensureIndexExists: jest.fn().mockResolvedValue(undefined),
     checkIndexExists: jest.fn().mockResolvedValue(true),
@@ -29,8 +29,11 @@ jest.mock("@/lib/opensearch", () => {
   };
 });
 
-// Import the mocked OpenSearch client
-import opensearchClient from "@/lib/opensearch";
+// Import the mocked OpenSearch client getter
+import { getOpenSearchClient } from "@/lib/opensearch";
+
+// Get the mock client instance for assertions
+const opensearchClient = getOpenSearchClient();
 
 describe("Search API Route", () => {
   beforeEach(() => {
