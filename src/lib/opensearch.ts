@@ -7,20 +7,37 @@ const log = createLogger("opensearch");
 
 /**
  * OpenSearch client instance configured from environment variables.
- * This client is used throughout the application for all OpenSearch operations.
+ * This client is lazily initialized on first use to avoid errors during build time.
  */
-const client = new Client({
-  node: process.env.OPENSEARCH_URL || "",
-  auth: {
-    username: process.env.OPENSEARCH_USERNAME || "",
-    password: process.env.OPENSEARCH_PASSWORD || "",
-  },
-  ssl: {
-    rejectUnauthorized: process.env.NODE_ENV === "production",
-  },
-  maxRetries: 3,
-  requestTimeout: 30000,
-});
+let client: Client | null = null;
+
+/**
+ * Get or create the OpenSearch client instance.
+ * The client is lazily initialized only when this function is called,
+ * preventing issues during build time when environment variables may not be available.
+ *
+ * @returns {Client} The OpenSearch client instance
+ */
+// Note: No default export to prevent eager client initialization at import time.
+// Always use getOpenSearchClient() to get the client instance.
+export function getOpenSearchClient(): Client {
+  if (client) return client;
+
+  client = new Client({
+    node: process.env.OPENSEARCH_URL || "",
+    auth: {
+      username: process.env.OPENSEARCH_USERNAME || "",
+      password: process.env.OPENSEARCH_PASSWORD || "",
+    },
+    ssl: {
+      rejectUnauthorized: process.env.NODE_ENV === "production",
+    },
+    maxRetries: 3,
+    requestTimeout: 30000,
+  });
+
+  return client;
+}
 
 export const PROMPT_KEEPER_INDEX = "prompt-keeper-v2";
 
@@ -147,7 +164,7 @@ const INDEX_MAPPING = {
  */
 export async function checkIndexExists(): Promise<boolean> {
   try {
-    const response = await client.indices.exists({
+    const response = await getOpenSearchClient().indices.exists({
       index: PROMPT_KEEPER_INDEX,
     });
     return response.body;
@@ -181,7 +198,7 @@ export async function initializeIndex() {
 
     if (!indexExists) {
       log.info(`Creating index ${PROMPT_KEEPER_INDEX}...`);
-      await client.indices.create({
+      await getOpenSearchClient().indices.create({
         index: PROMPT_KEEPER_INDEX,
         body: {
           settings: INDEX_SETTINGS,
@@ -230,5 +247,3 @@ export async function ensureIndexExists() {
 export function resetInitializationState() {
   isInitialized = false;
 }
-
-export default client;
