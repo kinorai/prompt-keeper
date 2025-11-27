@@ -1,14 +1,21 @@
 import { GET } from "@/app/api/readyz/route";
-import opensearchClient from "@/lib/opensearch";
 
 // Mock OpenSearch client
-jest.mock("@/lib/opensearch", () => ({
-  __esModule: true,
-  default: {
+jest.mock("@/lib/opensearch", () => {
+  const mockClient = {
     ping: jest.fn(),
-  },
-  ensureIndexExists: jest.fn().mockResolvedValue(undefined),
-}));
+  };
+  return {
+    __esModule: true,
+    getOpenSearchClient: jest.fn(() => mockClient),
+    ensureIndexExists: jest.fn().mockResolvedValue(undefined),
+  };
+});
+
+import { getOpenSearchClient } from "@/lib/opensearch";
+
+// Get the mock client instance for assertions
+const opensearchClient = getOpenSearchClient();
 
 // Mock fetch globally
 global.fetch = jest.fn();
