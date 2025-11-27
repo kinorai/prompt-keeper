@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createServer } from "http";
 import { createLogger } from "../lib/logger";
 import getPrisma from "../lib/prisma";
-import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "../lib/opensearch";
+import { getOpenSearchClient, PROMPT_KEEPER_INDEX, ensureIndexExists } from "../lib/opensearch";
 
 const log = createLogger("worker:outbox");
 
@@ -114,12 +114,12 @@ async function processConversationUpsert(aggregateId: string): Promise<void> {
   } as const;
 
   await ensureIndexExists();
-  await opensearchClient.index({ index: PROMPT_KEEPER_INDEX, id: aggregateId, body });
+  await getOpenSearchClient().index({ index: PROMPT_KEEPER_INDEX, id: aggregateId, body });
 }
 
 async function processConversationDelete(aggregateId: string): Promise<void> {
   try {
-    await opensearchClient.delete({
+    await getOpenSearchClient().delete({
       index: PROMPT_KEEPER_INDEX,
       id: aggregateId,
       refresh: "wait_for",
@@ -195,7 +195,7 @@ async function checkPostgres(): Promise<{ ok: boolean; detail?: unknown }> {
 
 async function checkOpenSearch(): Promise<{ ok: boolean; detail?: unknown }> {
   try {
-    const resp = await opensearchClient.ping();
+    const resp = await getOpenSearchClient().ping();
     if (resp.body === true) {
       return { ok: true };
     }

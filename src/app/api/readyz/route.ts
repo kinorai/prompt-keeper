@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import client, { ensureIndexExists } from "@/lib/opensearch";
+import { getOpenSearchClient, ensureIndexExists } from "@/lib/opensearch";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api:readyz");
@@ -7,7 +7,7 @@ const log = createLogger("api:readyz");
 async function checkOpenSearch(): Promise<{ ok: boolean; detail?: unknown }> {
   try {
     // lightweight ping
-    const resp = await client.ping();
+    const resp = await getOpenSearchClient().ping();
     if (resp.body === true) {
       await ensureIndexExists();
       return { ok: true };

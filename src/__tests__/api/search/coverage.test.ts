@@ -3,14 +3,24 @@ import { NextRequest } from "next/server";
 
 // Type for OpenSearch filter objects
 type OpenSearchFilter = { range?: { timestamp?: { gte?: string; lte?: string } } } | Record<string, unknown>;
-import opensearchClient from "@/lib/opensearch";
+
+jest.mock("@/lib/opensearch", () => {
+  const mockClient = {
+    search: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    getOpenSearchClient: jest.fn(() => mockClient),
+    ensureIndexExists: jest.fn().mockResolvedValue(undefined),
+    PROMPT_KEEPER_INDEX: "prompt-keeper",
+  };
+});
+
+import { getOpenSearchClient } from "@/lib/opensearch";
 import { getPresignedUrl } from "@/lib/s3";
 
-jest.mock("@/lib/opensearch", () => ({
-  search: jest.fn(),
-  ensureIndexExists: jest.fn().mockResolvedValue(undefined),
-  PROMPT_KEEPER_INDEX: "prompt-keeper",
-}));
+// Get the mock client instance for assertions
+const opensearchClient = getOpenSearchClient();
 
 jest.mock("@/lib/s3", () => ({
   getPresignedUrl: jest.fn(),

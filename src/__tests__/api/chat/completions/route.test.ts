@@ -1,11 +1,10 @@
 import { POST } from "@/app/api/chat/completions/route";
 import { NextRequest, NextResponse } from "next/server";
-import opensearchClient from "@/lib/opensearch";
 
 // Mock the global fetch function
 global.fetch = jest.fn();
 
-// Mock the OpenSearch client
+// Mock OpenSearch client
 jest.mock("@/lib/opensearch", () => {
   const mockClient = {
     search: jest.fn(),
@@ -14,7 +13,7 @@ jest.mock("@/lib/opensearch", () => {
   };
   return {
     __esModule: true,
-    default: mockClient,
+    getOpenSearchClient: jest.fn(() => mockClient),
     PROMPT_KEEPER_INDEX: "prompt-keeper",
     ensureIndexExists: jest.fn().mockResolvedValue(undefined),
     checkIndexExists: jest.fn().mockResolvedValue(true),
@@ -22,6 +21,11 @@ jest.mock("@/lib/opensearch", () => {
     resetInitializationState: jest.fn(),
   };
 });
+
+import { getOpenSearchClient } from "@/lib/opensearch";
+
+// Get the mock client instance for assertions
+const opensearchClient = getOpenSearchClient();
 
 // Mock AbortSignal.timeout
 Object.defineProperty(AbortSignal, "timeout", {
