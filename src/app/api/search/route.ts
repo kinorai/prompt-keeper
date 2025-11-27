@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import opensearchClient, { PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/opensearch";
+import { getOpenSearchClient, PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/lib/opensearch";
 import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/search-highlights";
 import { createLogger } from "@/lib/logger";
 import { getPresignedUrl } from "@/lib/s3";
@@ -330,7 +330,7 @@ export async function POST(req: NextRequest) {
     log.debug(esQueryBody, "[Search API] Magic Query:");
 
     const startTime = Date.now();
-    const response = await opensearchClient.search({
+    const response = await getOpenSearchClient().search({
       index: PROMPT_KEEPER_INDEX,
       body: {
         query: esQueryBody,
