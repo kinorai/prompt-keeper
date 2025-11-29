@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import {
   endOfMonth,
@@ -61,15 +61,8 @@ export const RangeCalendarWithPresets = ({ value, onChange, className }: RangeCa
     to: endOfYear(subYears(today, 1))
   }), [today])
 
-  const [month, setMonth] = useState(value?.from ?? today)
+  const [month, setMonth] = useState(value?.to ?? value?.from ?? today)
   const [date, setDate] = useState<DateRange | undefined>(value ?? last7Days)
-
-  useEffect(() => {
-    if (value?.from && value?.to) {
-      setDate(value)
-      setMonth(value.to)
-    }
-  }, [value])
 
   const handleSelect = (newDate?: DateRange) => {
     setDate(newDate)

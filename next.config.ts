@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["pino", "pino-pretty"],
-  eslint: {
-    ignoreDuringBuilds: false,
+  turbopack: {
+    root: __dirname,
   },
   images: {
     unoptimized: true,

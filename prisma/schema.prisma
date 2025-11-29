@@ -14,7 +14,7 @@ model Conversation {
   id               String    @id @default(cuid())
   model            String
   conversationHash String?   @map("conversation_hash")
-  created          DateTime? // Upstream LLM response created time
+
   latencyMs        Float?    @map("latency_ms")
 
   // Token usage

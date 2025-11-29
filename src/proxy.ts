@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // LiteLLM API routes that should use LiteLLM authentication
 const LITELLM_ROUTES = ["/api/chat/completions", "/api/completions", "/api/models"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Set CORS headers
   const response = NextResponse.next();
   const origin = request.headers.get("Origin");

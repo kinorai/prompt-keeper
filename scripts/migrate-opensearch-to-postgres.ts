@@ -114,7 +114,6 @@ async function migrate() {
             id: id, // Attempt to preserve ID
             model: source.model || "unknown",
             conversationHash: source.conversation_hash || null,
-            created: createdFromEpoch, // Upstream LLM response time
             latencyMs: source.latency ? parseFloat(source.latency) : null,
             promptTokens: source.usage?.prompt_tokens || 0,
             completionTokens: source.usage?.completion_tokens || 0,

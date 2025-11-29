@@ -14,7 +14,7 @@ import { splitHighlightSegments, SEARCH_HIGHLIGHT_CLASS } from "@/lib/search-hig
 
 export interface ConversationListItemProps {
   id: string;
-  created: string; // ISO date
+  created_at: string; // ISO date
   model: string;
   highlightedModel?: string;
   highlightSnippet?: string;
@@ -46,7 +46,7 @@ const formatWhatsAppLikeDate = (date: Date) => {
 
 export function ConversationListItem({
   id,
-  created,
+  created_at,
   model,
   highlightedModel,
   highlightSnippet,
@@ -56,7 +56,7 @@ export function ConversationListItem({
   onDelete,
   variant = "card",
 }: ConversationListItemProps) {
-  const createdDate = useMemo(() => new Date(created), [created]);
+  const createdDate = useMemo(() => new Date(created_at), [created_at]);
   const userMessagesCount = useMemo(() => messages.filter((m) => m.role === "user").length, [messages]);
   const firstUserPrompt = useMemo(() => {
     const msg = messages.find((m) => m.role === "user");
@@ -73,7 +73,7 @@ export function ConversationListItem({
   }, [highlightedModel]);
 
   const getFullConversationText = () => buildConversationPlainText(messages);
-  const getShareableMarkdown = () => buildConversationMarkdown({ model, created: createdDate, messages });
+  const getShareableMarkdown = () => buildConversationMarkdown({ model, created_at: createdDate, messages });
   const handleShare = async () => {
     const text = getShareableMarkdown();
     if (navigator.share) {

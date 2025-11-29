@@ -322,7 +322,7 @@ export async function POST(req: NextRequest) {
 
       if (Object.keys(range).length > 0) {
         esQueryBody.bool.filter.push({
-          range: { timestamp: range },
+          range: { created_at: range },
         });
       }
     }
@@ -336,7 +336,7 @@ export async function POST(req: NextRequest) {
         query: esQueryBody,
         ...(highlightConfig ? { highlight: highlightConfig } : {}),
         // Always order by date (most recent first)
-        sort: [{ timestamp: "desc" }],
+        sort: [{ created_at: "desc" }],
         size,
         from,
         _source: true,
