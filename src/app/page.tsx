@@ -40,7 +40,7 @@ interface SearchHit {
     };
   };
   _source: {
-    timestamp: string;
+    created_at: string;
     model: string;
     usage?: {
       total_tokens?: number;
@@ -56,7 +56,7 @@ interface SearchHit {
 }
 interface MappedSearchResult {
   id: string;
-  created: string;
+  created_at: string;
   model: string;
   highlightedModel?: string;
   highlightSnippet?: string;
@@ -316,7 +316,7 @@ function HomeContent() {
 
           return {
             id: hit._id,
-            created: hit._source?.timestamp || new Date().toISOString(),
+            created_at: hit._source?.created_at || new Date().toISOString(),
             model: hit._source?.model || "Unknown",
             highlightedModel: modelHighlight,
             highlightSnippet: snippetFromMessages || modelHighlight,
@@ -535,7 +535,7 @@ function HomeContent() {
                           <div key={result.id}>
                             <ConversationListItem
                               id={result.id}
-                              created={result.created}
+                              created_at={result.created_at}
                               model={result.model}
                               highlightedModel={result.highlightedModel}
                               highlightSnippet={result.highlightSnippet}
@@ -561,7 +561,7 @@ function HomeContent() {
                         <ConversationCard
                           key={active.id}
                           id={active.id}
-                          created={active.created}
+                          created_at={active.created_at}
                           model={active.model}
                           highlightedModel={active.highlightedModel}
                           usage={active.usage}
@@ -600,7 +600,7 @@ function HomeContent() {
                     <div key={result.id}>
                       <ConversationListItem
                         id={result.id}
-                        created={result.created}
+                        created_at={result.created_at}
                         model={result.model}
                         highlightedModel={result.highlightedModel}
                         highlightSnippet={result.highlightSnippet}
@@ -627,7 +627,7 @@ function HomeContent() {
                     <ConversationCard
                       key={active.id}
                       id={active.id}
-                      created={active.created}
+                      created_at={active.created_at}
                       model={active.model}
                       highlightedModel={active.highlightedModel}
                       usage={active.usage}
