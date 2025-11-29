@@ -52,7 +52,9 @@ export async function middleware(request: NextRequest) {
 
     // If no API key, check for Better Auth session cookie
     // We just check for existence here, actual validation happens in the route handler
-    const sessionToken = request.cookies.get("better-auth.session_token")?.value;
+    const sessionToken =
+      request.cookies.get("better-auth.session_token")?.value ||
+      request.cookies.get("__Secure-better-auth.session_token")?.value;
     if (sessionToken) {
       return response;
     }
@@ -67,7 +69,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // For UI routes, check for Better Auth session cookie
-  const sessionToken = request.cookies.get("better-auth.session_token")?.value;
+  const sessionToken =
+    request.cookies.get("better-auth.session_token")?.value ||
+    request.cookies.get("__Secure-better-auth.session_token")?.value;
   if (sessionToken) {
     return response;
   }
