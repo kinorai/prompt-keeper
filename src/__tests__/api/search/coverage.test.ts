@@ -2,7 +2,7 @@ import { POST } from "@/app/api/search/route";
 import { NextRequest } from "next/server";
 
 // Type for OpenSearch filter objects
-type OpenSearchFilter = { range?: { timestamp?: { gte?: string; lte?: string } } } | Record<string, unknown>;
+type OpenSearchFilter = { range?: { created_at?: { gte?: string; lte?: string } } } | Record<string, unknown>;
 
 jest.mock("@/lib/opensearch", () => {
   const mockClient = {
@@ -53,7 +53,7 @@ describe("Search API Coverage", () => {
 
       const rangeFilter = filters.find((f: OpenSearchFilter) => "range" in f && f.range);
       expect(rangeFilter).toBeDefined();
-      expect(rangeFilter.range.timestamp.gte).toBeDefined();
+      expect(rangeFilter.range.created_at.gte).toBeDefined();
 
       // Reset mocks for next iteration
       jest.clearAllMocks();
@@ -79,8 +79,8 @@ describe("Search API Coverage", () => {
     const filters = callArgs.body.query.bool.filter;
     const rangeFilter = filters.find((f: OpenSearchFilter) => "range" in f && f.range);
     expect(rangeFilter).toBeDefined();
-    expect(rangeFilter.range.timestamp.gte).toBe("now-2d");
-    expect(rangeFilter.range.timestamp.lte).toBe("now");
+    expect(rangeFilter.range.created_at.gte).toBe("now-2d");
+    expect(rangeFilter.range.created_at.lte).toBe("now");
   });
 
   it("should handle multimodal content and sign S3 urls", async () => {

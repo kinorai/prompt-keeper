@@ -58,7 +58,7 @@ interface MockConversationRow {
   id: string;
   model: string;
   conversationHash: string | null;
-  created: Date;
+
   latencyMs: number;
   promptTokens: number | null;
   completionTokens: number | null;
@@ -90,8 +90,8 @@ const mockTx: MockTransactionClient = {
       async ({ data }) => ({
         id: "conv_test",
         model: data.model ?? "test-model",
+
         conversationHash: (data.conversationHash as string | null | undefined) ?? null,
-        created: (data.created as Date | undefined) ?? new Date(),
         latencyMs: (data.latencyMs as number | undefined) ?? 0,
         promptTokens: (data.promptTokens as number | null | undefined) ?? null,
         completionTokens: (data.completionTokens as number | null | undefined) ?? null,
@@ -105,8 +105,8 @@ const mockTx: MockTransactionClient = {
     update: jest.fn<Promise<MockConversationRow>, [Prisma.ConversationUpdateArgs]>(async ({ where, data }) => ({
       id: where.id as string,
       model: (data.model as string | undefined) ?? "test-model",
+
       conversationHash: (data.conversationHash as string | null | undefined) ?? null,
-      created: new Date(),
       latencyMs: (data.latencyMs as number | undefined) ?? 0,
       promptTokens: (data.promptTokens as number | null | undefined) ?? null,
       completionTokens: (data.completionTokens as number | null | undefined) ?? null,
@@ -117,8 +117,8 @@ const mockTx: MockTransactionClient = {
     delete: jest.fn<Promise<MockConversationRow>, [Prisma.ConversationDeleteArgs]>(async ({ where }) => ({
       id: where.id as string,
       model: "test-model",
+
       conversationHash: null,
-      created: new Date(),
       latencyMs: 0,
       promptTokens: null,
       completionTokens: null,
