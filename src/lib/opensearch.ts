@@ -94,7 +94,6 @@ const INDEX_SETTINGS: IndexSettings = {
 // Define the complete mapping schema
 const INDEX_MAPPING = {
   properties: {
-    timestamp: { type: "date" as const },
     created_at: { type: "date" as const },
     updated_at: { type: "date" as const },
     conversation_hash: {

@@ -22,10 +22,10 @@ export const buildConversationPlainText = (messages: ConversationMessage[]) =>
 
 export const buildConversationMarkdown = (args: {
   model: string;
-  created: Date | string;
+  created_at: Date | string;
   messages: ConversationMessage[];
 }) => {
-  const createdDate = typeof args.created === "string" ? new Date(args.created) : args.created;
+  const createdDate = typeof args.created_at === "string" ? new Date(args.created_at) : args.created_at;
   const header = `# Conversation with ${args.model}\n\nDate: ${createdDate.toLocaleString()}\n\n---\n\n`;
   const body = args.messages
     .map((m) => `### ${m.role.toUpperCase()}\n\n${extractTextFromContent(m.content)}\n\n`)

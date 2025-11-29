@@ -293,7 +293,7 @@ describe("Search API Route", () => {
                 // Time range filter
                 expect.objectContaining({
                   range: expect.objectContaining({
-                    timestamp: expect.objectContaining({
+                    created_at: expect.objectContaining({
                       gte: "now-1d",
                     }),
                   }),

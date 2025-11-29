@@ -21,7 +21,6 @@ const CONFIG = {
 interface StreamChunk {
   id: string;
   model: string;
-  created: number;
   object: string;
   choices: Array<{
     index: number;
@@ -36,7 +35,6 @@ interface StreamChunk {
 interface FormattedResponse {
   id: string;
   model: string;
-  created: number;
   usage: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -163,7 +161,6 @@ function formatStreamToResponse(chunks: StreamChunk[]): FormattedResponse {
   return {
     id: firstChunk.id,
     model: firstChunk.model,
-    created: firstChunk.created,
     object: firstChunk.object,
     usage: {
       prompt_tokens: 0, // These will be updated when available
@@ -249,8 +246,6 @@ async function storeConversationPostgres(requestMessages: Message[], response: F
     const findHash = generateConversationHash(requestMessages, true); // exclude last
     const storeHash = generateConversationHash(requestMessages, false); // include all
 
-    const createdDate = typeof response.created === "number" ? new Date(response.created * 1000) : new Date();
-
     const prisma = getPrisma();
     await prisma.$transaction(async (tx) => {
       let conversationId: string;
@@ -299,7 +294,6 @@ async function storeConversationPostgres(requestMessages: Message[], response: F
             data: {
               model: response.model,
               conversationHash: storeHash,
-              created: createdDate,
               latencyMs: latency,
               promptTokens: response.usage?.prompt_tokens ?? null,
               completionTokens: response.usage?.completion_tokens ?? null,
@@ -314,7 +308,6 @@ async function storeConversationPostgres(requestMessages: Message[], response: F
           data: {
             model: response.model,
             conversationHash: storeHash,
-            created: createdDate,
             latencyMs: latency,
             promptTokens: response.usage?.prompt_tokens ?? null,
             completionTokens: response.usage?.completion_tokens ?? null,
