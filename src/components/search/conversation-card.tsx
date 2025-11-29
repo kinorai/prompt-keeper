@@ -49,7 +49,7 @@ export interface Message {
 
 export interface ConversationCardProps {
   id: string;
-  created: string;
+  created_at: string;
   model: string;
   highlightedModel?: string;
   usage?: {
@@ -393,7 +393,7 @@ const ChatBubble: React.FC<{
 
 export const ConversationCard: React.FC<ConversationCardProps> = ({
   id,
-  created,
+  created_at,
   model,
   highlightedModel,
   messages = [],
@@ -401,7 +401,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   onDelete,
   variant = "card",
 }) => {
-  const createdDate = new Date(created);
+  const createdDate = new Date(created_at);
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
   const modelDisplay = highlightedModel
     ? splitHighlightSegments(highlightedModel).map((segment, idx) => (
@@ -422,7 +422,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   const getFullConversationText = () => buildConversationPlainText(messages);
 
   // Generate markdown for sharing
-  const getShareableMarkdown = () => buildConversationMarkdown({ model, created: createdDate, messages });
+  const getShareableMarkdown = () => buildConversationMarkdown({ model, created_at: createdDate, messages });
 
   // Handle delete
   const handleDelete = async () => {

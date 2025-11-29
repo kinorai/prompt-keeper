@@ -79,7 +79,6 @@ async function processConversationUpsert(aggregateId: string): Promise<void> {
   });
 
   const body = {
-    timestamp: new Date(),
     model: convo.model,
     messages: messages.map((m) => {
       let content = m.content;
