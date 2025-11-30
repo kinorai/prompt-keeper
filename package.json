@@ -63,7 +63,8 @@
     "sonner": "^2.0.7",
     "streamdown": "^1.6.9",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
@@ -79,7 +80,6 @@
     "@typescript-eslint/parser": "^8.48.0",
     "baseline-browser-mapping": "^2.8.32",
     "concurrently": "^9.2.1",
-    "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
     "eslint-config-next": "16.0.5",
     "jest": "^30.2.0",
