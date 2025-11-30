@@ -21,7 +21,7 @@ jest.mock("@/lib/opensearch", () => {
   return {
     __esModule: true,
     getOpenSearchClient: jest.fn(() => mockClient),
-    PROMPT_KEEPER_INDEX: "prompt-keeper-v2",
+    PROMPT_KEEPER_INDEX: "prompt-keeper-v3",
     ensureIndexExists: jest.fn().mockResolvedValue(undefined),
     checkIndexExists: jest.fn().mockResolvedValue(true),
     initializeIndex: jest.fn().mockResolvedValue(undefined),
@@ -82,7 +82,7 @@ describe("Search API Route", () => {
     expect(responseData.hits.total.value).toBe(1);
 
     const callArgs = (opensearchClient.search as jest.Mock).mock.calls[0][0];
-    expect(callArgs.index).toBe("prompt-keeper-v2");
+    expect(callArgs.index).toBe("prompt-keeper-v3");
     const mustClauses = callArgs.body.query.bool.must;
     expect(mustClauses).toHaveLength(1);
     const shouldClauses = mustClauses[0].bool.should as ShouldClause[];

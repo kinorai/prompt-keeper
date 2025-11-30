@@ -152,7 +152,7 @@ async function migrate() {
             });
 
             // 2. Create OutboxEvent
-            // We need this to sync to the NEW OpenSearch index (prompt-keeper-v2)
+            // We need this to sync to the NEW OpenSearch index (prompt-keeper-v3)
             await tx.outboxEvent.create({
               data: {
                 eventType: "conversation.upserted",

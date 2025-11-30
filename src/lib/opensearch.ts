@@ -39,7 +39,7 @@ export function getOpenSearchClient(): Client {
   return client;
 }
 
-export const PROMPT_KEEPER_INDEX = "prompt-keeper-v2";
+export const PROMPT_KEEPER_INDEX = process.env.OPENSEARCH_INDEX || "prompt-keeper";
 
 // Track initialization state
 let isInitialized = false;
