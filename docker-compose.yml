@@ -14,10 +14,9 @@ services:
       - prompt-keeper-net
 
   outbox-worker:
-    image: kinorai/prompt-keeper:latest
+    image: kinorai/prompt-keeper-outbox-worker:latest
     env_file:
       - .env
-    command: ["node", "dist/workers/outbox.js"]
     depends_on:
       opensearch:
         condition: service_healthy
