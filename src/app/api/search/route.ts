@@ -33,7 +33,7 @@ interface SearchHit {
   [key: string]: unknown;
 }
 
-const FUZZINESS_SETTING = "AUTO:2,3";
+const FUZZINESS_SETTING = "AUTO:3,6";
 const FUZZY_PREFIX_LENGTH = 1;
 const MIN_FUZZY_TERM_LENGTH = 3;
 const MAX_FUZZY_TERMS = 5;
