@@ -122,7 +122,7 @@ describe("Search API Route", () => {
                       expect.objectContaining({
                         match: expect.objectContaining({
                           model: expect.objectContaining({
-                            fuzziness: "AUTO:2,3",
+                            fuzziness: "AUTO:3,6",
                           }),
                         }),
                       }),
@@ -136,7 +136,7 @@ describe("Search API Route", () => {
                                 expect.objectContaining({
                                   match: expect.objectContaining({
                                     "messages.content": expect.objectContaining({
-                                      fuzziness: "AUTO:2,3",
+                                      fuzziness: "AUTO:3,6",
                                     }),
                                   }),
                                 }),
