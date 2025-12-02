@@ -33,25 +33,7 @@ interface SearchHit {
   [key: string]: unknown;
 }
 
-const FUZZINESS_SETTING = "AUTO:4,7";
-const FUZZY_PREFIX_LENGTH = 1;
-const MIN_FUZZY_TERM_LENGTH = 4;
-const MAX_FUZZY_TERMS = 5;
 const HIGHLIGHT_FRAGMENT_SIZE = 2000;
-
-function extractFuzzyTokens(input: string): string[] {
-  const tokens = input
-    .split(/\s+/)
-    .map((token) =>
-      token
-        .replace(/^[+\-]+/, "")
-        .replace(/["']/g, "")
-        .trim(),
-    )
-    .filter((token) => token.length >= MIN_FUZZY_TERM_LENGTH);
-
-  return Array.from(new Set(tokens)).slice(0, MAX_FUZZY_TERMS);
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -200,33 +182,6 @@ export async function POST(req: NextRequest) {
           },
         },
       ];
-
-      const fuzzyTokens = extractFuzzyTokens(cleanQuery);
-      if (fuzzyTokens.length > 0) {
-        for (const token of fuzzyTokens) {
-          textSearchBool.bool.should.push({
-            match: {
-              model: {
-                query: token,
-                fuzziness: FUZZINESS_SETTING,
-                prefix_length: FUZZY_PREFIX_LENGTH,
-                boost: 0.5,
-              },
-            },
-          });
-
-          nestedShouldClauses.push({
-            match: {
-              "messages.content": {
-                query: token,
-                fuzziness: FUZZINESS_SETTING,
-                prefix_length: FUZZY_PREFIX_LENGTH,
-                boost: 0.7,
-              },
-            },
-          });
-        }
-      }
 
       textSearchBool.bool.should.push({
         nested: {
