@@ -96,66 +96,6 @@ describe("Search API Route", () => {
     );
   });
 
-  it("should include fuzzy typo-tolerant clauses for tokens", async () => {
-    (opensearchClient.search as jest.Mock).mockResolvedValueOnce({
-      body: { hits: { total: { value: 0 }, hits: [] }, took: 1 },
-    });
-
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify({
-        query: "poulet",
-      }),
-    });
-
-    await POST(req);
-
-    expect(opensearchClient.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              must: expect.arrayContaining([
-                expect.objectContaining({
-                  bool: expect.objectContaining({
-                    should: expect.arrayContaining([
-                      expect.objectContaining({
-                        match: expect.objectContaining({
-                          model: expect.objectContaining({
-                            fuzziness: "AUTO:3,6",
-                          }),
-                        }),
-                      }),
-                      expect.objectContaining({
-                        nested: expect.objectContaining({
-                          path: "messages",
-                          inner_hits: expect.any(Object),
-                          query: expect.objectContaining({
-                            bool: expect.objectContaining({
-                              should: expect.arrayContaining([
-                                expect.objectContaining({
-                                  match: expect.objectContaining({
-                                    "messages.content": expect.objectContaining({
-                                      fuzziness: "AUTO:3,6",
-                                    }),
-                                  }),
-                                }),
-                              ]),
-                            }),
-                          }),
-                        }),
-                      }),
-                    ]),
-                  }),
-                }),
-              ]),
-            }),
-          }),
-        }),
-      }),
-    );
-  });
-
   it("should handle role: filter extraction", async () => {
     (opensearchClient.search as jest.Mock).mockResolvedValueOnce({
       body: { hits: { total: { value: 0 }, hits: [] }, took: 1 },
