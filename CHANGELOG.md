@@ -1,3 +1,13 @@
+# [0.7.0](https://github.com/kinorai/prompt-keeper/compare/v0.6.0...v0.7.0) (2025-12-03)
+
+
+### Features
+
+* increase fuzzy ness minimum lenght ([a0e3c41](https://github.com/kinorai/prompt-keeper/commit/a0e3c4141bc420c935ce1dad017cb9f8b03839d8))
+* remove fuzziness from gaic search ([3fb037d](https://github.com/kinorai/prompt-keeper/commit/3fb037df6b2d50cfc3e78b1ad9b7a1ee55f86b95))
+
+
+
 # [0.6.0](https://github.com/kinorai/prompt-keeper/compare/v0.5.0...v0.6.0) (2025-12-01)
 
 
@@ -94,15 +104,6 @@
 * completely rework logging with pino and increase timeout completion api to 8 min ([95c4c12](https://github.com/kinorai/prompt-keeper/commit/95c4c122a7e5c7206efc63b3bc6f0d3b31d4dc20))
 * enhance CORS support ([fea9067](https://github.com/kinorai/prompt-keeper/commit/fea9067e8a70f7f44e2062b5b4e4848922a52758))
 * implement rate limiting for login requests ([353419f](https://github.com/kinorai/prompt-keeper/commit/353419feee174e69c1dcc1432dbd0008e170cd3b))
-
-
-
-# [0.2.0](https://github.com/kinorai/prompt-keeper/compare/v0.1.0...v0.2.0) (2025-05-31)
-
-
-### Features
-
-* implement access and refresh token authentication with JWT support ([43bdac3](https://github.com/kinorai/prompt-keeper/commit/43bdac329317dbc0bceaedc9a0a07a9f36e75815))
 
 
 
