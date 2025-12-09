@@ -17,31 +17,31 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       # First try to restore the cache
       - name: Restore node_modules cache
         id: cache-node-modules-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
 
-      # Only run npm ci if cache doesn't exist
+      # Only run npm ci  if cache doesn't exist
       - name: Install dependencies
         if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
-        run: npm ci --prefer-offline --no-audit
+        run: npm ci  --prefer-offline --no-audit
 
       # Save the cache if we had to install dependencies
       - name: Save node_modules cache
         if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
