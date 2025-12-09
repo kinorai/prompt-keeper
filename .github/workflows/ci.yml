@@ -377,11 +377,18 @@ jobs:
         with:
           ref: 'main'
           fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install conventional-changelog-conventionalcommits
+        run: npm install conventional-changelog-conventionalcommits
       - name: Conventional Changelog Action
         id: changelog
         uses: TriPSs/conventional-changelog-action@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          config-file-path: .github/changelog.config.js
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
