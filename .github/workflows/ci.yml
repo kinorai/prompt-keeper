@@ -14,28 +14,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Restore node_modules cache
         id: cache-node-modules-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
 
       - name: Install dependencies
         if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
-        run: npm ci --prefer-offline --no-audit
+        run: npm ci  --prefer-offline --no-audit
 
       - name: Save node_modules cache
         if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        continue-on-error: true
+        uses: actions/cache/save@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
@@ -46,21 +47,26 @@ jobs:
     needs: setup
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Restore node_modules
-        uses: actions/cache/restore@v4
+        id: cache-node-modules-restore
+        uses: actions/cache/restore@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
+        run: npm ci  --prefer-offline --no-audit
 
       - name: Validate current commit (last commit) with commitlint
         if: github.event_name == 'push' && github.actor != 'dependabot[bot]'
@@ -82,22 +88,27 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    needs: lint
+    needs: setup
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Restore node_modules
-        uses: actions/cache/restore@v4
+        id: cache-node-modules-restore
+        uses: actions/cache/restore@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
+        run: npm ci  --prefer-offline --no-audit
 
       - name: Run tests
         run: npm run test
@@ -105,7 +116,7 @@ jobs:
   docker_build_pr:
     name: Docker Build for PR Validation
     runs-on: ubuntu-latest
-    needs: test
+    needs: [lint, test]
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true
     strategy:
       fail-fast: false
@@ -120,7 +131,7 @@ jobs:
             file: Dockerfile.outbox-worker
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -141,7 +152,7 @@ jobs:
   build_edge_pr:
     name: Build Edge Platform-Specific Images (PRs)
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    needs: test
+    needs: [lint, test]
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
     strategy:
       fail-fast: false
@@ -163,7 +174,7 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
           echo "REGISTRY_IMAGE=${{ matrix.component.image }}" >> $GITHUB_ENV
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -190,7 +201,7 @@ jobs:
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: digests-edge-${{ matrix.component.name }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
@@ -212,7 +223,7 @@ jobs:
             image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-edge-${{ matrix.component.name }}-*
@@ -235,7 +246,7 @@ jobs:
   build_dev:
     name: Build Dev Platform-Specific Images
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    needs: test
+    needs: [lint, test]
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     strategy:
       fail-fast: false
@@ -257,7 +268,7 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
           echo "REGISTRY_IMAGE=${{ matrix.component.image }}" >> $GITHUB_ENV
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -284,7 +295,7 @@ jobs:
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: digests-dev-${{ matrix.component.name }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
@@ -306,7 +317,7 @@ jobs:
             image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-dev-${{ matrix.component.name }}-*
@@ -341,7 +352,7 @@ jobs:
             image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-dev-${{ matrix.component.name }}-*
@@ -364,7 +375,7 @@ jobs:
   versioning:
     name: Versioning
     runs-on: ubuntu-latest
-    needs: test
+    needs: [lint, test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
@@ -373,12 +384,12 @@ jobs:
       version: ${{ steps.changelog.outputs.tag }}
     steps:
       - name: Checkout main branch with full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: 'main'
           fetch-depth: 0
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
       - name: Install conventional-changelog-conventionalcommits
@@ -423,7 +434,7 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
           echo "REGISTRY_IMAGE=${{ matrix.component.image }}" >> $GITHUB_ENV
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
       - name: Docker meta
@@ -458,7 +469,7 @@ jobs:
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: digests-release-${{ matrix.component.name }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
@@ -480,7 +491,7 @@ jobs:
             image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-release-${{ matrix.component.name }}-*
