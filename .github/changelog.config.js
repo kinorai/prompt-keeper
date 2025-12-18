@@ -3,7 +3,7 @@ const preset = require("conventional-changelog-conventionalcommits");
 
 module.exports = async (config) => {
   const factory = typeof preset === "function" ? preset : preset.default;
-  const options = await factory({
+  const basePreset = await factory({
     ...config,
     types: [
       { type: "feat", section: "Features" },
@@ -19,5 +19,13 @@ module.exports = async (config) => {
       { type: "revert", section: "Reverts" },
     ],
   });
-  return options;
+
+  // Ensure whatBump is inside recommendedBumpOpts for compatibility with conventional-recommended-bump
+  return {
+    ...basePreset,
+    recommendedBumpOpts: {
+      parserOpts: basePreset.parserOpts || basePreset.parser,
+      whatBump: basePreset.whatBump,
+    },
+  };
 };
