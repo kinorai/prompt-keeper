@@ -394,10 +394,11 @@ jobs:
           node-version: '24'
       - name: Conventional Changelog Action
         id: changelog
-        uses: TriPSs/conventional-changelog-action@v5
+        uses: TriPSs/conventional-changelog-action@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           preset: "conventionalcommits"
+          skip-on-empty: "false"
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
