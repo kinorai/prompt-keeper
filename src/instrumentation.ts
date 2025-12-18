@@ -1,6 +1,8 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { checkConnections } = await import("@/lib/health");
-    await checkConnections();
+    const { initializeIndex } = await import("@/lib/opensearch");
+
+    await Promise.all([checkConnections(), initializeIndex()]);
   }
 }

@@ -176,11 +176,11 @@ export async function checkIndexExists(): Promise<boolean> {
 /**
  * Initialize the prompt-keeper index with the proper mapping schema.
  * This function should only be called once during application startup,
- * typically through the /api/init endpoint.
+ * This function should only be called once during application startup,
+ * typically through the instrumentation hook.
  *
  * Best practices:
  * - Call this function only during initial setup or deployment
- * - Use the /api/init endpoint rather than calling directly
  * - The function tracks initialization state to prevent redundant operations
  *
  * @throws {Error} If index creation fails
@@ -232,7 +232,7 @@ export async function ensureIndexExists() {
     const exists = await checkIndexExists();
     if (!exists) {
       // Log admin-facing detail but surface a user-friendly message outward
-      log.error("OpenSearch index not initialized. Please call /api/init endpoint first.");
+      log.error("OpenSearch index not initialized. Startup initialization may have failed.");
       throw new Error("Search is currently unavailable. Please try again later.");
     }
     isInitialized = true;
