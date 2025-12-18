@@ -1,3 +1,5 @@
+## [0.7.2](https://github.com/kinorai/prompt-keeper/compare/v0.7.1...v0.7.2) (2025-12-18)
+
 ## [0.7.1](https://github.com/kinorai/prompt-keeper/compare/v0.7.0...v0.7.1) (2025-12-18)
 
 ## [0.7.0](https://github.com/kinorai/prompt-keeper/compare/v0.6.0...v0.7.0) (2025-12-03)
@@ -76,11 +78,4 @@
 * refresh token ([0dffae3](https://github.com/kinorai/prompt-keeper/commit/0dffae371c3499f06ed5a7241e5774d6cc25f9f1))
 * system prompt out of screen ([4eda99c](https://github.com/kinorai/prompt-keeper/commit/4eda99c31ab7543248c1fc6701a4d58a431b69c5))
 * update conversation card to conditionally render system message content ([a014412](https://github.com/kinorai/prompt-keeper/commit/a0144125208dd73cead7a08a9a2cb2f56aa329e8))
-
-## [0.4.0](https://github.com/kinorai/prompt-keeper/compare/v0.3.0...v0.4.0) (2025-07-30)
-
-
-### Features
-
-* add delete functionality with confirmation dialog ([b43f313](https://github.com/kinorai/prompt-keeper/commit/b43f31307ef8c39cb2a2d367a0c1f9dc542239a3))
 
