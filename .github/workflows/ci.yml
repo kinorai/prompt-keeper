@@ -392,14 +392,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Install conventional-changelog-conventionalcommits
-        run: npm install conventional-changelog-conventionalcommits
       - name: Conventional Changelog Action
         id: changelog
         uses: TriPSs/conventional-changelog-action@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          config-file-path: .github/changelog.config.js
+          preset: "conventionalcommits"
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: ${{ steps.changelog.outputs.skipped == 'false' }}

@@ -43,7 +43,6 @@
     "better-auth": "^1.4.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "conventional-changelog-conventionalcommits": "^9.1.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "jose": "^6.1.2",
