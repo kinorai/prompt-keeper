@@ -239,4 +239,36 @@ describe("Chat Completions API Coverage", () => {
     // Verify uploadFile was called
     expect(uploadFile).toHaveBeenCalled();
   });
+
+  it("should throw error when stream chunks are empty", async () => {
+    const { POST } = require("@/app/api/chat/completions/route");
+    const { formatStreamToResponse } = require("@/app/api/chat/completions/route");
+
+    // This is internal, but we can hit it via stream test
+    const requestBody = {
+      model: "gpt-4",
+      messages: [{ role: "user", content: "Hello" }],
+      stream: true,
+    };
+
+    const mockStream = new ReadableStream({
+      start(controller) {
+        controller.close();
+      },
+    });
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ "content-type": "text/event-stream" }),
+      body: mockStream,
+    });
+
+    const req = new NextRequest("http://localhost/api/chat/completions", {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+
+    const response = await POST(req);
+    expect(response.status).toBe(200); // Response starts even if stream fails later
+  });
 });

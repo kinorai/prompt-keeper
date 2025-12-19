@@ -18,6 +18,7 @@ Object.defineProperty(process.env, "NODE_ENV", { value: "test" });
 process.env.PROMPT_KEEPER_API_KEY = "test-api-key";
 process.env.JWT_SECRET = "test-secret-key";
 process.env.POSTGRES_PRISMA_URL = "postgresql://test/test@test:5432/db"; // not used due to prisma mock
+process.env.LOG_LEVEL = "silent";
 
 // Mock Next.js URL
 global.URL = URL;
@@ -165,4 +166,35 @@ jest.mock("@aws-sdk/client-s3", () => ({
 
 jest.mock("@aws-sdk/s3-request-presigner", () => ({
   getSignedUrl: jest.fn(),
+}));
+
+jest.mock("better-auth", () => ({
+  betterAuth: jest.fn(() => ({
+    handler: jest.fn(),
+    api: {},
+  })),
+}));
+
+jest.mock("better-auth/next-js", () => ({
+  toNextJsHandler: jest.fn(() => ({
+    GET: jest.fn(),
+    POST: jest.fn(),
+  })),
+}));
+
+jest.mock("better-auth/adapters/prisma", () => ({
+  prismaAdapter: jest.fn(),
+}));
+
+jest.mock("@better-auth/passkey", () => ({
+  passkey: jest.fn(),
+}));
+
+jest.mock("better-auth/api", () => ({
+  createAuthMiddleware: jest.fn(),
+  APIError: class extends Error {
+    constructor(code: string, message: any) {
+      super(JSON.stringify(message));
+    }
+  },
 }));

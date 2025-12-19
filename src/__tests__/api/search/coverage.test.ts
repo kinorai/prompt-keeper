@@ -117,4 +117,18 @@ describe("Search API Coverage", () => {
     expect(data.hits.hits[0]._source.messages[0].content).toHaveLength(2);
     expect(data.hits.hits[0]._source.messages[0].content[1].image_url.url).toBe("https://signed-url.com");
   });
+
+  it("should handle opensearch errors and return 500", async () => {
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      body: JSON.stringify({ query: "test" }),
+    });
+
+    (opensearchClient.search as jest.Mock).mockRejectedValueOnce(new Error("OpenSearch connection failed"));
+
+    const response = await POST(req);
+    expect(response.status).toBe(500);
+    const data = await response.json();
+    expect(data.error).toBe("OpenSearch connection failed");
+  });
 });
