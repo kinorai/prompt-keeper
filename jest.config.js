@@ -30,4 +30,5 @@ module.exports = {
       },
     ],
   },
+  transformIgnorePatterns: ["/node_modules/(?!better-auth|@better-auth|jose).+"],
 };
