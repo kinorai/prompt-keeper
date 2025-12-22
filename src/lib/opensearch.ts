@@ -47,7 +47,7 @@ let isInitialized = false;
 const TOKEN_CHARS_LETTER_DIGIT: TokenChar[] = ["letter", "digit"];
 
 // Define the analysis settings
-const INDEX_SETTINGS: IndexSettings = {
+export const INDEX_SETTINGS: IndexSettings = {
   number_of_shards: 1,
   number_of_replicas: 1,
   analysis: {
@@ -92,7 +92,7 @@ const INDEX_SETTINGS: IndexSettings = {
 };
 
 // Define the complete mapping schema
-const INDEX_MAPPING = {
+export const INDEX_MAPPING = {
   properties: {
     created_at: { type: "date" as const },
     updated_at: { type: "date" as const },
