@@ -1,6 +1,6 @@
 {
   "name": "prompt-keeper",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "private": true,
   "scripts": {
     "dev": "concurrently -n \"next,worker\" -c \"cyan,magenta\" \"next dev --turbopack\" \"npm run dev:worker\"",
