@@ -193,7 +193,7 @@ jest.mock("@better-auth/passkey", () => ({
 jest.mock("better-auth/api", () => ({
   createAuthMiddleware: jest.fn(),
   APIError: class extends Error {
-    constructor(code: string, message: any) {
+    constructor(code: string, message: unknown) {
       super(JSON.stringify(message));
     }
   },
