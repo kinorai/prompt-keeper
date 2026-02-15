@@ -12,13 +12,13 @@ repos:
     rev: v3.2.0
     hooks:
     -   id: trailing-whitespace
-        exclude: ^chart/
+        exclude: ^chart/|^.agents/|^.cursor/
     -   id: end-of-file-fixer
-        exclude: ^chart/
+        exclude: ^chart/|^.agents/|^.cursor/
     -   id: check-yaml
-        exclude: ^chart/
+        exclude: ^chart/|^.agents/|^.cursor/
     -   id: check-added-large-files
-        exclude: ^chart/
+        exclude: ^chart/|^.agents/|^.cursor/
 -   repo: local
     hooks:
     -   id: npm-lint
@@ -26,14 +26,14 @@ repos:
         entry: npm run lint
         language: system
         pass_filenames: false
-        exclude: ^chart/
+        exclude: ^chart/|^.agents/|^.cursor/
     # TODO: This compiles the whole project, not just the changed files.
     # -   id: npm-tsc
     #     name: Run TypeScript compiler
     #     entry: npm run tsc
     #     language: system
     #     pass_filenames: false
-    #     exclude: ^chart/
+    #     exclude: ^chart/|^.agents/|^.cursor/
     -   id: prettier
         name: Run Prettier
         entry: npx prettier --write .
