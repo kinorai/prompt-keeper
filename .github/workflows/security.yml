@@ -12,6 +12,7 @@ jobs:
   dependency-scan:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
 
     steps:
       - name: Checkout code
@@ -24,25 +25,10 @@ jobs:
           cache: 'npm'
 
       # First try to restore the cache
-      - name: Restore node_modules cache
-        id: cache-node-modules-restore
-        uses: actions/cache/restore@v5
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+      # Actions/setup-node handles caching now, so explicit cache steps are removed.
 
-      # Only run npm ci  if cache doesn't exist
       - name: Install dependencies
-        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
-        run: npm ci  --prefer-offline --no-audit
-
-      # Save the cache if we had to install dependencies
-      - name: Save node_modules cache
-        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+        run: npm ci --prefer-offline --no-audit --no-fund --progress=false
 
       - name: Run npm audit
         run: npm audit --omit=dev --audit-level=high
@@ -71,25 +57,10 @@ jobs:
           cache: 'npm'
 
       # First try to restore the cache
-      - name: Restore node_modules cache
-        id: cache-node-modules-restore
-        uses: actions/cache/restore@v5
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+      # Actions/setup-node handles caching now, so explicit cache steps are removed.
 
-      # Only run npm ci  if cache doesn't exist
       - name: Install dependencies
-        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
         run: npm ci  --prefer-offline --no-audit
-
-      # Save the cache if we had to install dependencies
-      - name: Save node_modules cache
-        if: steps.cache-node-modules-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
 
       - name: Build application
         run: npm run build
