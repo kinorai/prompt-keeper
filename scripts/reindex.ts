@@ -38,7 +38,7 @@ interface OpenSearchReindexResponse {
   throttled_millis: number;
   requests_per_second: number;
   throttled_until_millis: number;
-  failures: any[];
+  failures: unknown[];
 }
 
 async function reindex() {

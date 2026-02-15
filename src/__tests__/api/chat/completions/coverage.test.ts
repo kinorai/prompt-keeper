@@ -242,7 +242,6 @@ describe("Chat Completions API Coverage", () => {
 
   it("should throw error when stream chunks are empty", async () => {
     const { POST } = require("@/app/api/chat/completions/route");
-    const { formatStreamToResponse } = require("@/app/api/chat/completions/route");
 
     // This is internal, but we can hit it via stream test
     const requestBody = {

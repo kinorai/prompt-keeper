@@ -62,7 +62,7 @@
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "sonner": "^2.0.7",
-    "streamdown": "^2.1.0",
+    "streamdown": "^2.2.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7"
   },
@@ -78,7 +78,7 @@
     "@types/react-dom": "^19",
     "@typescript-eslint/eslint-plugin": "^8.48.0",
     "@typescript-eslint/parser": "^8.48.0",
-    "baseline-browser-mapping": "^2.8.32",
+    "baseline-browser-mapping": "^2.9.19",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
     "eslint-config-next": "16.0.5",
