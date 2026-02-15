@@ -21,6 +21,26 @@ const client = new Client({
 
 const index = process.env.PROMPT_KEEPER_INDEX || "";
 
+interface OpenSearchReindexResponse {
+  took: number;
+  timed_out: boolean;
+  total: number;
+  updated: number;
+  created: number;
+  deleted: number;
+  batches: number;
+  version_conflicts: number;
+  noops: number;
+  retries: {
+    bulk: number;
+    search: number;
+  };
+  throttled_millis: number;
+  requests_per_second: number;
+  throttled_until_millis: number;
+  failures: any[];
+}
+
 async function reindex() {
   try {
     const tempIndex = `${index}-temp`;
@@ -55,12 +75,14 @@ async function reindex() {
       wait_for_completion: true,
     });
 
-    if (reindexResponse.body.failures.length > 0) {
-      log.error("Reindexing failed with errors:", reindexResponse.body.failures);
+    const reindexBody = reindexResponse.body as OpenSearchReindexResponse;
+
+    if (reindexBody.failures.length > 0) {
+      log.error({ failures: reindexBody.failures }, "Reindexing failed with errors");
       throw new Error("Reindexing failed");
     }
 
-    log.info(`Reindexed ${reindexResponse.body.total} documents.`);
+    log.info(`Reindexed ${reindexBody.total} documents.`);
 
     // 3. Delete source index
     log.info(`Deleting source index ${index}...`);
@@ -86,12 +108,14 @@ async function reindex() {
       wait_for_completion: true,
     });
 
-    if (restoreResponse.body.failures.length > 0) {
-      log.error("Restore reindexing failed with errors:", restoreResponse.body.failures);
+    const restoreBody = restoreResponse.body as OpenSearchReindexResponse;
+
+    if (restoreBody.failures.length > 0) {
+      log.error({ failures: restoreBody.failures }, "Restore reindexing failed with errors");
       throw new Error("Restore reindexing failed");
     }
 
-    log.info(`Restored ${restoreResponse.body.total} documents.`);
+    log.info(`Restored ${restoreBody.total} documents.`);
 
     // 6. Delete temp index
     log.info(`Deleting temp index ${tempIndex}...`);
