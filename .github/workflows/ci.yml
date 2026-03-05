@@ -175,7 +175,7 @@ jobs:
             image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-edge-${{ matrix.component.name }}-*
@@ -269,7 +269,7 @@ jobs:
             image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-dev-${{ matrix.component.name }}-*
@@ -304,7 +304,7 @@ jobs:
             image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-dev-${{ matrix.component.name }}-*
@@ -444,7 +444,7 @@ jobs:
             image: kinorai/prompt-keeper-outbox-worker
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-release-${{ matrix.component.name }}-*
