@@ -1,5 +1,7 @@
 import { Client } from "@opensearch-project/opensearch";
+// @ts-expect-error — deep subpath types exist but aren't exposed in package exports for bundler resolution
 import type { IndexSettings } from "@opensearch-project/opensearch/api/_types/indices._common";
+// @ts-expect-error — same as above
 import type { TokenChar } from "@opensearch-project/opensearch/api/_types/_common.analysis";
 import { createLogger } from "@/lib/logger";
 
