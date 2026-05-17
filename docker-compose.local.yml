@@ -49,7 +49,7 @@ services:
       context: .
       args:
         target: runtime
-    image: ghcr.io/berriai/litellm:main-stable
+    image: ghcr.io/berriai/litellm:v1.82.3-stable
     volumes:
       - ./files/config.local.litellm.yaml:/app/config.local.litellm.yaml
     command:
