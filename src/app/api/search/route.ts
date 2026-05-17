@@ -3,8 +3,9 @@ import { getOpenSearchClient, PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/l
 import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/search-highlights";
 import { createLogger } from "@/lib/logger";
 import { getPresignedUrl } from "@/lib/s3";
+// @ts-expect-error — deep subpath types exist but aren't exposed in package exports for bundler resolution
 import type { Highlight, HighlightField } from "@opensearch-project/opensearch/api/_types/_core.search";
-
+// @ts-expect-error — same as above
 import type { QueryContainer } from "@opensearch-project/opensearch/api/_types/_common.query_dsl";
 
 const log = createLogger("api:search");
