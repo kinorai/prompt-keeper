@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -9,11 +9,32 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+const INSTALL_PROMPT_DELAY_MS = 5000;
+const DISMISSED_STORAGE_KEY = "pwa-install-dismissed";
+
+function readDismissed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(DISMISSED_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeDismissed() {
+  try {
+    window.localStorage.setItem(DISMISSED_STORAGE_KEY, "1");
+  } catch {
+    // localStorage unavailable (private mode / quota) — ignore
+  }
+}
+
 export function InstallPrompt() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showPrompt, setShowPrompt] = useState(true);
+  const [dismissed, setDismissed] = useState<boolean>(() => readDismissed());
+  const shownRef = useRef(false);
 
   useEffect(() => {
     const checkInstallStatus = () => {
@@ -43,16 +64,32 @@ export function InstallPrompt() {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
+    const handleInstalled = () => {
+      setDeferredPrompt(null);
+      writeDismissed();
+      setDismissed(true);
+    };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleInstalled);
 
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleInstalled);
+    };
   }, [isStandalone]);
 
+  const dismiss = useCallback(() => {
+    writeDismissed();
+    setDismissed(true);
+  }, []);
+
   useEffect(() => {
-    if (isStandalone || !showPrompt) return;
+    if (isStandalone || dismissed || shownRef.current) return;
+    if (!isIOS && !deferredPrompt) return;
 
     const timer = setTimeout(() => {
+      shownRef.current = true;
       if (isIOS) {
         toast(
           <div className="flex flex-col gap-2">
@@ -64,10 +101,8 @@ export function InstallPrompt() {
           {
             position: "top-right",
             duration: 10000,
-            action: {
-              label: "Dismiss",
-              onClick: () => setShowPrompt(false),
-            },
+            action: { label: "Dismiss", onClick: dismiss },
+            onDismiss: dismiss,
           },
         );
       } else if (deferredPrompt) {
@@ -77,10 +112,15 @@ export function InstallPrompt() {
             <Button
               size="sm"
               onClick={async () => {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === "accepted") {
-                  setDeferredPrompt(null);
+                try {
+                  await deferredPrompt.prompt();
+                  const { outcome } = await deferredPrompt.userChoice;
+                  if (outcome === "accepted" || outcome === "dismissed") {
+                    setDeferredPrompt(null);
+                    dismiss();
+                  }
+                } catch (err) {
+                  console.error("Install prompt failed:", err);
                 }
               }}
             >
@@ -90,17 +130,15 @@ export function InstallPrompt() {
           {
             position: "top-right",
             duration: 10000,
-            action: {
-              label: "Dismiss",
-              onClick: () => setShowPrompt(false),
-            },
+            action: { label: "Dismiss", onClick: dismiss },
+            onDismiss: dismiss,
           },
         );
       }
-    }, 5000);
+    }, INSTALL_PROMPT_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [isStandalone, showPrompt, isIOS, deferredPrompt]);
+  }, [isStandalone, dismissed, isIOS, deferredPrompt, dismiss]);
 
   return null;
 }
