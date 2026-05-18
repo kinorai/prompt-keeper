@@ -21,8 +21,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Prompt Keeper - LLM Conversation History",
   description: "Search and analyze your historical LLM conversations",
+  applicationName: "Prompt Keeper",
+  appleWebApp: {
+    capable: true,
+    title: "Prompt Keeper",
+    statusBarStyle: "default",
+  },
   icons: {
     icon: "/favicon.ico",
+    apple: [{ url: "/icon-192x192.png", sizes: "192x192", type: "image/png" }],
   },
 };
 
