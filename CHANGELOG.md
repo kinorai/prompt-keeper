@@ -1,3 +1,11 @@
+## [0.10.0](https://github.com/kinorai/prompt-keeper/compare/v0.9.0...v0.10.0) (2026-05-18)
+
+
+### Features
+
+* add pwa ([384161b](https://github.com/kinorai/prompt-keeper/commit/384161be51caa43bb58161f1f163cf86be8b745f))
+* enhance PWA functionality and offline support ([33a0521](https://github.com/kinorai/prompt-keeper/commit/33a0521013eb0f12f3726bca6dd0a313a30c8a75))
+
 ## [0.9.0](https://github.com/kinorai/prompt-keeper/compare/v0.8.2...v0.9.0) (2026-02-15)
 
 
@@ -20,6 +28,4 @@
 ### Features
 
 * **opensearch:** init is done automatically on startup ([84514c9](https://github.com/kinorai/prompt-keeper/commit/84514c9b639eb9a7c349e73bec533ec5d0fc3382))
-
-## [0.7.2](https://github.com/kinorai/prompt-keeper/compare/v0.7.1...v0.7.2) (2025-12-18)
 
