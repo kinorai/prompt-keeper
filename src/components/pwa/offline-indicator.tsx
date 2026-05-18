@@ -1,31 +1,32 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 export function OfflineIndicator() {
-  const [offlineToastId, setOfflineToastId] = useState<string | number | null>(null);
-
-  const handleOnline = useCallback(() => {
-    if (offlineToastId) {
-      toast.dismiss(offlineToastId);
-    }
-    toast.success("Back online", {
-      position: "top-left",
-      duration: 3000,
-    });
-    setOfflineToastId(null);
-  }, [offlineToastId]);
-
-  const handleOffline = useCallback(() => {
-    const id = toast.warning("You're offline", {
-      position: "top-left",
-      duration: Infinity,
-    });
-    setOfflineToastId(id);
-  }, []);
+  const offlineToastIdRef = useRef<string | number | null>(null);
 
   useEffect(() => {
+    const handleOnline = () => {
+      if (offlineToastIdRef.current !== null) {
+        toast.dismiss(offlineToastIdRef.current);
+        offlineToastIdRef.current = null;
+      }
+      toast.success("Back online", { position: "top-left", duration: 3000 });
+    };
+
+    const handleOffline = () => {
+      if (offlineToastIdRef.current !== null) return;
+      offlineToastIdRef.current = toast.warning("You're offline", {
+        position: "top-left",
+        duration: Infinity,
+      });
+    };
+
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      handleOffline();
+    }
+
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
@@ -33,7 +34,7 @@ export function OfflineIndicator() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [handleOnline, handleOffline]);
+  }, []);
 
   return null;
 }
