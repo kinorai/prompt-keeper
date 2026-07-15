@@ -54,7 +54,7 @@ services:
       start_period: 30s
 
   litellm:
-    image: ghcr.io/berriai/litellm:v1.82.3-stable
+    image: ghcr.io/berriai/litellm:v1.92.0
     ports:
       - "4000:4000"
     environment:
