@@ -10,8 +10,31 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      # All auto-fixable security advisories -> one consolidated PR
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      # Routine version bumps: production deps in their own PR for review
+      npm-production:
+        applies-to: version-updates
+        dependency-type: production
+        patterns:
+          - "*"
+      # Routine version bumps: dev/tooling deps grouped together (low risk)
+      npm-development:
+        applies-to: version-updates
+        dependency-type: development
+        patterns:
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       # Check for updates to GitHub Actions every week
       interval: "weekly"
+    groups:
+      # One PR for all GitHub Actions bumps
+      github-actions:
+        patterns:
+          - "*"
