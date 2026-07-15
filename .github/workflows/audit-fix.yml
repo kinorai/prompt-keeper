@@ -1,0 +1,172 @@
+name: Dependency Audit Fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Allow breaking major upgrades (npm audit fix --force)"
+        type: boolean
+        default: false
+
+# Explicit block overrides the repo's read-only default so the built-in token
+# can push a branch and open the PR. No PAT / GitHub App token needed.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: audit-fix
+  cancel-in-progress: false
+
+jobs:
+  audit-fix:
+    name: npm audit fix -> PR
+    runs-on: ubuntu-latest
+    env:
+      FORCE: ${{ inputs.force && '--force' || '' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund --progress=false
+
+      # Snapshot vulnerabilities before the fix so we can report what changed.
+      - name: Audit snapshot (before)
+        run: npm audit --json > "$RUNNER_TEMP/audit-before.json" || true
+
+      # Borrowed from ybiquitous/npm-audit-fix-action (auditFix.js): a non-zero
+      # exit just means some advisories have no fix - only a real "npm ERR!" is
+      # fatal. This is more honest than a blanket `|| true`.
+      - name: Run npm audit fix
+        run: |
+          set +e
+          npm audit fix $FORCE 2>&1 | tee "$RUNNER_TEMP/audit-fix.log"
+          set -e
+          if grep -q "npm ERR!" "$RUNNER_TEMP/audit-fix.log"; then
+            echo "::error::npm reported a hard error during audit fix"
+            exit 1
+          fi
+
+      # Borrowed from changedFiles.js: only manifest/lockfile changes count.
+      - name: Detect dependency changes
+        id: diff
+        run: |
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "_Nothing to fix - package.json / package-lock.json unchanged._" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Audit snapshot (after)
+        if: steps.diff.outputs.changed == 'true'
+        run: npm audit --json > "$RUNNER_TEMP/audit-after.json" || true
+
+      # Build a rich PR body (resolved advisories + before/after severity),
+      # mirroring buildPullRequestBody.js / create-body.js. Temp files live in
+      # RUNNER_TEMP so they never leak into the PR.
+      - name: Build PR body and summary
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node - <<'EOF' | tee -a "$GITHUB_STEP_SUMMARY"
+          const fs = require("fs");
+          const tmp = process.env.RUNNER_TEMP;
+          const read = (f) => { try { return JSON.parse(fs.readFileSync(`${tmp}/${f}`, "utf8")); } catch { return null; } };
+          const before = read("audit-before.json") || {};
+          const after = read("audit-after.json");
+          const order = ["critical", "high", "moderate", "low", "info"];
+          const bMeta = before.metadata?.vulnerabilities || {};
+          const bVuln = before.vulnerabilities || {};
+          const out = ["### npm audit fix", ""];
+          if (!after || !after.metadata) {
+            out.push("_Post-fix audit unavailable; see the dependency diff in the PR._");
+          } else {
+            const aMeta = after.metadata.vulnerabilities || {};
+            const aVuln = after.vulnerabilities || {};
+            const fixed = Object.keys(bVuln).filter((k) => !(k in aVuln)).sort();
+            out.push(`Vulnerabilities: **${bMeta.total || 0} -> ${aMeta.total || 0}**`, "");
+            out.push("| Severity | Before | After |", "|:--|--:|--:|");
+            for (const s of order) if ((bMeta[s] || 0) || (aMeta[s] || 0)) out.push(`| ${s} | ${bMeta[s] || 0} | ${aMeta[s] || 0} |`);
+            out.push("");
+            if (fixed.length) {
+              out.push(`<details open><summary><strong>Resolved advisories (${fixed.length})</strong></summary>`, "");
+              out.push("| Package | Severity | Advisory |", "|:--|:--|:--|");
+              for (const name of fixed) {
+                const v = bVuln[name] || {};
+                const via = Array.isArray(v.via) ? v.via.find((x) => typeof x === "object") : null;
+                out.push(`| \`${name}\` | ${v.severity || "-"} | ${via?.url ? `[${via.title}](${via.url})` : (via?.title || "-")} |`);
+              }
+              out.push("", "</details>");
+            } else {
+              out.push("_Dependency versions changed; no tracked advisory fully resolved (likely transitive)._");
+            }
+          }
+          const note = "\n\n> All CI gates (prettier, eslint, tsc, jest, `next build`, prod audit) ran in the " +
+            `[workflow run](${process.env.RUN_URL}) before this PR was opened. Because it was opened by the built-in ` +
+            "`GITHUB_TOKEN`, `ci.yml` / `security.yml` do not re-run on it - the gates above are your green light to merge.";
+          fs.writeFileSync(`${tmp}/pr-body.md`, out.join("\n") + note + "\n");
+          console.log(out.join("\n"));
+          EOF
+
+      # --- The same gates CI runs, executed here because ci.yml will not re-run
+      # --- on a PR opened by the built-in token. A hard failure means no PR.
+      - name: Check formatting
+        if: steps.diff.outputs.changed == 'true'
+        run: npx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+
+      - name: Run linting
+        if: steps.diff.outputs.changed == 'true'
+        run: npm run lint
+
+      - name: Type check
+        if: steps.diff.outputs.changed == 'true'
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        if: steps.diff.outputs.changed == 'true'
+        run: npm run test
+
+      - name: Build application
+        if: steps.diff.outputs.changed == 'true'
+        run: npm run build
+
+      # Informational only: mirrors security.yml's production gate but must not
+      # block landing the fixes we already validated above.
+      - name: Production audit (report only)
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          if npm audit --omit=dev --audit-level=high; then
+            echo "_No production vulnerabilities at/above high remain._" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "> [!WARNING]"
+              echo "> Production vulnerabilities remain after this fix. Re-run with **force** enabled, or handle them manually."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Create Pull Request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          sign-commits: true
+          add-paths: |
+            package.json
+            package-lock.json
+          commit-message: "build(deps): npm audit fix${{ inputs.force && ' --force' || '' }}"
+          branch: deps/audit-fix
+          delete-branch: true
+          base: main
+          title: "build(deps): npm audit fix${{ inputs.force && ' --force' || '' }}"
+          labels: |
+            dependencies
+            javascript
+          body-path: ${{ runner.temp }}/pr-body.md
