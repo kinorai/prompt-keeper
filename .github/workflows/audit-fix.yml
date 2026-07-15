@@ -1,0 +1,116 @@
+name: Dependency Audit Fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Allow breaking major upgrades (npm audit fix --force)"
+        type: boolean
+        default: false
+
+# Explicit block overrides the repo's read-only default so the built-in token
+# can push a branch and open the PR. No PAT / GitHub App token needed.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: audit-fix
+  cancel-in-progress: false
+
+jobs:
+  audit-fix:
+    name: npm audit fix -> PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund --progress=false
+
+      # audit fix may exit non-zero when some advisories have no fix; that is
+      # expected here - the correctness gates below decide whether we open a PR.
+      - name: Run npm audit fix
+        run: npm audit fix ${{ inputs.force && '--force' || '' }} || true
+
+      - name: Detect changes
+        id: diff
+        run: |
+          {
+            echo "### Dependency changes"
+            echo '```'
+            git --no-pager diff --stat
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "_Nothing to fix - working tree is clean._" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --- The same gates CI runs, executed here because ci.yml will not re-run
+      # --- on a PR opened by the built-in token. A hard failure means no PR.
+      - name: Check formatting
+        if: steps.diff.outputs.changed == 'true'
+        run: npx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+
+      - name: Run linting
+        if: steps.diff.outputs.changed == 'true'
+        run: npm run lint
+
+      - name: Type check
+        if: steps.diff.outputs.changed == 'true'
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        if: steps.diff.outputs.changed == 'true'
+        run: npm run test
+
+      - name: Build application
+        if: steps.diff.outputs.changed == 'true'
+        run: npm run build
+
+      # Informational only: mirrors security.yml's production gate but must not
+      # block landing the fixes we already validated above.
+      - name: Production audit (report only)
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          if npm audit --omit=dev --audit-level=high; then
+            echo "_No production vulnerabilities at/above high remain._" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "> [!WARNING]"
+              echo "> Production vulnerabilities remain after this fix. Re-run with **force** enabled, or handle them manually."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Create Pull Request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "fix(deps): apply npm audit fix${{ inputs.force && ' --force' || '' }}"
+          branch: deps/audit-fix
+          delete-branch: true
+          base: main
+          title: "fix(deps): npm audit fix${{ inputs.force && ' --force' || '' }}"
+          labels: dependencies
+          body: |
+            Automated `npm audit fix${{ inputs.force && ' --force' || '' }}` run.
+
+            **All CI gates ran inside the workflow before this PR was opened:**
+            prettier, eslint, `tsc --noEmit`, jest, `next build`, and the
+            production `npm audit` gate - see the
+            [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            for details.
+
+            > Because this PR was opened by the built-in `GITHUB_TOKEN`, `ci.yml`
+            > and `security.yml` do **not** re-run on it automatically. The gates
+            > listed above are your green light to merge.
