@@ -1,3 +1,10 @@
+## [0.10.2](https://github.com/kinorai/prompt-keeper/compare/v0.10.1...v0.10.2) (2026-07-22)
+
+
+### Bug Fixes
+
+* **deps:** resolve remaining advisories via targeted overrides ([bb879a3](https://github.com/kinorai/prompt-keeper/commit/bb879a3e5c59e2c0c959db51dbfe7b023fd579ff))
+
 ## [0.10.1](https://github.com/kinorai/prompt-keeper/compare/v0.10.0...v0.10.1) (2026-07-22)
 
 ## [0.10.0](https://github.com/kinorai/prompt-keeper/compare/v0.9.0...v0.10.0) (2026-05-18)
@@ -21,6 +28,4 @@
 * lint errors ([a9d1ab8](https://github.com/kinorai/prompt-keeper/commit/a9d1ab867241f7233882c88d100517a43fdd3d05))
 
 ## [0.8.2](https://github.com/kinorai/prompt-keeper/compare/v0.8.1...v0.8.2) (2026-01-27)
-
-## [0.8.1](https://github.com/kinorai/prompt-keeper/compare/v0.8.0...v0.8.1) (2026-01-27)
 
