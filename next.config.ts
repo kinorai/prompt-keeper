@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["pino", "pino-pretty"],
+  // `next dev` refuses to serve its own assets cross-origin, which silently breaks hydration
+  // when the dev server is reached by LAN/VPN address instead of localhost. Set
+  // ALLOWED_DEV_ORIGINS to a comma-separated host list to allow those origins.
+  allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   turbopack: {
     root: __dirname,
   },
