@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, Suspense, useMemo } from "react";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilters } from "@/components/search/search-filters";
-import { ConversationCard } from "@/components/search/conversation-card";
+import { ConversationCard, type Message } from "@/components/search/conversation-card";
 import { ConversationListItem } from "@/components/search/conversation-list-item";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, Search, MessageSquare, Settings, ChevronLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -12,6 +12,7 @@ import debounce from "lodash.debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LogoutButton } from "@/components/logout-button";
+import { PasskeySettings } from "@/components/auth/passkey-settings";
 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DEFAULT_ROLES, FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DEFAULTS } from "@/lib/defaults";
@@ -47,11 +48,7 @@ interface SearchHit {
       prompt_tokens?: number;
       completion_tokens?: number;
     };
-    messages?: Array<{
-      role: string;
-      content: string;
-      finish_reason?: string;
-    }>;
+    messages?: Message[];
   };
 }
 interface MappedSearchResult {
@@ -65,12 +62,7 @@ interface MappedSearchResult {
     prompt_tokens?: number;
     completion_tokens?: number;
   };
-  messages: Array<{
-    role: string;
-    content: string;
-    highlightedContent?: string;
-    finish_reason?: string;
-  }>;
+  messages: Message[];
 }
 
 // Create a separate component that uses useSearchParams
@@ -690,8 +682,8 @@ function HomeContent() {
               </SheetTrigger>
               <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
                 <SheetHeader className="mb-4">
-                  <SheetTitle>Search Settings</SheetTitle>
-                  <SheetDescription>Adjust your search filters and preferences</SheetDescription>
+                  <SheetTitle>Settings</SheetTitle>
+                  <SheetDescription>Search filters, appearance and account</SheetDescription>
                 </SheetHeader>
                 <div className="flex justify-between items-center mb-4">
                   <div />
@@ -720,6 +712,8 @@ function HomeContent() {
                     onRolesChange={setRoles}
                     alwaysExpanded={true}
                   />
+                  <Separator className="my-4" />
+                  <PasskeySettings />
                 </div>
               </SheetContent>
             </Sheet>

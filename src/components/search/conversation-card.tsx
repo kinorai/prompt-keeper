@@ -23,10 +23,6 @@ import { ModelBadge } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Streamdown } from "streamdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -36,15 +32,34 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { copyToClipboard } from "@/lib/clipboard";
-import { normalizeMarkdownCodeFenceLanguages } from "@/lib/markdown";
 import { buildConversationMarkdown, buildConversationPlainText } from "@/lib/conversation";
+import { ReasoningRow, ToolStrip } from "@/components/search/tool-calls";
+import { buildRenderItems } from "@/lib/tool-calls";
+import { MarkdownContent } from "@/components/search/markdown-content";
+import { MessageExtras } from "@/components/search/message-extras";
 import { injectHighlightHtml, splitHighlightSegments, SEARCH_HIGHLIGHT_CLASS } from "@/lib/search-highlights";
+
+export interface ToolCall {
+  index?: number;
+  id?: string;
+  type?: string;
+  function?: { name?: string; arguments?: string };
+  custom?: { name?: string; input?: string };
+}
 
 export interface Message {
   role: string;
-  content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+  content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> | null;
   highlightedContent?: string;
   finish_reason?: string;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+  name?: string;
+  reasoning_content?: string;
+  annotations?: unknown[];
+  audio?: unknown;
+  images?: unknown[];
+  refusal?: string;
 }
 
 export interface ConversationCardProps {
@@ -108,121 +123,6 @@ const CopyButton = ({
       {isCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
       {showText && <span className="hidden sm:inline text-xs">{isCopied ? "Copied" : "Copy"}</span>}
     </Button>
-  );
-};
-
-const MarkdownContent: React.FC<{
-  content: string;
-}> = ({ content }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inlineCopyTimersRef = useRef<WeakMap<HTMLElement, number>>(new WeakMap());
-  const normalizedContent = useMemo(() => normalizeMarkdownCodeFenceLanguages(content), [content]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const container = containerRef.current;
-    const timersMap = inlineCopyTimersRef.current;
-
-    // Add copy buttons to code blocks, guarding against duplicates
-    const codeBlocks = container.querySelectorAll("pre code");
-    codeBlocks.forEach((codeBlock) => {
-      const pre = codeBlock.parentElement;
-      if (!pre) return;
-      if (pre.querySelector(".pk-copy-btn-container")) return;
-
-      const buttonContainer = document.createElement("div");
-      buttonContainer.className = "absolute top-2 right-2 pk-copy-btn-container";
-
-      const copyButton = document.createElement("button");
-      copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
-      copyButton.className = "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
-      copyButton.title = "Copy code";
-
-      copyButton.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const code = codeBlock.textContent || "";
-        navigator.clipboard.writeText(code).then(() => {
-          copyButton.innerHTML = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-check\"><path d=\"M20 6 9 17l-5-5\"/></svg>`;
-          copyButton.className = "p-1 rounded-md bg-green-500/20 hover:bg-green-500/30 text-green-500";
-
-          window.setTimeout(() => {
-            copyButton.innerHTML = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-copy\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/></svg>`;
-            copyButton.className = "p-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground";
-          }, 1500);
-        });
-      });
-
-      buttonContainer.appendChild(copyButton);
-      pre.style.position = "relative";
-      pre.appendChild(buttonContainer);
-    });
-
-    // Event delegation for inline code copy
-    const handleInlineCodeClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const codeElement = target.closest("code") as HTMLElement | null;
-      if (!codeElement) return;
-      if (codeElement.closest("pre")) return; // ignore code blocks
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Clear any previous highlight and timers
-      container.querySelectorAll("code.__pk_copied").forEach((el) => {
-        const htmlEl = el as HTMLElement;
-        const timerId = timersMap.get(htmlEl);
-        if (timerId) {
-          window.clearTimeout(timerId);
-          timersMap.delete(htmlEl);
-        }
-        htmlEl.style.backgroundColor = "";
-        htmlEl.style.color = "";
-        htmlEl.classList.remove("__pk_copied");
-      });
-
-      const code = codeElement.textContent || "";
-      navigator.clipboard.writeText(code).then(() => {
-        codeElement.classList.add("__pk_copied");
-        codeElement.style.backgroundColor = "rgba(34, 197, 94, 0.2)";
-        codeElement.style.color = "rgb(34, 197, 94)";
-
-        const timerId = window.setTimeout(() => {
-          codeElement.style.backgroundColor = "";
-          codeElement.style.color = "";
-          codeElement.classList.remove("__pk_copied");
-          timersMap.delete(codeElement);
-        }, 1500);
-        timersMap.set(codeElement, timerId);
-
-        toast.success("Code copied to clipboard");
-      });
-    };
-
-    container.addEventListener("click", handleInlineCodeClick);
-
-    return () => {
-      container.removeEventListener("click", handleInlineCodeClick);
-      container.querySelectorAll("code.__pk_copied").forEach((el) => {
-        const htmlEl = el as HTMLElement;
-        const timerId = timersMap.get(htmlEl);
-        if (timerId) {
-          window.clearTimeout(timerId);
-          timersMap.delete(htmlEl);
-        }
-        htmlEl.style.backgroundColor = "";
-        htmlEl.style.color = "";
-        htmlEl.classList.remove("__pk_copied");
-      });
-    };
-  }, [content]);
-
-  return (
-    <div ref={containerRef} className="dark:prose-invert max-w-none prose-sm prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
-      <Streamdown className="sd-prose" remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
-        {normalizedContent}
-      </Streamdown>
-    </div>
   );
 };
 
@@ -328,6 +228,8 @@ const ChatBubble: React.FC<{
             </div>
           )}
 
+          {isAssistantMessage && message.reasoning_content && <ReasoningRow content={message.reasoning_content} />}
+
           {isSystemMessage && !isSystemExpanded ? (
             <div className="w-full block text-sm sm:text-base whitespace-nowrap overflow-hidden text-ellipsis pr-8">
               {(message.highlightedContent
@@ -351,6 +253,8 @@ const ChatBubble: React.FC<{
               }
             />
           )}
+
+          <MessageExtras message={message} />
 
           <div className="absolute top-1 right-1">
             <CopyButton
@@ -403,6 +307,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 }) => {
   const createdDate = new Date(created_at);
   const cardRef = useRef<HTMLDivElement>(null); // Ref for the main card element
+  const renderItems = useMemo(() => buildRenderItems(messages), [messages]);
   const modelDisplay = highlightedModel
     ? splitHighlightSegments(highlightedModel).map((segment, idx) => (
         <span key={`model-hl-${idx}`} className={segment.isHighlighted ? SEARCH_HIGHLIGHT_CLASS : undefined}>
@@ -724,9 +629,13 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       </div>
       <div className={cn("px-2 sm:px-3 py-0.5 sm:py-1 pb-1 sm:pb-2", variant === "card" ? "" : "")}>
         <div className="space-y-3">
-          {messages.map((message, index) => (
-            <ChatBubble key={`message-${index}`} message={message} modelName={model} />
-          ))}
+          {renderItems.map((item, index) =>
+            item.kind === "tools" ? (
+              <ToolStrip key={`tools-${index}`} invocations={item.invocations} />
+            ) : (
+              <ChatBubble key={`message-${index}`} message={item.message} modelName={model} />
+            ),
+          )}
         </div>
       </div>
 

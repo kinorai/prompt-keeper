@@ -67,6 +67,13 @@ export function SearchFilters({
           >
             <span className="text-sm">assistant</span>
           </ToggleGroupItem>
+          <ToggleGroupItem
+            value="tool"
+            aria-label="Filter tool"
+            className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+          >
+            <span className="text-sm">tool</span>
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
     );
