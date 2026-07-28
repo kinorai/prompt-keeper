@@ -3,6 +3,7 @@ import { getOpenSearchClient, PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/l
 import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/search-highlights";
 import { createLogger } from "@/lib/logger";
 import { getPresignedUrl } from "@/lib/s3";
+import { DEFAULT_ROLES } from "@/lib/defaults";
 // @ts-expect-error — deep subpath types exist but aren't exposed in package exports for bundler resolution
 import type { Highlight, HighlightField } from "@opensearch-project/opensearch/api/_types/_core.search";
 // @ts-expect-error — same as above
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     } = await req.json();
 
     // 1. Parse Magic Query
-    const roleRegex = /\brole:(system|user|assistant)\b/gi;
+    const roleRegex = new RegExp(`\\brole:(${DEFAULT_ROLES.join("|")})\\b`, "gi");
     const modelRegex = /\bmodel:([^\s"']+|"[^"]*"|'[^']+')/gi;
 
     const rolesFromQuery: string[] = [];
@@ -224,11 +225,11 @@ export async function POST(req: NextRequest) {
     // Filters
 
     // Roles
-    const validRoles = ["system", "user", "assistant"];
+    const validRoles: string[] = [...DEFAULT_ROLES];
     const uiRoles = Array.isArray(roles) ? roles.filter((r) => validRoles.includes(r)) : [];
 
     const activeRoles = new Set<string>();
-    if (uiRoles.length > 0 && uiRoles.length < 3) {
+    if (uiRoles.length > 0 && uiRoles.length < validRoles.length) {
       uiRoles.forEach((r) => activeRoles.add(r));
     }
     if (rolesFromQuery.length > 0) {

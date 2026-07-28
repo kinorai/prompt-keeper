@@ -25,5 +25,5 @@ export const FILTERS_DEFAULTS = {
 } as const;
 
 // Roles defaults used across the app
-export const DEFAULT_ROLES = ["system", "user", "assistant"] as const;
+export const DEFAULT_ROLES = ["system", "user", "assistant", "tool"] as const;
 export type Role = (typeof DEFAULT_ROLES)[number];

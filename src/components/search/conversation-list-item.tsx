@@ -8,6 +8,7 @@ import { KebabMenu } from "@/components/kebab-menu";
 import { format, isSameDay, isThisWeek, isYesterday } from "date-fns";
 import { copyToClipboard } from "@/lib/clipboard";
 import { buildConversationMarkdown, buildConversationPlainText, extractTextFromContent } from "@/lib/conversation";
+import type { Message } from "@/components/search/conversation-card";
 
 import { toast } from "sonner";
 import { splitHighlightSegments, SEARCH_HIGHLIGHT_CLASS } from "@/lib/search-highlights";
@@ -18,12 +19,7 @@ export interface ConversationListItemProps {
   model: string;
   highlightedModel?: string;
   highlightSnippet?: string;
-  messages: Array<{
-    role: string;
-    content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
-    highlightedContent?: string;
-    finish_reason?: string;
-  }>;
+  messages: Message[];
 
   isActive?: boolean;
   onSelect?: (id: string) => void;
