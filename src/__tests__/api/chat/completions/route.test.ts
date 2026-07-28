@@ -1438,8 +1438,8 @@ describe("Chat Completions API Route", () => {
     const crypto = jest.requireMock("crypto");
     // Create specific mocks for this test case to track calls
     const updateMock = jest.fn().mockReturnThis();
-    // generateConversationHash should return "" for empty messages, so digest shouldn't be called
-    const digestMock = jest.fn();
+    // Identity now hashes the list we store, which includes the response message
+    const digestMock = jest.fn().mockReturnValue("mock-conversation-hash");
 
     // Configure the globally mocked createHash to return our specific mocks for this test run
     // We expect update/digest not to be called, but set up mocks just in case and for clarity.
@@ -1457,9 +1457,9 @@ describe("Chat Completions API Route", () => {
 
     await POST(req);
 
-    // Verify hash generation was not attempted in the usual way
-    expect(updateMock).not.toHaveBeenCalled();
-    expect(digestMock).not.toHaveBeenCalled();
+    // An empty request still yields an identity, hashed over the stored response message.
+    // There is no earlier turn to match, so nothing is looked up as a parent.
+    expect(updateMock).toHaveBeenCalledWith("assistant:empty response");
 
     // No direct OpenSearch writes in API route
     expect(opensearchClient.index).not.toHaveBeenCalled();

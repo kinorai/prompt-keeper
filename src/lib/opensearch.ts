@@ -124,6 +124,45 @@ export const INDEX_MAPPING = {
       type: "nested" as const,
       properties: {
         role: { type: "keyword" as const },
+        // Tool calling. Plain objects rather than nested: we only ever filter on tool names,
+        // never correlate fields within a single array element.
+        tool_calls: {
+          properties: {
+            id: { type: "keyword" as const },
+            type: { type: "keyword" as const },
+            function: {
+              properties: {
+                name: { type: "keyword" as const },
+                arguments: { type: "text" as const, analyzer: "standard" },
+              },
+            },
+            custom: {
+              properties: {
+                name: { type: "keyword" as const },
+                input: { type: "text" as const, analyzer: "standard" },
+              },
+            },
+          },
+        },
+        tool_call_id: { type: "keyword" as const },
+        name: { type: "keyword" as const },
+        reasoning_content: {
+          type: "text" as const,
+          analyzer: "standard",
+          fields: {
+            folded: {
+              type: "text" as const,
+              analyzer: "folded_analyzer",
+            },
+          },
+        },
+        // Provider-specific and unbounded (signatures, redacted blobs): stored, never indexed
+        thinking_blocks: { type: "object" as const, enabled: false },
+        // Assistant payloads we render but never query on: kept in _source only
+        annotations: { type: "object" as const, enabled: false },
+        audio: { type: "object" as const, enabled: false },
+        images: { type: "object" as const, enabled: false },
+        refusal: { type: "text" as const, analyzer: "standard" },
         content: {
           type: "text" as const,
           analyzer: "standard",
@@ -210,9 +249,19 @@ export async function initializeIndex() {
     } else {
       log.debug(`Index ${PROMPT_KEEPER_INDEX} already exists`);
 
-      // Only check mapping compatibility if needed
-      // In production, you might want to add migration logic here
-      // For now, we'll just log that the index exists
+      // Push the mapping so fields added since the index was created (e.g. tool calling) start
+      // being indexed. Adding fields is allowed in place; changing an existing field's type is
+      // not, so a conflict is logged rather than thrown — the app stays up on the old mapping
+      // and only the new fields are missing until the index is reindexed.
+      try {
+        await getOpenSearchClient().indices.putMapping({
+          index: PROMPT_KEEPER_INDEX,
+          body: INDEX_MAPPING,
+        });
+        log.debug(`Index ${PROMPT_KEEPER_INDEX} mapping is up to date`);
+      } catch (error) {
+        log.warn(error, `Could not update the mapping of ${PROMPT_KEEPER_INDEX}; a reindex may be required`);
+      }
     }
 
     isInitialized = true;

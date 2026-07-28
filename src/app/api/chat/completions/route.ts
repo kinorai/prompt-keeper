@@ -4,6 +4,8 @@ import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { uploadFile } from "@/lib/s3";
+import { collectUnknownFields } from "@/lib/message-fields";
+import { incrementCounter } from "@/lib/metrics";
 
 const log = createLogger("api:chat/completions");
 
@@ -18,6 +20,23 @@ const CONFIG = {
 };
 
 // Types
+// A tool call is either `type: "function"` (arguments is a JSON string) or `type: "custom"`
+// (freeform input). Streamed deltas arrive fragmented and are keyed by `index`.
+interface ToolCall {
+  index?: number;
+  id?: string;
+  type?: string;
+  function?: { name?: string; arguments?: string };
+  custom?: { name?: string; input?: string };
+}
+
+interface Usage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  [key: string]: unknown;
+}
+
 interface StreamChunk {
   id: string;
   model: string;
@@ -27,9 +46,14 @@ interface StreamChunk {
     delta: {
       role?: string;
       content?: string;
+      reasoning_content?: string;
+      tool_calls?: ToolCall[];
     };
     finish_reason?: string;
   }>;
+  // Present on the final chunk when the client asked for stream_options.include_usage,
+  // which Open WebUI does whenever the model has the usage capability enabled
+  usage?: Usage;
 }
 
 interface FormattedResponse {
@@ -43,16 +67,14 @@ interface FormattedResponse {
   object: string;
   choices: Array<{
     index: number;
-    message: {
-      role: string;
-      content: string;
-    };
+    message: Message;
     finish_reason?: string;
   }>;
 }
 
 interface Message {
   role: string;
+  // Assistant turns that only call tools send `content: null`
   content:
     | string
     | Array<{
@@ -60,7 +82,29 @@ interface Message {
         text?: string;
         image_url?: { url: string };
         [key: string]: unknown;
-      }>;
+      }>
+    | null;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+  name?: string;
+  reasoning_content?: string;
+  thinking_blocks?: unknown[];
+  reasoning_items?: unknown[];
+  annotations?: unknown[];
+  audio?: unknown;
+  images?: unknown[];
+  refusal?: string;
+  provider_specific_fields?: Record<string, unknown>;
+  // Deprecated predecessor of tool_calls, still emitted by older clients
+  function_call?: { name?: string; arguments?: string };
+}
+
+// Normalize the legacy `function_call` shape into `tool_calls` so that everything
+// downstream (storage, indexing, UI) only has to understand one shape.
+function normalizeToolCalls(message: Message): ToolCall[] | null {
+  if (message.tool_calls?.length) return message.tool_calls;
+  if (message.function_call) return [{ index: 0, type: "function", function: message.function_call }];
+  return null;
 }
 
 const skipHeaders = [
@@ -73,57 +117,22 @@ const skipHeaders = [
   "content-encoding",
 ];
 
-// Helper function to generate a conversation hash
-// When excludeLastUserMessage is true, we exclude the last user message (used for FINDING existing conversations)
-// When excludeLastUserMessage is false, we include all messages (used for STORING the conversation hash)
-function generateConversationHash(messages: Message[], excludeLastUserMessage = false): string {
-  if (!messages || messages.length === 0) return "";
+// Conversation identity
+//
+// A client continuing a conversation resends the whole history, so the messages we stored last
+// time are a *prefix* of the incoming list. Hashing every message (not just system + user) and
+// matching on prefixes therefore links a turn to its parent even when the new messages are not
+// user messages — which is what a tool round-trip looks like:
+//
+//   request 1: [user]                              -> stored [user, assistant(tool_calls)]
+//   request 2: [user, assistant(tool_calls), tool] -> prefix of length 2 matches request 1
+//
+// Hashing only system + user messages could not see that, so every tool round-trip started a
+// new conversation.
+function hashMessages(messages: Message[]): string {
+  if (messages.length === 0) return "";
 
-  // For conversation continuity identification:
-  // When a client sends a conversation continuation, they send the FULL history including the new message.
-  //
-  // To FIND existing conversation: hash OLD messages (exclude last user message)
-  // To STORE conversation: hash ALL messages (include last user message)
-  //
-  // Example flow:
-  // - Request 1: ["user:1"]
-  //   → Find with hash of [] (empty, no old messages) → not found
-  //   → Store with hash of ["user:1"]
-  //
-  // - Request 2: ["user:1", "user:2"]
-  //   → Find with hash of ["user:1"] → FOUND!
-  //   → Update with hash of ["user:1", "user:2"]
-  //
-  // - Request 3: ["user:1", "user:2", "user:3"]
-  //   → Find with hash of ["user:1", "user:2"] → FOUND!
-  //   → Update with hash of ["user:1", "user:2", "user:3"]
-
-  const messagesToHash: Message[] = [];
-
-  // Find system message and ALL user messages
-  const systemMessage = messages.find((msg) => msg.role === "system");
-  const userMessages = messages.filter((msg) => msg.role === "user");
-
-  if (systemMessage) {
-    messagesToHash.push(systemMessage);
-  }
-
-  // Add user messages (all or all except last, depending on the flag)
-  if (excludeLastUserMessage && userMessages.length > 1) {
-    // Exclude the last user message (for finding existing conversation)
-    messagesToHash.push(...userMessages.slice(0, -1));
-  } else if (!excludeLastUserMessage) {
-    // Include all user messages (for storing conversation)
-    messagesToHash.push(...userMessages);
-  }
-
-  if (messagesToHash.length === 0) {
-    // No messages to hash (new conversation with no history)
-    return "";
-  }
-
-  // Create a string from the selected messages
-  const contentString = messagesToHash
+  const contentString = messages
     .map((msg) => {
       let contentStr = "";
 
@@ -136,15 +145,29 @@ function generateConversationHash(messages: Message[], excludeLastUserMessage = 
           .join("\n");
       }
 
+      // Tool calls carry the meaning of an assistant turn whose content is null
+      const calls = (normalizeToolCalls(msg) ?? [])
+        .map((call) => `${call.function?.name ?? call.custom?.name ?? ""}:${call.function?.arguments ?? ""}`)
+        .join(",");
+
       // Normalize content by trimming and converting to lowercase
       contentStr = contentStr.trim().toLowerCase();
 
-      return `${msg.role}:${contentStr}`;
+      return `${msg.role}:${contentStr}${calls ? `:${calls}` : ""}`;
     })
     .join("|");
 
-  // Return a hash of the content string
   return crypto.createHash("sha256").update(contentString).digest("hex");
+}
+
+// Hashes of every proper prefix of the incoming history, longest first. One of these is the
+// storeHash of the conversation this request continues, if there is one.
+function prefixHashes(messages: Message[]): string[] {
+  const hashes: string[] = [];
+  for (let length = messages.length - 1; length > 0; length--) {
+    hashes.push(hashMessages(messages.slice(0, length)));
+  }
+  return hashes;
 }
 
 function formatStreamToResponse(chunks: StreamChunk[]): FormattedResponse {
@@ -153,28 +176,68 @@ function formatStreamToResponse(chunks: StreamChunk[]): FormattedResponse {
   }
 
   const firstChunk = chunks[0];
-  const lastChunk = chunks[chunks.length - 1];
-  const aggregatedContent = chunks.reduce((acc, chunk) => {
-    return acc + (chunk.choices[0]?.delta?.content || "");
-  }, "");
+  let aggregatedContent = "";
+  let aggregatedReasoning = "";
+  // Tool call fragments are keyed by `index`; `arguments` is split across chunks
+  const toolCallsByIndex = new Map<number, ToolCall>();
+  // The final chunk may carry usage only (empty choices), so keep the last one we saw
+  let finishReason: string | undefined;
+  let usage: Usage | undefined;
+
+  for (const chunk of chunks) {
+    // Read usage before the choices guard: the chunk that carries it has an empty choices array
+    if (chunk.usage) usage = chunk.usage;
+
+    const choice = chunk.choices?.[0];
+    if (!choice) continue;
+
+    aggregatedContent += choice.delta?.content || "";
+    aggregatedReasoning += choice.delta?.reasoning_content || "";
+    if (choice.finish_reason) finishReason = choice.finish_reason;
+
+    for (const fragment of choice.delta?.tool_calls || []) {
+      const index = fragment.index ?? 0;
+      const merged = toolCallsByIndex.get(index) || { index };
+
+      merged.id = fragment.id || merged.id;
+      merged.type = fragment.type || merged.type;
+      if (fragment.function) {
+        merged.function = {
+          name: fragment.function.name || merged.function?.name,
+          arguments: (merged.function?.arguments || "") + (fragment.function.arguments || ""),
+        };
+      }
+      if (fragment.custom) {
+        merged.custom = {
+          name: fragment.custom.name || merged.custom?.name,
+          input: (merged.custom?.input || "") + (fragment.custom.input || ""),
+        };
+      }
+
+      toolCallsByIndex.set(index, merged);
+    }
+  }
+
+  const toolCalls = Array.from(toolCallsByIndex.keys())
+    .sort((a, b) => a - b)
+    .map((index) => toolCallsByIndex.get(index) as ToolCall);
 
   return {
     id: firstChunk.id,
     model: firstChunk.model,
     object: firstChunk.object,
-    usage: {
-      prompt_tokens: 0, // These will be updated when available
-      completion_tokens: 0,
-      total_tokens: 0,
-    },
+    // Real token counts when the stream included them, zeros only when it genuinely did not
+    usage: usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
     choices: [
       {
         index: 0,
         message: {
           role: "assistant", // We know this is always assistant for responses
           content: aggregatedContent,
+          ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}),
+          ...(aggregatedReasoning ? { reasoning_content: aggregatedReasoning } : {}),
         },
-        finish_reason: lastChunk.choices[0]?.finish_reason,
+        finish_reason: finishReason,
       },
     ],
   };
@@ -233,120 +296,123 @@ async function processMessageForStorage(message: Message): Promise<Message> {
 
 // Store conversation in Postgres (source of truth) and enqueue outbox event
 // If a conversation with the same hash exists (within 1 year), update it instead of creating new
-async function storeConversationPostgres(requestMessages: Message[], response: FormattedResponse, latency: number) {
+async function storeConversationPostgres(
+  requestMessages: Message[],
+  response: FormattedResponse,
+  latency: number,
+  requestBody: Record<string, unknown> = {},
+) {
   try {
     const sanitizedRequestMessages = await Promise.all(requestMessages.map(processMessageForStorage));
     const sanitizedResponseMessages = await Promise.all(
       response.choices.map((choice) => processMessageForStorage(choice.message)),
     );
 
-    // Generate TWO hashes:
-    // 1. findHash: excludes last user message - used to FIND existing conversation
-    // 2. storeHash: includes all messages - used to STORE the conversation
-    const findHash = generateConversationHash(requestMessages, true); // exclude last
-    const storeHash = generateConversationHash(requestMessages, false); // include all
+    // What we are about to store: the client's history plus this turn's reply. The next request
+    // in the conversation resends exactly this list as its own prefix.
+    const storedMessages = [...sanitizedRequestMessages, ...sanitizedResponseMessages];
+    const storeHash = hashMessages(storedMessages);
+    // Proper prefixes of the incoming history, longest first — one of them is the parent's hash
+    const candidateHashes = prefixHashes(sanitizedRequestMessages);
+
+    // Everything about the request except the messages themselves: tools offered, tool_choice,
+    // sampling params, stream options, and any client-specific extras
+    const requestParams = Object.fromEntries(Object.entries(requestBody).filter(([key]) => key !== "messages"));
 
     const prisma = getPrisma();
     await prisma.$transaction(async (tx) => {
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+      const candidates =
+        candidateHashes.length > 0
+          ? await tx.conversation.findMany({
+              where: { conversationHash: { in: candidateHashes }, updatedAt: { gte: oneYearAgo } },
+              orderBy: { updatedAt: "desc" },
+            })
+          : [];
+
+      // candidateHashes is longest-first, so the earliest hash with a match is the most specific
+      // parent for this turn
+      const existing = candidateHashes
+        .map((hash) => candidates.find((candidate) => candidate.conversationHash === hash))
+        .find(Boolean);
+
+      const conversationData = {
+        model: response.model,
+        conversationHash: storeHash,
+        requestParams: Object.keys(requestParams).length > 0 ? (requestParams as Prisma.InputJsonValue) : Prisma.DbNull,
+        latencyMs: latency,
+        promptTokens: response.usage?.prompt_tokens ?? null,
+        completionTokens: response.usage?.completion_tokens ?? null,
+        totalTokens: response.usage?.total_tokens ?? null,
+      };
+
       let conversationId: string;
-      let isUpdate = false;
+      const isUpdate = Boolean(existing);
 
-      // Try to find existing conversation with same hash (updated within 1 year)
-      // Use findHash which excludes the current/new message
-      if (findHash && requestMessages.length > 1) {
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      if (existing) {
+        log.debug({ existingId: existing.id, storeHash }, "[Postgres] Updating existing conversation");
+        conversationId = existing.id;
 
-        const existing = await tx.conversation.findFirst({
-          where: {
-            conversationHash: findHash,
-            updatedAt: { gte: oneYearAgo },
-          },
-          orderBy: { updatedAt: "desc" },
+        // Replace the message list wholesale; the incoming history supersedes it
+        await tx.message.deleteMany({ where: { conversationId: existing.id } });
+        await tx.conversation.update({
+          where: { id: existing.id },
+          data: { ...conversationData, updatedAt: new Date() },
         });
-
-        if (existing) {
-          log.debug({ existingId: existing.id, findHash, storeHash }, "[Postgres] Updating existing conversation");
-          isUpdate = true;
-          conversationId = existing.id;
-
-          // Delete old messages for this conversation
-          await tx.message.deleteMany({
-            where: { conversationId: existing.id },
-          });
-
-          // Update conversation metadata (including the new hash with all messages)
-          await tx.conversation.update({
-            where: { id: existing.id },
-            data: {
-              model: response.model,
-              conversationHash: storeHash, // Update hash to include the new message
-              latencyMs: latency,
-              promptTokens: response.usage?.prompt_tokens ?? null,
-              completionTokens: response.usage?.completion_tokens ?? null,
-              totalTokens: response.usage?.total_tokens ?? null,
-              updatedAt: new Date(),
-            },
-          });
-        } else {
-          // No existing conversation found, create new
-          const newConversation = await tx.conversation.create({
-            data: {
-              model: response.model,
-              conversationHash: storeHash,
-              latencyMs: latency,
-              promptTokens: response.usage?.prompt_tokens ?? null,
-              completionTokens: response.usage?.completion_tokens ?? null,
-              totalTokens: response.usage?.total_tokens ?? null,
-            },
-          });
-          conversationId = newConversation.id;
-        }
       } else {
-        // New conversation (no hash or single message)
-        const newConversation = await tx.conversation.create({
-          data: {
-            model: response.model,
-            conversationHash: storeHash,
-            latencyMs: latency,
-            promptTokens: response.usage?.prompt_tokens ?? null,
-            completionTokens: response.usage?.completion_tokens ?? null,
-            totalTokens: response.usage?.total_tokens ?? null,
-          },
-        });
+        const newConversation = await tx.conversation.create({ data: conversationData });
         conversationId = newConversation.id;
       }
 
       // Insert all messages (both request and response)
-      const messagesToInsert: Array<{
-        conversationId: string;
-        role: string;
-        content: string | Prisma.InputJsonValue;
-        finishReason?: string | null;
-        messageIndex: number;
-      }> = [];
+      const toMessageRow = (m: Message, messageIndex: number, finishReason: string | null) => {
+        const toolCalls = normalizeToolCalls(m);
+        const asJson = (value: unknown) => (value ? (value as Prisma.InputJsonValue) : Prisma.DbNull);
 
-      sanitizedRequestMessages.forEach((m, idx) => {
-        messagesToInsert.push({
-          conversationId,
-          role: m.role,
-          content: m.content as Prisma.InputJsonValue, // Prisma input Json type for object/array
+        // Anything this version does not model is counted and logged rather than dropped in
+        // silence, so a provider adding a field surfaces in monitoring
+        const unknown = collectUnknownFields(m);
+        if (unknown.fields.length > 0 || unknown.partTypes.length > 0) {
+          unknown.fields.forEach((field) =>
+            incrementCounter("promptkeeper_unknown_message_fields_total", { scope: "field", field }),
+          );
+          unknown.partTypes.forEach((type) =>
+            incrementCounter("promptkeeper_unknown_message_fields_total", { scope: "content_part", field: type }),
+          );
+          log.warn({ role: m.role, ...unknown }, "[Postgres] Message carried fields this version does not model");
+        }
 
-          finishReason: null,
-          messageIndex: idx,
-        });
-      });
-
-      sanitizedResponseMessages.forEach((m, idx) => {
-        messagesToInsert.push({
+        return {
           conversationId,
           role: m.role || "assistant",
-          content: m.content as Prisma.InputJsonValue, // Prisma input Json type
+          // `content` is a required Json column, and Prisma rejects a bare `null` — assistant
+          // turns that only call tools send exactly that, so pass an explicit JSON null
+          content:
+            m.content === null || m.content === undefined ? Prisma.JsonNull : (m.content as Prisma.InputJsonValue),
+          toolCalls: toolCalls ? (toolCalls as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+          toolCallId: m.tool_call_id ?? null,
+          name: m.name ?? null,
+          reasoningContent: m.reasoning_content ?? null,
+          thinkingBlocks: asJson(m.thinking_blocks),
+          annotations: asJson(m.annotations),
+          audio: asJson(m.audio),
+          images: asJson(m.images),
+          refusal: m.refusal ?? null,
+          // Verbatim (post-S3-substitution) message, so nothing is unrecoverable later
+          raw: m as unknown as Prisma.InputJsonValue,
+          finishReason,
+          messageIndex,
+        };
+      };
 
-          finishReason: response.choices[idx]?.finish_reason ?? null,
-          messageIndex: sanitizedRequestMessages.length + idx,
-        });
-      });
+      const messagesToInsert = [
+        ...sanitizedRequestMessages.map((m, idx) => toMessageRow(m, idx, null)),
+        ...sanitizedResponseMessages.map((m, idx) =>
+          toMessageRow(m, sanitizedRequestMessages.length + idx, response.choices[idx]?.finish_reason ?? null),
+        ),
+      ];
 
       if (messagesToInsert.length > 0) {
         await tx.message.createMany({ data: messagesToInsert });
@@ -368,7 +434,7 @@ async function storeConversationPostgres(requestMessages: Message[], response: F
         },
       });
 
-      log.debug({ conversationId, isUpdate, findHash, storeHash }, "[Postgres] Conversation stored");
+      log.debug({ conversationId, isUpdate, storeHash }, "[Postgres] Conversation stored");
     });
   } catch (error) {
     log.error(error, "[Postgres Storage Error]");
@@ -424,7 +490,7 @@ export async function POST(req: NextRequest) {
             if (done) {
               // Stream is complete, now we can store the conversation
               const formattedResponse = formatStreamToResponse(chunks);
-              await storeConversationPostgres(requestMessages, formattedResponse, latency);
+              await storeConversationPostgres(requestMessages, formattedResponse, latency, requestData);
               break;
             }
 
@@ -468,7 +534,7 @@ export async function POST(req: NextRequest) {
       });
     } else {
       const jsonResponse = await response.json();
-      await storeConversationPostgres(requestMessages, jsonResponse, latency);
+      await storeConversationPostgres(requestMessages, jsonResponse, latency, requestData);
       return NextResponse.json(jsonResponse);
     }
   } catch (error) {
