@@ -9,12 +9,29 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Loader2, Fingerprint } from "lucide-react";
 
-export default function SignIn() {
+// better-auth rejects with a plain { message, code, status } object rather than an Error,
+// so an `instanceof Error` check alone throws away the actual reason for the failure.
+const errorMessage = (err: unknown, fallback: string) => {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null) {
+    const { message, code } = err as { message?: unknown; code?: unknown };
+    if (typeof message === "string" && message) return typeof code === "string" ? `${message} (${code})` : message;
+    if (typeof code === "string" && code) return code;
+  }
+  return fallback;
+};
+
+export default function SignIn({ defaultSignUp = false }: { defaultSignUp?: boolean }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(defaultSignUp);
+  const [isPasskeyAutofillReady, setIsPasskeyAutofillReady] = useState(false);
+
+  // Password managers key their heuristics off id/name, so the sign-in and sign-up password
+  // inputs use the documented, distinct ids rather than sharing one
+  const passwordId = isSignUp ? "new-password" : "current-password";
 
   // Check if any user exists to toggle between Sign In and Sign Up (Admin creation)
   // For now, we'll handle the error from the server if signup is disabled.
@@ -46,7 +63,7 @@ export default function SignIn() {
         window.location.href = "/";
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Authentication failed";
+      const message = errorMessage(err, "Authentication failed");
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -61,7 +78,7 @@ export default function SignIn() {
       toast.success("Signed in with Passkey!");
       window.location.href = "/";
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Passkey sign in failed";
+      const message = errorMessage(err, "Passkey sign in failed");
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -76,28 +93,41 @@ export default function SignIn() {
       if (result?.error) throw result.error;
       toast.success("Passkey registered successfully!");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = errorMessage(err, "Unknown error");
       toast.error("Failed to register passkey: " + message);
     }
   };
 
-  // Conditional UI for Passkeys
+  // Conditional UI for Passkeys.
+  // WebAuthn needs a secure context and conditional mediation, so both are feature-detected
+  // before starting the request. The `webauthn` autocomplete token is only advertised once
+  // the request is pending — offering it otherwise gives the browser a passkey affordance
+  // that can never resolve, which confuses Safari's AutoFill on iOS.
   useEffect(() => {
-    // Attempt to autofill passkey if available
-    // This might trigger the browser's passkey prompt if the user clicks the input
-    authClient.signIn
-      .passkey({
-        autoFill: true,
-      })
-      .then((result) => {
-        if (!result?.error) {
+    if (!window.isSecureContext) return;
+    if (typeof PublicKeyCredential === "undefined") return;
+    if (typeof PublicKeyCredential.isConditionalMediationAvailable !== "function") return;
+
+    let cancelled = false;
+
+    PublicKeyCredential.isConditionalMediationAvailable()
+      .then((isAvailable) => {
+        if (!isAvailable || cancelled) return;
+        setIsPasskeyAutofillReady(true);
+
+        return authClient.signIn.passkey({ autoFill: true }).then((result) => {
+          if (cancelled || result?.error) return;
           toast.success("Signed in with Passkey!");
           window.location.href = "/";
-        }
+        });
       })
       .catch(() => {
         // Ignore errors from autofill (e.g. if cancelled or not supported)
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -118,6 +148,8 @@ export default function SignIn() {
                 <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
+                  name="name"
+                  autoComplete="name"
                   placeholder="Admin User"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -129,23 +161,26 @@ export default function SignIn() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="username webauthn"
+                autoComplete={isPasskeyAutofillReady ? "username webauthn" : "username"}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor={passwordId}>Password</Label>
               <Input
-                id="password"
+                key={passwordId}
+                id={passwordId}
+                name="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                autoComplete={isSignUp ? "new-password" : "current-password webauthn"}
+                autoComplete={isSignUp ? "new-password" : "current-password"}
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
