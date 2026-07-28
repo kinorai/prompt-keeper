@@ -22,6 +22,10 @@ model Conversation {
   completionTokens Int?      @map("completion_tokens")
   totalTokens      Int?      @map("total_tokens")
 
+  // The request envelope with `messages` removed: tools offered, tool_choice, sampling params
+  // and any client-specific extras. Without it a logged conversation is not reproducible.
+  requestParams    Json?     @map("request_params")
+
   // Timestamps
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
@@ -38,6 +42,26 @@ model Message {
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   role            String
   content         Json
+
+  // Tool calling: assistant messages carry toolCalls, tool messages carry toolCallId
+  toolCalls        Json?       @map("tool_calls")
+  toolCallId       String?     @map("tool_call_id")
+  name             String?
+
+  // LiteLLM-standardized reasoning fields
+  reasoningContent String?     @map("reasoning_content")
+  thinkingBlocks   Json?       @map("thinking_blocks")
+
+  // Assistant payloads beyond plain text
+  annotations      Json?
+  audio            Json?
+  images           Json?
+  refusal          String?
+
+  // The verbatim message as received, so fields this version does not model stay recoverable
+  // and a renderer added later can be applied to history retroactively
+  raw              Json?
+
   finishReason    String?      @map("finish_reason")
   messageIndex    Int?         @map("message_index")
 
