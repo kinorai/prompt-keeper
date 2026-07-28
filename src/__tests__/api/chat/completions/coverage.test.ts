@@ -29,6 +29,7 @@ global.fetch = jest.fn();
 const mockTx = {
   conversation: {
     findFirst: jest.fn(),
+    findMany: jest.fn(),
     update: jest.fn(),
     create: jest.fn().mockResolvedValue({ id: "new-id" }),
     deleteMany: jest.fn(),
@@ -55,6 +56,7 @@ describe("Chat Completions API Coverage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTx.conversation.findFirst.mockResolvedValue(null);
+    mockTx.conversation.findMany.mockResolvedValue([]);
     mockPrismaClient.$transaction.mockImplementation((callback) => callback(mockTx));
   });
 
@@ -106,12 +108,14 @@ describe("Chat Completions API Coverage", () => {
   });
 
   it("should update existing conversation if hash matches", async () => {
-    // Mock findFirst to return an existing conversation
-    mockTx.conversation.findFirst.mockResolvedValueOnce({
-      id: "existing-id",
-      conversationHash: "mock-hash",
-      updatedAt: new Date(),
-    });
+    // A parent is now found by matching a prefix hash of the incoming history
+    mockTx.conversation.findMany.mockResolvedValueOnce([
+      {
+        id: "existing-id",
+        conversationHash: "mock-hash",
+        updatedAt: new Date(),
+      },
+    ]);
 
     const requestBody = {
       model: "gpt-4",
@@ -149,7 +153,7 @@ describe("Chat Completions API Coverage", () => {
     const response = await POST(req);
     expect(response.status).toBe(200);
 
-    expect(mockTx.conversation.findFirst).toHaveBeenCalled();
+    expect(mockTx.conversation.findMany).toHaveBeenCalled();
     expect(mockTx.conversation.update).toHaveBeenCalled();
   });
 

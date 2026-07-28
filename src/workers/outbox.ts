@@ -99,6 +99,17 @@ async function processConversationUpsert(aggregateId: string): Promise<void> {
         role: m.role,
         content: content,
         multimodal_content,
+        tool_calls: m.toolCalls ?? undefined,
+        tool_call_id: m.toolCallId ?? undefined,
+        name: m.name ?? undefined,
+        reasoning_content: m.reasoningContent ?? undefined,
+        thinking_blocks: m.thinkingBlocks ?? undefined,
+        annotations: m.annotations ?? undefined,
+        audio: m.audio ?? undefined,
+        images: m.images ?? undefined,
+        refusal: m.refusal ?? undefined,
+        // `raw` is deliberately not shipped: Postgres is the recovery store, and indexing
+        // arbitrary provider payloads would grow the mapping without bound
       };
     }),
     usage: {
