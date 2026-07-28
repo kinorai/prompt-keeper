@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   description: "Login to access Prompt Keeper",
 };
 
-export default function LoginPage() {
-  return <SignIn />;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ signup?: string }> }) {
+  const { signup } = await searchParams;
+
+  // /login?signup=1 opens the admin creation form directly
+  return <SignIn defaultSignUp={signup === "1" || signup === "true"} />;
 }
