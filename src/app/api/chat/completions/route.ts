@@ -4,8 +4,7 @@ import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { uploadFile } from "@/lib/s3";
-import { collectUnknownFields } from "@/lib/message-fields";
-import { incrementCounter } from "@/lib/metrics";
+import { collectUnknownFields, pickRequestParams } from "@/lib/message-fields";
 
 const log = createLogger("api:chat/completions");
 
@@ -317,7 +316,7 @@ async function storeConversationPostgres(
 
     // Everything about the request except the messages themselves: tools offered, tool_choice,
     // sampling params, stream options, and any client-specific extras
-    const requestParams = Object.fromEntries(Object.entries(requestBody).filter(([key]) => key !== "messages"));
+    const requestParams = pickRequestParams(requestBody);
 
     const prisma = getPrisma();
     await prisma.$transaction(async (tx) => {
@@ -375,12 +374,6 @@ async function storeConversationPostgres(
         // silence, so a provider adding a field surfaces in monitoring
         const unknown = collectUnknownFields(m);
         if (unknown.fields.length > 0 || unknown.partTypes.length > 0) {
-          unknown.fields.forEach((field) =>
-            incrementCounter("promptkeeper_unknown_message_fields_total", { scope: "field", field }),
-          );
-          unknown.partTypes.forEach((type) =>
-            incrementCounter("promptkeeper_unknown_message_fields_total", { scope: "content_part", field: type }),
-          );
           log.warn({ role: m.role, ...unknown }, "[Postgres] Message carried fields this version does not model");
         }
 
@@ -400,8 +393,6 @@ async function storeConversationPostgres(
           audio: asJson(m.audio),
           images: asJson(m.images),
           refusal: m.refusal ?? null,
-          // Verbatim (post-S3-substitution) message, so nothing is unrecoverable later
-          raw: m as unknown as Prisma.InputJsonValue,
           finishReason,
           messageIndex,
         };
