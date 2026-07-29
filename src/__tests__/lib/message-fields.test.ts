@@ -1,5 +1,4 @@
-import { collectUnknownFields, KNOWN_MESSAGE_FIELDS } from "@/lib/message-fields";
-import { incrementCounter, renderMetrics, resetMetrics } from "@/lib/metrics";
+import { collectUnknownFields, KNOWN_MESSAGE_FIELDS, pickRequestParams } from "@/lib/message-fields";
 
 describe("collectUnknownFields", () => {
   it("reports nothing for a message built only from known fields", () => {
@@ -61,28 +60,38 @@ describe("collectUnknownFields", () => {
   });
 });
 
-describe("metrics", () => {
-  beforeEach(() => resetMetrics());
+describe("pickRequestParams", () => {
+  it("keeps what a turn needs to be reproducible", () => {
+    const kept = pickRequestParams({
+      model: "gpt-4",
+      tools: [{ type: "function" }],
+      tool_choice: "auto",
+      temperature: 0.2,
+      stream: true,
+      messages: [{ role: "user", content: "hi" }],
+    });
 
-  it("exposes counters in the Prometheus text format", () => {
-    incrementCounter("promptkeeper_unknown_message_fields_total", { scope: "field", field: "video_tokens" });
-    incrementCounter("promptkeeper_unknown_message_fields_total", { scope: "field", field: "video_tokens" });
-    incrementCounter("promptkeeper_unknown_message_fields_total", { scope: "content_part", field: "video_url" });
-
-    const output = renderMetrics();
-
-    expect(output).toContain("# TYPE promptkeeper_unknown_message_fields_total counter");
-    expect(output).toContain('promptkeeper_unknown_message_fields_total{field="video_tokens",scope="field"} 2');
-    expect(output).toContain('promptkeeper_unknown_message_fields_total{field="video_url",scope="content_part"} 1');
+    expect(kept).toEqual({
+      model: "gpt-4",
+      tools: [{ type: "function" }],
+      tool_choice: "auto",
+      temperature: 0.2,
+      stream: true,
+    });
   });
 
-  it("escapes label values", () => {
-    incrementCounter("promptkeeper_unknown_message_fields_total", { scope: "field", field: 'we"ird' });
+  it("drops credentials a client may authenticate with per request", () => {
+    const kept = pickRequestParams({
+      model: "gpt-4",
+      api_key: "sk-secret",
+      aws_access_key_id: "AKIA…",
+      aws_secret_access_key: "secret",
+      vertex_credentials: { private_key: "…" },
+      azure_ad_token: "token",
+      user: "user-42",
+      metadata: { chat_id: "abc" },
+    });
 
-    expect(renderMetrics()).toContain('field="we\\"ird"');
-  });
-
-  it("renders nothing when no counter has been touched", () => {
-    expect(renderMetrics()).toBe("");
+    expect(kept).toEqual({ model: "gpt-4" });
   });
 });

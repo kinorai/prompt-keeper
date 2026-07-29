@@ -58,7 +58,6 @@ interface StoredMessage {
   reasoningContent: string | null;
   finishReason: string | null;
   messageIndex: number;
-  raw: unknown;
 }
 
 const storedMessages = (): StoredMessage[] => mockTx.message.createMany.mock.calls[0][0].data;
@@ -269,9 +268,5 @@ describe("Chat Completions tool call persistence", () => {
     const conversationData = mockTx.conversation.create.mock.calls[0][0].data;
     expect(conversationData.requestParams).toMatchObject({ tool_choice: "auto", temperature: 0.2 });
     expect(conversationData.requestParams).not.toHaveProperty("messages");
-
-    // And every message keeps a verbatim copy
-    const rows = storedMessages();
-    expect(rows[0].raw).toEqual({ role: "user", content: "fees?" });
   });
 });

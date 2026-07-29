@@ -79,6 +79,10 @@ const isToolResult = (message: Message) => message.role === "tool" || message.ro
 const isRenderableMessage = (message: Message) => {
   if (message.role !== "assistant") return true;
   if (message.highlightedContent || message.reasoning_content) return true;
+  // Payloads other than text are rendered by MessageExtras, so a turn carrying only one of
+  // these still has something to show
+  if (message.refusal || message.audio) return true;
+  if (message.images?.length || message.annotations?.length) return true;
   return extractTextFromContent(message.content).trim().length > 0;
 };
 
@@ -93,7 +97,15 @@ export const buildRenderItems = (messages: Message[]): RenderItem[] => {
     if (isToolResult(message) && message.tool_call_id) resultsByCallId.set(message.tool_call_id, message);
   });
 
+  // Resolve pairing up front: a result can appear before the assistant turn that called it, and
+  // walking in document order would then render it twice — once orphaned, once resolved.
   const paired = new Set<Message>();
+  messages.forEach((message) => {
+    (message.tool_calls ?? []).forEach((call) => {
+      const result = call.id ? resultsByCallId.get(call.id) : undefined;
+      if (result) paired.add(result);
+    });
+  });
   const items: RenderItem[] = [];
 
   const pushInvocations = (invocations: ToolInvocation[]) => {
@@ -111,11 +123,9 @@ export const buildRenderItems = (messages: Message[]): RenderItem[] => {
     const calls = message.tool_calls ?? [];
     if (calls.length > 0) {
       pushInvocations(
-        calls.map((call, callIndex) => {
-          const result = call.id ? resultsByCallId.get(call.id) : undefined;
-          if (result) paired.add(result);
-          return toInvocation(`${index}-${callIndex}`, call, result);
-        }),
+        calls.map((call, callIndex) =>
+          toInvocation(`${index}-${callIndex}`, call, call.id ? resultsByCallId.get(call.id) : undefined),
+        ),
       );
     }
 

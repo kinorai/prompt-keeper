@@ -108,8 +108,6 @@ async function processConversationUpsert(aggregateId: string): Promise<void> {
         audio: m.audio ?? undefined,
         images: m.images ?? undefined,
         refusal: m.refusal ?? undefined,
-        // `raw` is deliberately not shipped: Postgres is the recovery store, and indexing
-        // arbitrary provider payloads would grow the mapping without bound
       };
     }),
     usage: {
