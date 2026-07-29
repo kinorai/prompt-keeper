@@ -34,10 +34,15 @@ export function PasskeySettings() {
 
   const refresh = async () => {
     try {
-      const { data, error } = await authClient.passkey.listUserPasskeys();
+      // Explicit GET: listing is only declared as GET by the plugin's own atom, and an inferred
+      // action would POST, which this endpoint answers with a 404
+      const { data, error } = await authClient.$fetch<PasskeyRow[]>("/passkey/list-user-passkeys", {
+        method: "GET",
+      });
       if (error) throw error;
-      setPasskeys((data as PasskeyRow[]) ?? []);
+      setPasskeys(data ?? []);
     } catch (err) {
+      console.error("Failed to list passkeys", err);
       toast.error(errorMessage(err, "Could not load passkeys"));
     } finally {
       setIsLoading(false);
@@ -59,11 +64,12 @@ export function PasskeySettings() {
   const handleAdd = async () => {
     setIsAdding(true);
     try {
-      const result = await authClient.passkey.addPasskey({ name: `Passkey ${passkeys.length + 1}` });
+      const result = await authClient.passkey.addPasskey();
       if (result?.error) throw result.error;
       toast.success("Passkey added");
       await refresh();
     } catch (err) {
+      console.error("Failed to add a passkey", err);
       toast.error(errorMessage(err, "Could not add a passkey"));
     } finally {
       setIsAdding(false);
@@ -77,6 +83,7 @@ export function PasskeySettings() {
       toast.success("Passkey removed");
       await refresh();
     } catch (err) {
+      console.error("Failed to remove a passkey", err);
       toast.error(errorMessage(err, "Could not remove the passkey"));
     }
   };
