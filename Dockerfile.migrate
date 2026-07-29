@@ -1,0 +1,42 @@
+# syntax=docker.io/docker/dockerfile:1
+
+# Standalone migration runner: applies prisma/migrations to the database, then exits.
+#
+# Deliberately not part of the app image. Migrations stay a separate, ordered step so
+# they can be run once — compose `service_completed_successfully`, a Helm pre-upgrade
+# hook, or a plain `docker run` — instead of every app replica racing to migrate on
+# startup, and so a failure surfaces as one failed container rather than a crashloop.
+
+FROM node:23-alpine AS base
+ENV NODE_ENV=production
+# Prisma's engines are dynamically linked against OpenSSL on musl.
+RUN apk add --no-cache libc6-compat openssl
+
+FROM base AS cli
+WORKDIR /cli
+COPY package-lock.json /tmp/app-lock.json
+# Only the Prisma CLI, pinned to the version the app's lockfile resolves, so the
+# migration runner can never drift from the generated client.
+RUN version="$(node -p "require('/tmp/app-lock.json').packages['node_modules/prisma'].version")" \
+    && npm init -y > /dev/null \
+    && npm install --no-audit --no-fund --omit=dev "prisma@${version}"
+
+FROM base AS runner
+WORKDIR /app
+
+# No version check phoning home from inside a cluster.
+ENV CHECKPOINT_DISABLE=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 --ingroup nodejs prisma
+
+COPY --from=cli --chown=prisma:nodejs /cli/node_modules ./node_modules
+COPY --from=cli --chown=prisma:nodejs /cli/package.json ./package.json
+COPY --chown=prisma:nodejs prisma ./prisma
+
+USER prisma
+
+# Overridable so the same image can run `migrate status`, `migrate resolve --rolled-back`,
+# or `db execute` during an incident.
+ENTRYPOINT ["node", "node_modules/prisma/build/index.js"]
+CMD ["migrate", "deploy"]

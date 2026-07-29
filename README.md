@@ -36,6 +36,26 @@
 - `kinorai/prompt-keeper:latest` - Latest release
 - `kinorai/prompt-keeper:vx.y.z` - Specific version (see [releases page](https://github.com/kinorai/prompt-keeper/releases) for available versions)
 
+The same tags exist for `kinorai/prompt-keeper-outbox-worker` and `kinorai/prompt-keeper-migrate`. Run all three at the same version.
+
+## Database Migrations 🗄️
+
+The schema is applied by a dedicated run-once image, `kinorai/prompt-keeper-migrate`, which runs `prisma migrate deploy` and exits. It is a separate image on purpose: the app never migrates on startup, so multiple replicas cannot race each other and a failed migration shows up as one failed container instead of a crashloop.
+
+**Docker Compose** — nothing to do. `docker-compose.yml` includes a `migrate` service, and the app and worker declare `depends_on: { migrate: { condition: service_completed_successfully } }`, so `docker compose up -d` migrates first and only then starts the app.
+
+**Plain `docker run`, or any other orchestrator** — run it once before rolling out the new app version:
+
+```bash
+docker run --rm --env-file .env kinorai/prompt-keeper-migrate:vx.y.z
+```
+
+**Kubernetes** — run it as a `pre-install,pre-upgrade` Helm hook `Job` (or an Argo CD `PreSync` hook) so it completes before the Deployment is updated.
+
+The image needs only `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING`. It is idempotent — already-applied migrations are skipped — and exits non-zero on failure, so it is safe to gate a rollout on. The entrypoint is overridable for incident work, e.g. `docker run --rm --env-file .env kinorai/prompt-keeper-migrate:vx.y.z migrate status`.
+
+Migrations are written to be backwards compatible with the previous release (expand, then contract in a later version), so the running pods keep working while a migration is applied and a rollback of the app image does not need a schema rollback.
+
 ## LiteLLM Integration 🔄
 
 Prompt Keeper uses [LiteLLM](https://docs.litellm.ai/docs/) as its LLM routing layer. LiteLLM is a unified API for various LLM providers that:
