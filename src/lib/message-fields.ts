@@ -78,3 +78,49 @@ export function collectUnknownFields(message: unknown): UnknownFields {
 
   return { fields, partTypes };
 }
+
+/**
+ * Request-body fields worth keeping alongside a conversation: what the model was offered and how
+ * it was configured, so a logged turn can be reproduced.
+ *
+ * An allowlist rather than a deny-list on purpose. LiteLLM accepts per-request credentials in the
+ * body (api_key, aws_secret_access_key, vertex_credentials, azure_ad_token), and anything not
+ * named here would otherwise be persisted verbatim — and end up in database backups.
+ */
+export const PERSISTED_REQUEST_PARAMS: ReadonlySet<string> = new Set([
+  "model",
+  // What the model could call, and whether it was forced to
+  "tools",
+  "tool_choice",
+  "parallel_tool_calls",
+  // Sampling and limits
+  "temperature",
+  "top_p",
+  "top_k",
+  "max_tokens",
+  "max_completion_tokens",
+  "frequency_penalty",
+  "presence_penalty",
+  "repetition_penalty",
+  "seed",
+  "stop",
+  "n",
+  // Output shape
+  "response_format",
+  "modalities",
+  "prediction",
+  "reasoning_effort",
+  "thinking",
+  "web_search_options",
+  // Transport
+  "stream",
+  "stream_options",
+  "service_tier",
+  "logprobs",
+  "top_logprobs",
+]);
+
+/** Keep only the allowlisted request params, dropping credentials and client-specific extras. */
+export function pickRequestParams(body: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(body).filter(([key]) => PERSISTED_REQUEST_PARAMS.has(key)));
+}

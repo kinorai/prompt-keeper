@@ -58,10 +58,6 @@ model Message {
   images           Json?
   refusal          String?
 
-  // The verbatim message as received, so fields this version does not model stay recoverable
-  // and a renderer added later can be applied to history retroactively
-  raw              Json?
-
   finishReason    String?      @map("finish_reason")
   messageIndex    Int?         @map("message_index")
 
