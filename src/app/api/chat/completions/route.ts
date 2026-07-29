@@ -128,45 +128,60 @@ const skipHeaders = [
 //
 // Hashing only system + user messages could not see that, so every tool round-trip started a
 // new conversation.
+// Digest of a single message. Hashing per message rather than per prefix keeps the cost linear:
+// tool payloads run to tens of KB and a long agentic history would otherwise be re-hashed once
+// per prefix, on the proxy's hot path.
+function messageDigest(msg: Message): string {
+  let contentStr = "";
+
+  if (typeof msg.content === "string") {
+    contentStr = msg.content;
+  } else if (Array.isArray(msg.content)) {
+    contentStr = msg.content
+      .filter((item) => item.type === "text")
+      .map((item) => item.text)
+      .join("\n");
+  }
+
+  // Tool calls carry the meaning of an assistant turn whose content is null
+  const calls = (normalizeToolCalls(msg) ?? [])
+    .map((call) => `${call.function?.name ?? call.custom?.name ?? ""}:${call.function?.arguments ?? ""}`)
+    .join(",");
+
+  // Normalize content by trimming and converting to lowercase
+  contentStr = contentStr.trim().toLowerCase();
+
+  return crypto
+    .createHash("sha256")
+    .update(`${msg.role}:${contentStr}${calls ? `:${calls}` : ""}`)
+    .digest("hex");
+}
+
+// Running hash after each message. Chaining means the hash of a list is also the hash of that
+// list as a prefix of any longer one, which is what parent lookup relies on.
+function chainedHashes(messages: Message[]): string[] {
+  const hashes: string[] = [];
+  let previous = "";
+
+  for (const message of messages) {
+    previous = crypto
+      .createHash("sha256")
+      .update(previous + messageDigest(message))
+      .digest("hex");
+    hashes.push(previous);
+  }
+
+  return hashes;
+}
+
 function hashMessages(messages: Message[]): string {
-  if (messages.length === 0) return "";
-
-  const contentString = messages
-    .map((msg) => {
-      let contentStr = "";
-
-      if (typeof msg.content === "string") {
-        contentStr = msg.content;
-      } else if (Array.isArray(msg.content)) {
-        contentStr = msg.content
-          .filter((item) => item.type === "text")
-          .map((item) => item.text)
-          .join("\n");
-      }
-
-      // Tool calls carry the meaning of an assistant turn whose content is null
-      const calls = (normalizeToolCalls(msg) ?? [])
-        .map((call) => `${call.function?.name ?? call.custom?.name ?? ""}:${call.function?.arguments ?? ""}`)
-        .join(",");
-
-      // Normalize content by trimming and converting to lowercase
-      contentStr = contentStr.trim().toLowerCase();
-
-      return `${msg.role}:${contentStr}${calls ? `:${calls}` : ""}`;
-    })
-    .join("|");
-
-  return crypto.createHash("sha256").update(contentString).digest("hex");
+  return chainedHashes(messages).at(-1) ?? "";
 }
 
 // Hashes of every proper prefix of the incoming history, longest first. One of these is the
 // storeHash of the conversation this request continues, if there is one.
 function prefixHashes(messages: Message[]): string[] {
-  const hashes: string[] = [];
-  for (let length = messages.length - 1; length > 0; length--) {
-    hashes.push(hashMessages(messages.slice(0, length)));
-  }
-  return hashes;
+  return chainedHashes(messages).slice(0, -1).reverse();
 }
 
 function formatStreamToResponse(chunks: StreamChunk[]): FormattedResponse {

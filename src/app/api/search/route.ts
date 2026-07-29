@@ -178,6 +178,11 @@ export async function POST(req: NextRequest) {
               "messages.content.folded^4",
               "messages.content.edge^2",
               "messages.content.ngram^1",
+              // Reasoning is prose the user wrote a query against just as much as content is,
+              // and the tool name is how you find "which conversation called fetch_url"
+              "messages.reasoning_content^2",
+              "messages.reasoning_content.folded^2",
+              "messages.tool_calls.function.name^2",
             ],
             default_operator: "AND",
             flags: "ALL",
@@ -209,6 +214,13 @@ export async function POST(req: NextRequest) {
                     "messages.content.folded",
                     "messages.content.edge",
                     "messages.content.ngram",
+                  ]),
+                },
+                reasoning_content: {
+                  ...baseMessageHighlightField,
+                  highlight_query: buildHighlightQuery([
+                    "messages.reasoning_content",
+                    "messages.reasoning_content.folded",
                   ]),
                 },
               },
