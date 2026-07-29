@@ -142,7 +142,9 @@ export default function SignIn({ defaultSignUp = false }: { defaultSignUp?: bool
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleEmailSignIn} className="space-y-4">
+          {/* method="post" so that if the page ever fails to hydrate, the browser's native submit
+              cannot serialize the credentials into the URL — and from there into logs and history */}
+          <form onSubmit={handleEmailSignIn} method="post" className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
