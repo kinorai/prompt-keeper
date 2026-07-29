@@ -38,11 +38,17 @@ export const summarizeArgs = (args?: string) => {
 };
 
 // Prefer a meaningful count over a byte size: `{"results": [...]}` reads better as "10 results"
+// Parsing megabytes of payload to render a one-line summary is not worth it, and most tool
+// results are prose anyway — so only try when it plausibly is JSON and is small enough.
+const SUMMARY_PARSE_LIMIT_CHARS = 64_000;
+
 export const summarizeResult = (result?: string) => {
   if (result === undefined) return "no result";
   if (!result.trim()) return "empty";
 
-  const parsed = tryParseJson(result);
+  const trimmed = result.trimStart();
+  const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+  const parsed = looksLikeJson && result.length <= SUMMARY_PARSE_LIMIT_CHARS ? tryParseJson(result) : undefined;
   if (Array.isArray(parsed)) return `${parsed.length} items`;
 
   if (parsed && typeof parsed === "object") {

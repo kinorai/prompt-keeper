@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { copyToClipboard } from "@/lib/clipboard";
-import { formatPayloadSize } from "@/lib/conversation";
+import { formatPayloadSize, formatSizeSum } from "@/lib/conversation";
 import { prettify, summarizeArgs, summarizeResult, tryParseJson, type ToolInvocation } from "@/lib/tool-calls";
 import { MarkdownContent } from "@/components/search/markdown-content";
 import { SEARCH_HIGHLIGHT_CLASS, splitHighlightSegments, type HighlightSegment } from "@/lib/search-highlights";
@@ -60,11 +60,13 @@ const matchPreview = (highlighted: string): Preview => {
     budget -= text.length;
   }
 
+  // Both sides exclude the highlight markers, otherwise the note showed for any hit at all
   const shown = windowed.reduce((total, segment) => total + segment.text.length, 0);
+  const available = segments.reduce((total, segment) => total + segment.text.length, 0);
 
   return {
     segments: windowed,
-    hiddenNote: shown < highlighted.length ? "… trimmed around the match" : undefined,
+    hiddenNote: shown < available ? "… trimmed around the match" : undefined,
   };
 };
 
@@ -237,8 +239,9 @@ export const ToolStrip: React.FC<{ invocations: ToolInvocation[] }> = ({ invocat
       .join(" · ");
   }, [invocations]);
 
+  // Sum the sizes rather than joining every payload into one throwaway string
   const totalSize = useMemo(
-    () => formatPayloadSize(invocations.map((invocation) => invocation.result ?? "").join("")),
+    () => formatSizeSum(invocations.map((invocation) => invocation.result ?? "")),
     [invocations],
   );
 

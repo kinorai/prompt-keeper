@@ -15,9 +15,35 @@ export interface ConversationMessage {
   name?: string;
 }
 
+// String length counts UTF-16 code units, which understates the size of non-ASCII payloads.
+// Counted rather than encoded so a multi-megabyte payload is not copied just to size it.
+const utf8ByteLength = (text: string) => {
+  let bytes = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff) {
+      // Surrogate pair: one 4-byte code point
+      bytes += 4;
+      i++;
+    } else bytes += 3;
+  }
+
+  return bytes;
+};
+
 export const formatPayloadSize = (text: string) => {
-  const kb = text.length / 1024;
-  return kb < 1 ? `${text.length} B` : `${kb.toFixed(1)} KB`;
+  const bytes = utf8ByteLength(text);
+  const kb = bytes / 1024;
+  return kb < 1 ? `${bytes} B` : `${kb.toFixed(1)} KB`;
+};
+
+export const formatSizeSum = (texts: string[]) => {
+  const bytes = texts.reduce((total, text) => total + utf8ByteLength(text), 0);
+  const kb = bytes / 1024;
+  return kb < 1 ? `${bytes} B` : `${kb.toFixed(1)} KB`;
 };
 
 const toolCallName = (call: ConversationToolCall) => call.function?.name || call.custom?.name || "tool";

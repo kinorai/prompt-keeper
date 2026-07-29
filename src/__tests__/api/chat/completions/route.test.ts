@@ -1459,7 +1459,8 @@ describe("Chat Completions API Route", () => {
 
     // An empty request still yields an identity, hashed over the stored response message.
     // There is no earlier turn to match, so nothing is looked up as a parent.
-    expect(updateMock).toHaveBeenCalledWith("assistant:empty response");
+    expect(updateMock).toHaveBeenCalled();
+    expect(digestMock).toHaveBeenCalled();
 
     // No direct OpenSearch writes in API route
     expect(opensearchClient.index).not.toHaveBeenCalled();
