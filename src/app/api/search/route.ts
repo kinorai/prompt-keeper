@@ -4,12 +4,24 @@ import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/searc
 import { createLogger } from "@/lib/logger";
 import { getPresignedUrl } from "@/lib/s3";
 import { DEFAULT_ROLES } from "@/lib/defaults";
+import { parseMagicQuery } from "@/lib/search-query";
+import { searchPostgres } from "@/lib/pg-search";
 // @ts-expect-error — deep subpath types exist but aren't exposed in package exports for bundler resolution
 import type { Highlight, HighlightField } from "@opensearch-project/opensearch/api/_types/_core.search";
 // @ts-expect-error — same as above
 import type { QueryContainer } from "@opensearch-project/opensearch/api/_types/_common.query_dsl";
 
 const log = createLogger("api:search");
+
+/**
+ * Which search backend serves this request. SEARCH_BACKEND selects it per
+ * deployment; outside production the x-search-backend header can override it
+ * per request (used by the search benchmark to A/B both engines).
+ */
+function resolveSearchBackend(req: NextRequest): string {
+  const override = process.env.NODE_ENV !== "production" ? req.headers.get("x-search-backend") : null;
+  return override || process.env.SEARCH_BACKEND || "opensearch";
+}
 
 // Types for OpenSearch response structure
 interface MessageContentItem {
@@ -38,6 +50,10 @@ interface SearchHit {
 const HIGHLIGHT_FRAGMENT_SIZE = 2000;
 
 export async function POST(req: NextRequest) {
+  if (resolveSearchBackend(req) === "postgres") {
+    return searchPostgres(req);
+  }
+
   try {
     // Ensure index exists before searching
     await ensureIndexExists();
@@ -51,35 +67,7 @@ export async function POST(req: NextRequest) {
     } = await req.json();
 
     // 1. Parse Magic Query
-    const roleRegex = new RegExp(`\\brole:(${DEFAULT_ROLES.join("|")})\\b`, "gi");
-    const modelRegex = /\bmodel:([^\s"']+|"[^"]*"|'[^']+')/gi;
-
-    const rolesFromQuery: string[] = [];
-    const modelsFromQuery: string[] = [];
-
-    let cleanQuery = query || "";
-
-    // Extract roles
-    let roleMatch;
-    while ((roleMatch = roleRegex.exec(query || "")) !== null) {
-      rolesFromQuery.push(roleMatch[1].toLowerCase());
-      cleanQuery = cleanQuery.replace(roleMatch[0], "");
-    }
-
-    // Extract models (handling quoted strings)
-    let modelMatch;
-    while ((modelMatch = modelRegex.exec(query || "")) !== null) {
-      let model = modelMatch[1];
-      // Remove quotes if present
-      if ((model.startsWith('"') && model.endsWith('"')) || (model.startsWith("'") && model.endsWith("'"))) {
-        model = model.slice(1, -1);
-      }
-      modelsFromQuery.push(model);
-      cleanQuery = cleanQuery.replace(modelMatch[0], "");
-    }
-
-    // Clean up extra spaces
-    cleanQuery = cleanQuery.replace(/\s+/g, " ").trim();
+    const { cleanQuery, rolesFromQuery, modelsFromQuery } = parseMagicQuery(query);
 
     // 2. Construct OpenSearch Query
     interface EsBoolQuery {

@@ -49,7 +49,12 @@ async function retry<T>(name: string, fn: () => Promise<T>, retries = MAX_RETRIE
 export async function checkConnections() {
   log.info("Starting health checks...");
   try {
-    await Promise.all([retry("Prisma", checkPrisma), retry("OpenSearch", checkOpenSearch), retry("S3", checkS3)]);
+    const checks = [retry("Prisma", checkPrisma), retry("S3", checkS3)];
+    // OpenSearch is optional once SEARCH_BACKEND=postgres; only check it when configured
+    if (process.env.OPENSEARCH_URL) {
+      checks.push(retry("OpenSearch", checkOpenSearch));
+    }
+    await Promise.all(checks);
     log.info("All health checks passed");
   } catch (error) {
     log.fatal({ error }, "Health checks failed. Exiting process.");
