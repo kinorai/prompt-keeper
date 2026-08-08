@@ -24,6 +24,20 @@ describe("GET /api/readyz", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     delete process.env.LITELLM_URL;
+    // The OpenSearch check only runs when the URL is configured
+    process.env.OPENSEARCH_URL = "http://opensearch.test:9200";
+  });
+
+  it("should skip the OpenSearch check when OPENSEARCH_URL is not configured", async () => {
+    delete process.env.OPENSEARCH_URL;
+
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.status).toBe("ready");
+    expect(data.checks.opensearch.ok).toBe(true);
+    expect(opensearchClient.ping).not.toHaveBeenCalled();
   });
 
   it("should return 200 when all services are ready", async () => {

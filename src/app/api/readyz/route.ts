@@ -5,6 +5,8 @@ import { createLogger } from "@/lib/logger";
 const log = createLogger("api:readyz");
 
 async function checkOpenSearch(): Promise<{ ok: boolean; detail?: unknown }> {
+  // OpenSearch is optional once SEARCH_BACKEND=postgres; only check when configured
+  if (!process.env.OPENSEARCH_URL) return { ok: true };
   try {
     // lightweight ping
     const resp = await getOpenSearchClient().ping();

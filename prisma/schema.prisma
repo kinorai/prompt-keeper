@@ -61,6 +61,10 @@ model Message {
   finishReason    String?      @map("finish_reason")
   messageIndex    Int?         @map("message_index")
 
+  // GENERATED ALWAYS AS (to_tsvector(...)) STORED — created by the postgres_search
+  // migration; declared here so `prisma migrate dev` doesn't try to drop it.
+  searchTsv       Unsupported("tsvector")? @map("search_tsv")
+
   createdAt       DateTime     @default(now()) @map("created_at")
 
   @@index([conversationId])
