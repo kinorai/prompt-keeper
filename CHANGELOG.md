@@ -1,3 +1,5 @@
+## [0.12.1](https://github.com/kinorai/prompt-keeper/compare/v0.12.0...v0.12.1) (2026-08-22)
+
 ## [0.12.0](https://github.com/kinorai/prompt-keeper/compare/v0.11.0...v0.12.0) (2026-07-29)
 
 
@@ -35,12 +37,4 @@
 * **deps:** resolve remaining advisories via targeted overrides ([bb879a3](https://github.com/kinorai/prompt-keeper/commit/bb879a3e5c59e2c0c959db51dbfe7b023fd579ff))
 
 ## [0.10.1](https://github.com/kinorai/prompt-keeper/compare/v0.10.0...v0.10.1) (2026-07-22)
-
-## [0.10.0](https://github.com/kinorai/prompt-keeper/compare/v0.9.0...v0.10.0) (2026-05-18)
-
-
-### Features
-
-* add pwa ([384161b](https://github.com/kinorai/prompt-keeper/commit/384161be51caa43bb58161f1f163cf86be8b745f))
-* enhance PWA functionality and offline support ([33a0521](https://github.com/kinorai/prompt-keeper/commit/33a0521013eb0f12f3726bca6dd0a313a30c8a75))
 
