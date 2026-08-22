@@ -33,6 +33,12 @@ updates:
     schedule:
       # Check for updates to GitHub Actions every week
       interval: "weekly"
+    # Actions are pinned to commit SHAs. Dependabot bumps the SHA and rewrites
+    # the trailing version comment. The cooldown holds a new release for 7 days
+    # so a poisoned tag or release is caught before it lands here (GitHub's
+    # built-in default is only 3). Security updates ignore the cooldown.
+    cooldown:
+      default-days: 7
     groups:
       # One PR for all GitHub Actions bumps
       github-actions:
