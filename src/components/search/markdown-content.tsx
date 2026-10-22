@@ -8,7 +8,7 @@ import rehypeKatex from "rehype-katex";
 import type { PluggableList, Plugin } from "unified";
 import { toast } from "sonner";
 
-import { normalizeMarkdownCodeFenceLanguages } from "@/lib/markdown";
+import { MARKDOWN_HARDEN_OPTIONS, normalizeMarkdownCodeFenceLanguages } from "@/lib/markdown";
 import { SEARCH_HIGHLIGHT_STRONG_CLASS } from "@/lib/search-highlights";
 
 // `singleDollarTextMath: false` keeps currency out of KaTeX. Payloads are full of amounts like
@@ -21,6 +21,7 @@ const REMARK_PLUGINS: PluggableList = [remarkGfm, [remarkMath, { singleDollarTex
 // KaTeX after them. Message content is attacker-controlled (anyone with a LiteLLM key writes it), so raw
 // HTML must never render without the sanitizer. The schema is widened only for the search-hit <strong>.
 const [rehypeSanitize, sanitizeSchema] = defaultRehypePlugins.sanitize as [Plugin, Record<string, unknown>];
+const [rehypeHarden] = defaultRehypePlugins.harden as [Plugin, unknown];
 const sanitizeAttributes = sanitizeSchema.attributes as Record<string, unknown[]> | undefined;
 const REHYPE_PLUGINS: PluggableList = [
   defaultRehypePlugins.raw,
@@ -34,7 +35,7 @@ const REHYPE_PLUGINS: PluggableList = [
       },
     },
   ],
-  defaultRehypePlugins.harden,
+  [rehypeHarden, MARKDOWN_HARDEN_OPTIONS],
   rehypeKatex,
 ];
 
