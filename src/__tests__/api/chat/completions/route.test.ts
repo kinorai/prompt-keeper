@@ -379,7 +379,7 @@ describe("Chat Completions API Route", () => {
             { type: "text", text: "What is this image?" },
             {
               type: "image",
-              image_url: { url: "data:image/jpeg;base64,abc123" },
+              image_url: { url: "data:image/jpeg;base64,/9j/4AAQSkZJRg==" },
             },
           ],
         },
@@ -699,7 +699,7 @@ describe("Chat Completions API Route", () => {
             { type: "text", text: "Second text part" },
             {
               type: "image",
-              image_url: { url: "data:image/jpeg;base64,abc123" },
+              image_url: { url: "data:image/jpeg;base64,/9j/4AAQSkZJRg==" },
             },
             // Add an unknown type to test the default case
             { type: "unknown", data: "some data" },
@@ -909,7 +909,7 @@ describe("Chat Completions API Route", () => {
             { type: "text", text: "Second text part" },
             {
               type: "image",
-              image_url: { url: "data:image/jpeg;base64,abc123" },
+              image_url: { url: "data:image/jpeg;base64,/9j/4AAQSkZJRg==" },
             },
             { type: "unknown", data: "some data" },
           ],

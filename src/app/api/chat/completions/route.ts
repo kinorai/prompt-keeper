@@ -4,6 +4,7 @@ import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { uploadFile } from "@/lib/s3";
+import { IMAGE_MIME_EXTENSIONS, hasImageSignature, parseImageDataUrl } from "@/lib/image-types";
 import { collectUnknownFields, pickRequestParams } from "@/lib/message-fields";
 
 const log = createLogger("api:chat/completions");
@@ -269,16 +270,14 @@ async function processMessageForStorage(message: Message): Promise<Message> {
       message.content.map(async (item) => {
         if (item.type === "image_url" && item.image_url?.url?.startsWith("data:")) {
           try {
-            // Extract base64 data
-            const matches = item.image_url.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-            if (matches && matches.length === 3) {
-              const contentType = matches[1];
-              const buffer = Buffer.from(matches[2], "base64");
-              const ext = contentType.split("/")[1] || "bin";
+            const image = parseImageDataUrl(item.image_url.url);
+            const buffer = image ? Buffer.from(image.base64, "base64") : null;
+            if (image && buffer && hasImageSignature(buffer, image.contentType)) {
+              const ext = IMAGE_MIME_EXTENSIONS[image.contentType];
               const date = new Date().toISOString().split("T")[0].split("-"); // [YYYY, MM, DD]
               const key = `conversations/images/${date[0]}/${date[1]}/${crypto.randomUUID()}.${ext}`;
 
-              await uploadFile(key, buffer, contentType);
+              await uploadFile(key, buffer, image.contentType);
 
               return {
                 type: "image_url",
@@ -287,6 +286,8 @@ async function processMessageForStorage(message: Message): Promise<Message> {
                 },
               };
             }
+            // Not an allowlisted raster image: keep it out of S3. The UI won't render it as an image.
+            log.warn("Skipping S3 upload of a data: URL that is not an allowlisted image");
           } catch (error) {
             log.error(error, "Failed to process image for S3 upload");
             // Fallback: keep original or maybe strip it? Keeping original might be too large for DB if it's base64
