@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { createServer } from "http";
+import { errors } from "@opensearch-project/opensearch";
 import { createLogger } from "../lib/logger";
 import getPrisma from "../lib/prisma";
 import { getOpenSearchClient, PROMPT_KEEPER_INDEX, ensureIndexExists } from "../lib/opensearch";
@@ -15,6 +16,7 @@ interface OutboxEventRecord {
   aggregateId: string;
   payload: unknown | null;
   attempts: number;
+  rejectedAttempts: number;
   lockedAt: Date | null;
   lockId: string | null;
   createdAt: Date;
@@ -26,8 +28,12 @@ const CONFIG = {
   batchSize: Number(process.env.OUTBOX_BATCH_SIZE || 50),
   shardId: Number(process.env.WORKER_SHARD_ID || 0),
   shardTotal: Math.max(1, Number(process.env.WORKER_SHARD_TOTAL || 1)),
-  // A failed event keeps its lock until the TTL expires, so this is also the retry delay
+  // Reclaims events whose worker died mid-processing
   lockTtlMs: 60000,
+  // A failed event waits retryBaseMs * 2^(attempts - 1), at most retryMaxMs, before its next attempt
+  retryBaseMs: 10000,
+  retryMaxMs: 3600000,
+  // Only attempts OpenSearch rejected count; outages are retried until they end
   maxAttempts: Math.max(1, Number(process.env.OUTBOX_MAX_ATTEMPTS || 10)),
   healthPort: Number(process.env.HEALTH_PORT || 3001),
 };
@@ -44,17 +50,24 @@ function modHash(str: string, mod: number): number {
   return h % mod;
 }
 
+// Events that are pending, not locked by a live worker, and past their backoff
+function claimableWhere(now: Date) {
+  const expired = new Date(now.getTime() - CONFIG.lockTtlMs);
+  return {
+    processedAt: null,
+    deadLetteredAt: null,
+    AND: [
+      { OR: [{ lockedAt: null }, { lockedAt: { lt: expired } }] },
+      { OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
+    ],
+  };
+}
+
 async function claimEvent(id: string): Promise<boolean> {
   const prisma = getPrisma();
   const now = new Date();
-  const expired = new Date(Date.now() - CONFIG.lockTtlMs);
   const res = await prisma.outboxEvent.updateMany({
-    where: {
-      id,
-      processedAt: null,
-      deadLetteredAt: null,
-      OR: [{ lockedAt: null }, { lockedAt: { lt: expired } }],
-    },
+    where: { id, ...claimableWhere(now) },
     data: { lockedAt: now, lockId: WORKER_ID, attempts: { increment: 1 } },
   });
   return res.count === 1;
@@ -68,21 +81,41 @@ async function markProcessed(id: string): Promise<void> {
   });
 }
 
-// Keep lockedAt so the event is skipped until the lock expires: a failing event backs off instead of
-// being retried on every poll and holding back the events behind it
+// OpenSearch refused the event itself (bad mapping, invalid document): retrying the same payload fails
+// the same way. Connection errors, timeouts, throttling and 5xx are outages and are retried until they end.
+function isRejection(err: unknown): boolean {
+  if (err instanceof errors.SerializationError) return true;
+  if (!(err instanceof errors.ResponseError)) return false;
+  const status = err.statusCode;
+  return status >= 400 && status < 500 && status !== 408 && status !== 409 && status !== 429;
+}
+
+const retryDelayMs = (attempts: number): number =>
+  Math.min(CONFIG.retryBaseMs * 2 ** Math.min(Math.max(attempts - 1, 0), 30), CONFIG.retryMaxMs);
+
+// A failing event backs off exponentially instead of being retried on every poll
 async function recordFailure(e: OutboxEventRecord, err: unknown): Promise<void> {
   const prisma = getPrisma();
   const lastError = (err instanceof Error ? err.message : String(err)).slice(0, 2000);
   // claimEvent already counted this attempt
-  const isPoison = e.attempts + 1 >= CONFIG.maxAttempts;
+  const attempts = e.attempts + 1;
+  const rejectedAttempts = e.rejectedAttempts + (isRejection(err) ? 1 : 0);
+  const isDeadLetter = rejectedAttempts >= CONFIG.maxAttempts;
   await prisma.outboxEvent.update({
     where: { id: e.id },
-    data: { lockId: null, lastError, ...(isPoison ? { deadLetteredAt: new Date() } : {}) },
+    data: {
+      lockId: null,
+      lockedAt: null,
+      lastError,
+      rejectedAttempts,
+      nextAttemptAt: new Date(Date.now() + retryDelayMs(attempts)),
+      ...(isDeadLetter ? { deadLetteredAt: new Date() } : {}),
+    },
   });
-  if (isPoison) {
+  if (isDeadLetter) {
     log.error(
-      { eventId: e.id, eventType: e.eventType, aggregateId: e.aggregateId, attempts: e.attempts + 1 },
-      "[Outbox] Event dead-lettered after too many failed attempts",
+      { eventId: e.id, eventType: e.eventType, aggregateId: e.aggregateId, attempts, rejectedAttempts, lastError },
+      "[Outbox] Event dead-lettered after OpenSearch rejected it too many times; see README to requeue",
     );
   }
 }
@@ -160,8 +193,9 @@ async function processConversationDelete(aggregateId: string, payload: unknown):
     });
     log.info({ conversationId: aggregateId }, "Conversation deleted from OpenSearch");
   } catch (error) {
-    // If document doesn't exist in OpenSearch, that's okay
-    if (error instanceof Error && error.message.includes("404")) {
+    // If document doesn't exist in OpenSearch, that's okay. The client reports it as a ResponseError
+    // whose message is just "Response Error", so check the status
+    if (error instanceof errors.ResponseError && error.statusCode === 404) {
       log.warn({ conversationId: aggregateId }, "Conversation not found in OpenSearch (already deleted?)");
     } else {
       throw error;
@@ -200,13 +234,8 @@ async function processEvent(e: OutboxEventRecord): Promise<void> {
 
 async function pollOnce(): Promise<void> {
   const prisma = getPrisma();
-  const expired = new Date(Date.now() - CONFIG.lockTtlMs);
   const candidates = await prisma.outboxEvent.findMany({
-    where: {
-      processedAt: null,
-      deadLetteredAt: null,
-      OR: [{ lockedAt: null }, { lockedAt: { lt: expired } }],
-    },
+    where: claimableWhere(new Date()),
     orderBy: { createdAt: "asc" },
     take: CONFIG.batchSize * 2, // fetch extra before shard filtering
   });
