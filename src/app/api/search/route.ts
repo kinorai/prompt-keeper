@@ -5,6 +5,7 @@ import { createLogger } from "@/lib/logger";
 import { getPresignedUrl } from "@/lib/s3";
 import { DEFAULT_ROLES, SEARCH_LIMITS } from "@/lib/defaults";
 import { requireAuth } from "@/lib/request-auth";
+import { parseImageDataUrl, STORED_IMAGE_KEY_PREFIX } from "@/lib/image-types";
 // @ts-expect-error — deep subpath types exist but aren't exposed in package exports for bundler resolution
 import type { Highlight, HighlightField } from "@opensearch-project/opensearch/api/_types/_core.search";
 // @ts-expect-error — same as above
@@ -16,7 +17,7 @@ const log = createLogger("api:search");
 interface MessageContentItem {
   type: string;
   text?: string;
-  image_url?: { url: string };
+  image_url?: { url: string; renderable?: boolean };
 }
 
 interface SearchMessage {
@@ -374,11 +375,21 @@ export async function POST(req: NextRequest) {
               if (Array.isArray(msg.content)) {
                 await Promise.all(
                   msg.content.map(async (item: MessageContentItem) => {
-                    if (item.type === "image_url" && item.image_url?.url?.startsWith("s3://")) {
-                      const key = item.image_url.url.replace("s3://", "");
+                    if (item.type !== "image_url" || !item.image_url) {
+                      return;
+                    }
+                    // Always overwrite the flag: stored content comes from callers and may carry its own.
+                    // The UI auto-loads only renderable images; anything else becomes a link.
+                    item.image_url.renderable = parseImageDataUrl(item.image_url.url ?? "") !== null;
+                    const key = item.image_url.url?.startsWith("s3://")
+                      ? item.image_url.url.slice("s3://".length)
+                      : null;
+                    // Only presign keys the upload path writes, never an arbitrary key a caller stored
+                    if (key?.startsWith(STORED_IMAGE_KEY_PREFIX)) {
                       const signedUrl = await getPresignedUrl(key);
                       if (signedUrl) {
                         item.image_url.url = signedUrl;
+                        item.image_url.renderable = true;
                       }
                     }
                   }),

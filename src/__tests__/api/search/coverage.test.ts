@@ -102,7 +102,11 @@ describe("Search API Coverage", () => {
               role: "user",
               multimodal_content: [
                 { type: "text", text: "some text" },
-                { type: "image_url", image_url: { url: "s3://bucket/key" } },
+                { type: "image_url", image_url: { url: "s3://conversations/images/2026/10/a.png" } },
+                { type: "image_url", image_url: { url: "s3://other/prefix/secret.png", renderable: true } },
+                { type: "image_url", image_url: { url: "https://tracker.example/p.png", renderable: true } },
+                { type: "image_url", image_url: { url: "data:image/png;base64,iVBORw0KGgo=" } },
+                { type: "image_url", image_url: { url: "data:image/svg+xml;base64,PHN2Zz4=" } },
               ],
             },
           ],
@@ -119,8 +123,16 @@ describe("Search API Coverage", () => {
     const response = await POST(req);
     const data = await response.json();
 
-    expect(data.hits.hits[0]._source.messages[0].content).toHaveLength(2);
-    expect(data.hits.hits[0]._source.messages[0].content[1].image_url.url).toBe("https://signed-url.com");
+    const content = data.hits.hits[0]._source.messages[0].content;
+    expect(content).toHaveLength(6);
+    expect(content[1].image_url).toEqual({ url: "https://signed-url.com", renderable: true });
+    // Keys outside the upload prefix are never presigned
+    expect(content[2].image_url).toEqual({ url: "s3://other/prefix/secret.png", renderable: false });
+    expect(getPresignedUrl).toHaveBeenCalledTimes(1);
+    // A caller-supplied flag is overwritten, so external URLs are never auto-loaded
+    expect(content[3].image_url.renderable).toBe(false);
+    expect(content[4].image_url.renderable).toBe(true);
+    expect(content[5].image_url.renderable).toBe(false);
   });
 
   it("should handle opensearch errors and return 500", async () => {

@@ -4,7 +4,12 @@ import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { uploadFile } from "@/lib/s3";
-import { IMAGE_MIME_EXTENSIONS, hasImageSignature, parseImageDataUrl } from "@/lib/image-types";
+import {
+  IMAGE_MIME_EXTENSIONS,
+  STORED_IMAGE_KEY_PREFIX,
+  hasImageSignature,
+  parseImageDataUrl,
+} from "@/lib/image-types";
 import { collectUnknownFields, pickRequestParams } from "@/lib/message-fields";
 
 const log = createLogger("api:chat/completions");
@@ -275,7 +280,7 @@ async function processMessageForStorage(message: Message): Promise<Message> {
             if (image && buffer && hasImageSignature(buffer, image.contentType)) {
               const ext = IMAGE_MIME_EXTENSIONS[image.contentType];
               const date = new Date().toISOString().split("T")[0].split("-"); // [YYYY, MM, DD]
-              const key = `conversations/images/${date[0]}/${date[1]}/${crypto.randomUUID()}.${ext}`;
+              const key = `${STORED_IMAGE_KEY_PREFIX}${date[0]}/${date[1]}/${crypto.randomUUID()}.${ext}`;
 
               await uploadFile(key, buffer, image.contentType);
 

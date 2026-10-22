@@ -15,6 +15,7 @@ import {
   PanelLeftOpen,
   X,
   Maximize2,
+  ImageOff,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -38,6 +39,7 @@ import { buildRenderItems } from "@/lib/tool-calls";
 import { MarkdownContent } from "@/components/search/markdown-content";
 import { MessageExtras } from "@/components/search/message-extras";
 import { injectHighlightHtml, splitHighlightSegments, SEARCH_HIGHLIGHT_CLASS } from "@/lib/search-highlights";
+import { parseImageDataUrl } from "@/lib/image-types";
 
 export interface ToolCall {
   index?: number;
@@ -49,7 +51,7 @@ export interface ToolCall {
 
 export interface Message {
   role: string;
-  content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> | null;
+  content: string | Array<{ type: string; text?: string; image_url?: { url: string; renderable?: boolean } }> | null;
   highlightedContent?: string;
   finish_reason?: string;
   tool_calls?: ToolCall[];
@@ -181,21 +183,25 @@ const ChatBubble: React.FC<{
         {/* Images - Outside bubble for User, Inside for others (if any) */}
         {images.length > 0 && (
           <div className={`flex flex-row flex-wrap gap-2 mb-1 ${isUserMessage ? "justify-end" : "justify-start"}`}>
-            {images.map((item, idx) => (
-              <div key={idx} className="relative group flex-shrink-0">
-                <Image
-                  width={500}
-                  height={500}
-                  src={item.image_url!.url}
-                  alt="User uploaded content"
-                  className="h-24 w-auto rounded-md border border-border object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setFullscreenImage(item.image_url!.url)}
-                />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <Maximize2 className="h-5 w-5 text-white drop-shadow-md" />
+            {images.map((item, idx) =>
+              isRenderableImage(item.image_url!) ? (
+                <div key={idx} className="relative group flex-shrink-0">
+                  <Image
+                    width={500}
+                    height={500}
+                    src={item.image_url!.url}
+                    alt="User uploaded content"
+                    className="h-24 w-auto rounded-md border border-border object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setFullscreenImage(item.image_url!.url)}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <Maximize2 className="h-5 w-5 text-white drop-shadow-md" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ) : (
+                <ExternalImageLink key={idx} url={item.image_url!.url} />
+              ),
+            )}
           </div>
         )}
 
@@ -675,3 +681,38 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
     </div>
   );
 };
+
+// Stored image URLs come from whoever called the proxy. Auto-load only what the search API marked as
+// the app's own presigned upload or an allowlisted data: image, so a planted URL can't track the viewer.
+function isRenderableImage(image: { url: string; renderable?: boolean }): boolean {
+  return image.renderable === true && (image.url.startsWith("data:") ? parseImageDataUrl(image.url) !== null : true);
+}
+
+function ExternalImageLink({ url }: { url: string }) {
+  const hostname = (() => {
+    try {
+      return /^https?:$/.test(new URL(url).protocol) ? new URL(url).hostname : null;
+    } catch {
+      return null;
+    }
+  })();
+  return (
+    <div className="flex h-24 max-w-60 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border px-3 text-xs text-muted-foreground">
+      <ImageOff className="h-5 w-5" />
+      {hostname ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          referrerPolicy="no-referrer"
+          className="max-w-full truncate underline"
+          title={url}
+        >
+          External image: {hostname}
+        </a>
+      ) : (
+        <span>Image not shown</span>
+      )}
+    </div>
+  );
+}
