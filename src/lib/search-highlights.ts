@@ -1,6 +1,8 @@
 export const SEARCH_HIGHLIGHT_PRE_TAG = "__pkhlstart__";
 export const SEARCH_HIGHLIGHT_POST_TAG = "__pkhlend__";
 export const SEARCH_HIGHLIGHT_CLASS = "font-semibold text-foreground";
+// Class on the <strong> injected into markdown; the markdown sanitizer allows exactly this value
+export const SEARCH_HIGHLIGHT_STRONG_CLASS = "font-semibold";
 
 export interface HighlightSegment {
   text: string;
@@ -43,7 +45,8 @@ export function splitHighlightSegments(text: string): HighlightSegment[] {
   return segments;
 }
 
-export function injectHighlightHtml(text: string, className = SEARCH_HIGHLIGHT_CLASS): string {
+// Only for MarkdownContent, whose sanitizer strips any other markup from the surrounding message text
+export function injectHighlightHtml(text: string, className = SEARCH_HIGHLIGHT_STRONG_CLASS): string {
   return text
     .split(SEARCH_HIGHLIGHT_PRE_TAG)
     .join(`<strong class="${className}">`)

@@ -1,21 +1,42 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { Streamdown } from "streamdown";
+import { defaultRehypePlugins, Streamdown } from "streamdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import type { PluggableList } from "unified";
+import type { PluggableList, Plugin } from "unified";
 import { toast } from "sonner";
 
 import { normalizeMarkdownCodeFenceLanguages } from "@/lib/markdown";
+import { SEARCH_HIGHLIGHT_STRONG_CLASS } from "@/lib/search-highlights";
 
 // `singleDollarTextMath: false` keeps currency out of KaTeX. Payloads are full of amounts like
 // "0 $ et +" / "2500 $", and with the default a pair of them is parsed as inline math: the text
 // between is swallowed, rendered as a formula, and any table it was part of falls apart.
 // Block math still works with $$…$$.
 const REMARK_PLUGINS: PluggableList = [remarkGfm, [remarkMath, { singleDollarTextMath: false }]];
-const REHYPE_PLUGINS: PluggableList = [rehypeKatex];
+
+// A custom rehypePlugins list replaces Streamdown's defaults, so keep raw → sanitize → harden and append
+// KaTeX after them. Message content is attacker-controlled (anyone with a LiteLLM key writes it), so raw
+// HTML must never render without the sanitizer. The schema is widened only for the search-hit <strong>.
+const [rehypeSanitize, sanitizeSchema] = defaultRehypePlugins.sanitize as [Plugin, Record<string, unknown>];
+const sanitizeAttributes = sanitizeSchema.attributes as Record<string, unknown[]> | undefined;
+const REHYPE_PLUGINS: PluggableList = [
+  defaultRehypePlugins.raw,
+  [
+    rehypeSanitize,
+    {
+      ...sanitizeSchema,
+      attributes: {
+        ...sanitizeAttributes,
+        strong: [...(sanitizeAttributes?.strong ?? []), ["className", SEARCH_HIGHLIGHT_STRONG_CLASS]],
+      },
+    },
+  ],
+  defaultRehypePlugins.harden,
+  rehypeKatex,
+];
 
 export const MarkdownContent: React.FC<{
   content: string;
