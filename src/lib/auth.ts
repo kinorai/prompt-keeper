@@ -40,5 +40,26 @@ export const auth = betterAuth({
         }
       }
     }),
+    // The count check above and the insert are not atomic: concurrent first signups can all see zero
+    // users. After the insert, keep only the oldest account and undo any other that slipped through.
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-up/email" || process.env.ENABLE_SIGNUP === "true") {
+        return;
+      }
+      const returned = ctx.context.returned as { user?: { id?: string } } | undefined;
+      const createdUserId = returned instanceof APIError ? undefined : returned?.user?.id;
+      if (!createdUserId) {
+        return;
+      }
+      const firstUser = await prisma.user.findFirst({
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+      });
+      if (firstUser && firstUser.id !== createdUserId) {
+        // Sessions and accounts cascade with the user
+        await prisma.user.delete({ where: { id: createdUserId } });
+        throw new APIError("FORBIDDEN", { message: "Signups are disabled." });
+      }
+    }),
   },
 });
