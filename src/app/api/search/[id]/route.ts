@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
+import { requireAuth } from "@/lib/request-auth";
 
 const log = createLogger("api:search:delete");
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const unauthorized = await requireAuth(req);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
   try {
     const { id } = await params;
 

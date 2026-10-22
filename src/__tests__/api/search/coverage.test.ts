@@ -4,6 +4,11 @@ import { NextRequest } from "next/server";
 // Type for OpenSearch filter objects
 type OpenSearchFilter = { range?: { created_at?: { gte?: string; lte?: string } } } | Record<string, unknown>;
 
+// The handlers validate the caller; these tests run as a signed-in user
+jest.mock("@/lib/auth", () => ({
+  auth: { api: { getSession: jest.fn().mockResolvedValue({ session: { id: "session" }, user: { id: "user" } }) } },
+}));
+
 jest.mock("@/lib/opensearch", () => {
   const mockClient = {
     search: jest.fn(),
