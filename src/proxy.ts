@@ -4,6 +4,10 @@ import { API_KEY_HEADER, hasValidSession, isAuthenticated, unauthorizedResponse 
 // LiteLLM API routes that should use LiteLLM authentication
 const LITELLM_ROUTES = ["/api/chat/completions", "/api/completions", "/api/models"];
 
+// The proxy only checks the session and passes NextResponse.next() on, so a refreshed session cookie
+// would be discarded: don't let the check write the refresh to the database
+const SESSION_CHECK = { disableRefresh: true };
+
 export async function proxy(request: NextRequest) {
   // Set CORS headers
   const response = NextResponse.next();
@@ -46,7 +50,7 @@ export async function proxy(request: NextRequest) {
     }
 
     // For non-LiteLLM API routes, require the API key or a session that better-auth validates
-    if (await isAuthenticated(request.headers)) {
+    if (await isAuthenticated(request.headers, SESSION_CHECK)) {
       return response;
     }
 
@@ -54,7 +58,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // UI routes need a valid session
-  if (await hasValidSession(request.headers)) {
+  if (await hasValidSession(request.headers, SESSION_CHECK)) {
     return response;
   }
 
