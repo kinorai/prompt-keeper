@@ -147,19 +147,23 @@ model Passkey {
 }
 
 model OutboxEvent {
-  id             String    @id @default(cuid())
-  eventType      String    @map("event_type")
-  aggregateType  String    @map("aggregate_type")
-  aggregateId    String    @map("aggregate_id")
-  payload        Json?
-  attempts       Int       @default(0)
-  lockedAt       DateTime? @map("locked_at")
-  lockId         String?   @map("lock_id")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  processedAt    DateTime? @map("processed_at")
-  // Set when an event failed OUTBOX_MAX_ATTEMPTS times; the worker stops retrying it
-  deadLetteredAt DateTime? @map("dead_lettered_at")
-  lastError      String?   @map("last_error")
+  id               String    @id @default(cuid())
+  eventType        String    @map("event_type")
+  aggregateType    String    @map("aggregate_type")
+  aggregateId      String    @map("aggregate_id")
+  payload          Json?
+  attempts         Int       @default(0)
+  lockedAt         DateTime? @map("locked_at")
+  lockId           String?   @map("lock_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  processedAt      DateTime? @map("processed_at")
+  // The worker skips the event until then; set with exponential backoff after a failed attempt
+  nextAttemptAt    DateTime? @map("next_attempt_at")
+  // Attempts OpenSearch rejected the event itself (4xx). Outages and 5xx don't count
+  rejectedAttempts Int       @default(0) @map("rejected_attempts")
+  // Set after OUTBOX_MAX_ATTEMPTS rejected attempts; the worker stops retrying it
+  deadLetteredAt   DateTime? @map("dead_lettered_at")
+  lastError        String?   @map("last_error")
 
   @@index([processedAt, lockedAt])
   @@index([aggregateType, aggregateId])

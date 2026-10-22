@@ -59,6 +59,30 @@ The image needs only `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING`. It is
 
 Migrations are written to be backwards compatible with the previous release (expand, then contract in a later version), so the running pods keep working while a migration is applied and a rollback of the app image does not need a schema rollback.
 
+## Search Index Sync 🔁
+
+Postgres is the source of truth. Every conversation write or delete also records an event in `outbox_events`, and the outbox worker applies it to OpenSearch (and deletes a deleted conversation's images from S3).
+
+A failed event is retried with exponential backoff: 10 s, 20 s, 40 s, … up to one hour between attempts. Connection errors, timeouts, throttling (429) and 5xx responses are retried for as long as the outage lasts, so nothing is lost while OpenSearch is down. Only an event that OpenSearch itself rejects (another 4xx, such as a mapping or validation error) `OUTBOX_MAX_ATTEMPTS` times (default 10) is dead-lettered: the worker logs it at error level and stops retrying it.
+
+List dead-lettered events:
+
+```sql
+SELECT id, event_type, aggregate_id, rejected_attempts, last_error, dead_lettered_at
+FROM outbox_events
+WHERE dead_lettered_at IS NOT NULL AND processed_at IS NULL
+ORDER BY dead_lettered_at;
+```
+
+After fixing the cause (for example the index mapping), requeue them. The worker picks them up on its next poll:
+
+```sql
+UPDATE outbox_events
+SET dead_lettered_at = NULL, rejected_attempts = 0, next_attempt_at = NULL, locked_at = NULL, lock_id = NULL
+WHERE dead_lettered_at IS NOT NULL AND processed_at IS NULL;
+-- add "AND id = '...'" to requeue a single event
+```
+
 ## LiteLLM Integration 🔄
 
 Prompt Keeper uses [LiteLLM](https://docs.litellm.ai/docs/) as its LLM routing layer. LiteLLM is a unified API for various LLM providers that:
