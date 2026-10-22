@@ -246,11 +246,7 @@ const ChatBubble: React.FC<{
             </div>
           ) : (
             <MarkdownContent
-              content={
-                message.highlightedContent
-                  ? injectHighlightHtml(message.highlightedContent, "font-semibold")
-                  : textContent
-              }
+              content={message.highlightedContent ? injectHighlightHtml(message.highlightedContent) : textContent}
             />
           )}
 
