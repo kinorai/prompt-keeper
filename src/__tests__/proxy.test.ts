@@ -65,6 +65,15 @@ describe("proxy", () => {
       expect(passedThrough(response)).toBe(true);
     });
 
+    // The proxy can't forward a refreshed cookie, so the lookup must not write a refresh
+    it.each(["/api/search", "/"])("checks the session for %s without refreshing it", async (path) => {
+      getSession.mockResolvedValue(VALID_SESSION);
+
+      await proxy(request(path, { headers: { cookie: FORGED_COOKIE } }));
+
+      expect(getSession).toHaveBeenCalledWith(expect.objectContaining({ query: { disableRefresh: true } }));
+    });
+
     it("lets the configured API key through without a session lookup", async () => {
       const response = await proxy(
         request("/api/search", { method: "POST", headers: { "X-Prompt-Keeper-API-Key": "test-api-key" } }),

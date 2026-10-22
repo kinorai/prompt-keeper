@@ -24,9 +24,10 @@ export function hasValidApiKey(headers: Headers): boolean {
 
 // The session cookie only names a session; better-auth looks it up in the database and checks
 // its signature and expiry. Cookie presence alone proves nothing.
-export async function hasValidSession(headers: Headers): Promise<boolean> {
+// disableRefresh skips extending the session in the database, for callers that can't return the refreshed cookie.
+export async function hasValidSession(headers: Headers, { disableRefresh = false } = {}): Promise<boolean> {
   try {
-    const session = await auth.api.getSession({ headers });
+    const session = await auth.api.getSession({ headers, ...(disableRefresh ? { query: { disableRefresh } } : {}) });
     return Boolean(session?.session && session.user);
   } catch (error) {
     log.warn(error, "Session lookup failed");
@@ -34,8 +35,8 @@ export async function hasValidSession(headers: Headers): Promise<boolean> {
   }
 }
 
-export async function isAuthenticated(headers: Headers): Promise<boolean> {
-  return hasValidApiKey(headers) || (await hasValidSession(headers));
+export async function isAuthenticated(headers: Headers, options: { disableRefresh?: boolean } = {}): Promise<boolean> {
+  return hasValidApiKey(headers) || (await hasValidSession(headers, options));
 }
 
 export const unauthorizedResponse = () => NextResponse.json({ error: "Unauthorized" }, { status: 401 });
