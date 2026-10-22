@@ -11,57 +11,57 @@ datasource db {
 }
 
 model Conversation {
-  id               String    @id @default(cuid())
+  id               String  @id @default(cuid())
   model            String
-  conversationHash String?   @map("conversation_hash")
+  conversationHash String? @map("conversation_hash")
 
-  latencyMs        Float?    @map("latency_ms")
+  latencyMs Float? @map("latency_ms")
 
   // Token usage
-  promptTokens     Int?      @map("prompt_tokens")
-  completionTokens Int?      @map("completion_tokens")
-  totalTokens      Int?      @map("total_tokens")
+  promptTokens     Int? @map("prompt_tokens")
+  completionTokens Int? @map("completion_tokens")
+  totalTokens      Int? @map("total_tokens")
 
   // The request envelope with `messages` removed: tools offered, tool_choice, sampling params
   // and any client-specific extras. Without it a logged conversation is not reproducible.
-  requestParams    Json?     @map("request_params")
+  requestParams Json? @map("request_params")
 
   // Timestamps
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  messages         Message[]
+  messages Message[]
 
   @@index([conversationHash])
   @@map("conversations")
 }
 
 model Message {
-  id              String       @id @default(cuid())
-  conversationId  String       @map("conversation_id")
-  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role            String
-  content         Json
+  id             String       @id @default(cuid())
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        Json
 
   // Tool calling: assistant messages carry toolCalls, tool messages carry toolCallId
-  toolCalls        Json?       @map("tool_calls")
-  toolCallId       String?     @map("tool_call_id")
-  name             String?
+  toolCalls  Json?   @map("tool_calls")
+  toolCallId String? @map("tool_call_id")
+  name       String?
 
   // LiteLLM-standardized reasoning fields
-  reasoningContent String?     @map("reasoning_content")
-  thinkingBlocks   Json?       @map("thinking_blocks")
+  reasoningContent String? @map("reasoning_content")
+  thinkingBlocks   Json?   @map("thinking_blocks")
 
   // Assistant payloads beyond plain text
-  annotations      Json?
-  audio            Json?
-  images           Json?
-  refusal          String?
+  annotations Json?
+  audio       Json?
+  images      Json?
+  refusal     String?
 
-  finishReason    String?      @map("finish_reason")
-  messageIndex    Int?         @map("message_index")
+  finishReason String? @map("finish_reason")
+  messageIndex Int?    @map("message_index")
 
-  createdAt       DateTime     @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([conversationId])
   @@map("messages")
@@ -144,16 +144,19 @@ model Passkey {
 }
 
 model OutboxEvent {
-  id            String    @id @default(cuid())
-  eventType     String    @map("event_type")
-  aggregateType String    @map("aggregate_type")
-  aggregateId   String    @map("aggregate_id")
-  payload       Json?
-  attempts      Int       @default(0)
-  lockedAt      DateTime? @map("locked_at")
-  lockId        String?   @map("lock_id")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  processedAt   DateTime? @map("processed_at")
+  id             String    @id @default(cuid())
+  eventType      String    @map("event_type")
+  aggregateType  String    @map("aggregate_type")
+  aggregateId    String    @map("aggregate_id")
+  payload        Json?
+  attempts       Int       @default(0)
+  lockedAt       DateTime? @map("locked_at")
+  lockId         String?   @map("lock_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  processedAt    DateTime? @map("processed_at")
+  // Set when an event failed OUTBOX_MAX_ATTEMPTS times; the worker stops retrying it
+  deadLetteredAt DateTime? @map("dead_lettered_at")
+  lastError      String?   @map("last_error")
 
   @@index([processedAt, lockedAt])
   @@index([aggregateType, aggregateId])

@@ -3,6 +3,8 @@ import { createServer } from "http";
 import { createLogger } from "../lib/logger";
 import getPrisma from "../lib/prisma";
 import { getOpenSearchClient, PROMPT_KEEPER_INDEX, ensureIndexExists } from "../lib/opensearch";
+import { deleteFile } from "../lib/s3";
+import { STORED_IMAGE_KEY_PREFIX } from "../lib/image-types";
 
 const log = createLogger("worker:outbox");
 
@@ -24,7 +26,9 @@ const CONFIG = {
   batchSize: Number(process.env.OUTBOX_BATCH_SIZE || 50),
   shardId: Number(process.env.WORKER_SHARD_ID || 0),
   shardTotal: Math.max(1, Number(process.env.WORKER_SHARD_TOTAL || 1)),
+  // A failed event keeps its lock until the TTL expires, so this is also the retry delay
   lockTtlMs: 60000,
+  maxAttempts: Math.max(1, Number(process.env.OUTBOX_MAX_ATTEMPTS || 10)),
   healthPort: Number(process.env.HEALTH_PORT || 3001),
 };
 
@@ -48,6 +52,7 @@ async function claimEvent(id: string): Promise<boolean> {
     where: {
       id,
       processedAt: null,
+      deadLetteredAt: null,
       OR: [{ lockedAt: null }, { lockedAt: { lt: expired } }],
     },
     data: { lockedAt: now, lockId: WORKER_ID, attempts: { increment: 1 } },
@@ -63,10 +68,31 @@ async function markProcessed(id: string): Promise<void> {
   });
 }
 
-async function releaseLock(id: string): Promise<void> {
+// Keep lockedAt so the event is skipped until the lock expires: a failing event backs off instead of
+// being retried on every poll and holding back the events behind it
+async function recordFailure(e: OutboxEventRecord, err: unknown): Promise<void> {
   const prisma = getPrisma();
-  await prisma.outboxEvent.update({ where: { id }, data: { lockId: null, lockedAt: null } });
+  const lastError = (err instanceof Error ? err.message : String(err)).slice(0, 2000);
+  // claimEvent already counted this attempt
+  const isPoison = e.attempts + 1 >= CONFIG.maxAttempts;
+  await prisma.outboxEvent.update({
+    where: { id: e.id },
+    data: { lockId: null, lastError, ...(isPoison ? { deadLetteredAt: new Date() } : {}) },
+  });
+  if (isPoison) {
+    log.error(
+      { eventId: e.id, eventType: e.eventType, aggregateId: e.aggregateId, attempts: e.attempts + 1 },
+      "[Outbox] Event dead-lettered after too many failed attempts",
+    );
+  }
 }
+
+const getImageKeys = (payload: unknown): string[] => {
+  const keys = (payload as { imageKeys?: unknown } | null)?.imageKeys;
+  return Array.isArray(keys)
+    ? keys.filter((key): key is string => typeof key === "string" && key.startsWith(STORED_IMAGE_KEY_PREFIX))
+    : [];
+};
 
 async function processConversationUpsert(aggregateId: string): Promise<void> {
   const prisma = getPrisma();
@@ -125,7 +151,7 @@ async function processConversationUpsert(aggregateId: string): Promise<void> {
   await getOpenSearchClient().index({ index: PROMPT_KEEPER_INDEX, id: aggregateId, body });
 }
 
-async function processConversationDelete(aggregateId: string): Promise<void> {
+async function processConversationDelete(aggregateId: string, payload: unknown): Promise<void> {
   try {
     await getOpenSearchClient().delete({
       index: PROMPT_KEEPER_INDEX,
@@ -141,6 +167,14 @@ async function processConversationDelete(aggregateId: string): Promise<void> {
       throw error;
     }
   }
+
+  // Uploaded images outlive the conversation unless they are removed here. S3 deletes are idempotent,
+  // so a retry after a partial failure is safe.
+  const imageKeys = getImageKeys(payload);
+  await Promise.all(imageKeys.map((key) => deleteFile(key)));
+  if (imageKeys.length > 0) {
+    log.info({ conversationId: aggregateId, count: imageKeys.length }, "Conversation images deleted from S3");
+  }
 }
 
 async function processEvent(e: OutboxEventRecord): Promise<void> {
@@ -151,7 +185,7 @@ async function processEvent(e: OutboxEventRecord): Promise<void> {
         await processConversationUpsert(e.aggregateId);
         break;
       case "conversation.deleted":
-        await processConversationDelete(e.aggregateId);
+        await processConversationDelete(e.aggregateId, e.payload);
         break;
       default:
         // Unknown events are marked processed to avoid blocking
@@ -160,7 +194,7 @@ async function processEvent(e: OutboxEventRecord): Promise<void> {
     await markProcessed(e.id);
   } catch (err) {
     log.error(err, "[Outbox] Processing error");
-    await releaseLock(e.id);
+    await recordFailure(e, err);
   }
 }
 
@@ -170,6 +204,7 @@ async function pollOnce(): Promise<void> {
   const candidates = await prisma.outboxEvent.findMany({
     where: {
       processedAt: null,
+      deadLetteredAt: null,
       OR: [{ lockedAt: null }, { lockedAt: { lt: expired } }],
     },
     orderBy: { createdAt: "asc" },
@@ -309,7 +344,12 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  log.error(err, "Outbox worker fatal error");
-  process.exit(1);
-});
+// Tests import the event handling without starting the loop and health server
+if (process.env.NODE_ENV !== "test") {
+  main().catch((err) => {
+    log.error(err, "Outbox worker fatal error");
+    process.exit(1);
+  });
+}
+
+export { processEvent, pollOnce };

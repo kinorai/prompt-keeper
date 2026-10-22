@@ -34,6 +34,7 @@ describe("DELETE /api/search/[id]", () => {
   });
 
   it("should delete a conversation successfully", async () => {
+    const outboxCreate = jest.fn().mockResolvedValue({ id: "outbox-id" });
     // Mock successful transaction
     mockPrisma.$transaction.mockImplementation(async (callback) => {
       return await callback({
@@ -42,10 +43,21 @@ describe("DELETE /api/search/[id]", () => {
           delete: jest.fn().mockResolvedValue({ id: "test-id" }),
         },
         message: {
+          findMany: jest.fn().mockResolvedValue([
+            { content: "plain text" },
+            {
+              content: [
+                { type: "text", text: "look" },
+                { type: "image_url", image_url: { url: "s3://conversations/images/2026/10/a.png" } },
+                { type: "image_url", image_url: { url: "s3://other/prefix/b.png" } },
+                { type: "image_url", image_url: { url: "https://example.com/c.png" } },
+              ],
+            },
+          ]),
           deleteMany: jest.fn().mockResolvedValue({ count: 2 }),
         },
         outboxEvent: {
-          create: jest.fn().mockResolvedValue({ id: "outbox-id" }),
+          create: outboxCreate,
         },
       });
     });
@@ -63,6 +75,13 @@ describe("DELETE /api/search/[id]", () => {
       deleted: true,
     });
     expect(mockPrisma.$transaction).toHaveBeenCalled();
+    // Only uploaded images are handed to the worker for deletion
+    expect(outboxCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        eventType: "conversation.deleted",
+        payload: { imageKeys: ["conversations/images/2026/10/a.png"] },
+      }),
+    });
   });
 
   it("should return 404 for non-existent conversation", async () => {
