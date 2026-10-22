@@ -134,6 +134,6 @@ describe("Search API Coverage", () => {
     const response = await POST(req);
     expect(response.status).toBe(500);
     const data = await response.json();
-    expect(data.error).toBe("OpenSearch connection failed");
+    expect(data.error).toBe("Search failed");
   });
 });

@@ -296,6 +296,6 @@ describe("Search API Route", () => {
     const response = await POST(req);
     expect(response.status).toBe(500);
     const json = await response.json();
-    expect(json.error).toBe("OpenSearch failure");
+    expect(json.error).toBe("Search failed");
   });
 });
