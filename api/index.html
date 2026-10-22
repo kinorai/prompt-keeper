@@ -1,0 +1,186 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>prompt-keeper</title><meta name="description" content="Documentation for prompt-keeper"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar">
+<div class="tsd-toolbar-contents container"><a href="index.html" class="title">prompt-keeper</a>
+<div id="tsd-toolbar-links"></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/>
+<ul role="listbox" id="tsd-search-results"></ul>
+<div id="tsd-search-status" aria-live="polite" aria-atomic="true">
+<div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header>
+<div class="container container-main">
+<div class="col-content">
+<div class="tsd-page-title">
+<h1>prompt-keeper</h1></div>
+<div class="tsd-panel tsd-typography"><h1 id="prompt-keeper" class="tsd-anchor-link">Prompt Keeper<a href="#prompt-keeper" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
+<h3 id="never-lose-a-single-llm-conversation-again" class="tsd-anchor-link"><strong>Never lose a single LLM conversation again!</strong><a href="#never-lose-a-single-llm-conversation-again" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p><strong>Prompt Keeper</strong> is an open-source LLM API proxy providing a <strong>rich user interface to search and analyze historical LLM conversations</strong>. The system intercepts API calls, <strong>forwards them to LiteLLM</strong> for processing, and stores the resulting conversation data in <strong>OpenSearch</strong>. It is fully <strong>OpenAI compatible</strong>.</p>
+<h2 id="features-🌟" class="tsd-anchor-link">Features 🌟<a href="#features-🌟" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li>😌 <strong>Interactive frontend</strong> for searching and filtering conversations</li>
+<li>🧠 <strong>Conversation storage</strong> in Postgres (single source of truth) + OpenSearch (search index)</li>
+<li>✅ <strong>OpenAI-compatible API</strong> proxy that routes requests to LiteLLM</li>
+<li>🔄 <strong>Outbox pattern</strong> for reliable async syncing from Postgres to OpenSearch</li>
+</ul>
+<h2 id="how-to-install-🚀" class="tsd-anchor-link">How to Install 🚀<a href="#how-to-install-🚀" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ol>
+<li>
+<p>Download the docker-compose.yml and .env:</p>
+<pre><code class="bash"><span class="hl-0">curl</span><span class="hl-1"> </span><span class="hl-2">-O</span><span class="hl-1"> </span><span class="hl-3">https://raw.githubusercontent.com/kinorai/prompt-keeper/main/docker-compose.yml</span><br/><span class="hl-0">curl</span><span class="hl-1"> </span><span class="hl-2">-o</span><span class="hl-1"> </span><span class="hl-3">.env</span><span class="hl-1"> </span><span class="hl-3">https://raw.githubusercontent.com/kinorai/prompt-keeper/main/.env.example</span><br/><span class="hl-0">curl</span><span class="hl-1"> </span><span class="hl-2">-o</span><span class="hl-1"> </span><span class="hl-3">config.litellm.yaml</span><span class="hl-1"> </span><span class="hl-3">https://raw.githubusercontent.com/kinorai/prompt-keeper/main/files/config.example.litellm.yaml</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>
+<p>Replace every <code>change-me</code> value in <code>.env</code> with your own secret before the first start. The placeholders are public, so an unchanged one is a credential anyone can use. Generate each secret with:</p>
+<pre><code class="bash"><span class="hl-0">openssl</span><span class="hl-1"> </span><span class="hl-3">rand</span><span class="hl-1"> </span><span class="hl-2">-hex</span><span class="hl-1"> </span><span class="hl-4">32</span>
+</code><button type="button">Copy</button></pre>
+
+<p>Keep the <code>sk-</code> prefix on <code>LITELLM_MASTER_KEY</code>, which LiteLLM requires. A <code>PROMPT_KEEPER_API_KEY</code> that still starts with <code>change-me</code> is ignored.</p>
+</li>
+<li>
+<p>Start the services:</p>
+<pre><code class="bash"><span class="hl-0">docker-compose</span><span class="hl-1"> </span><span class="hl-3">up</span><span class="hl-1"> </span><span class="hl-2">-d</span>
+</code><button type="button">Copy</button></pre>
+
+</li>
+<li>
+<p>Access the UI at <a href="http://localhost:3000">http://localhost:3000</a> and sign up: the first account becomes the admin.</p>
+</li>
+</ol>
+<p>Only the app's port 3000 is published on all interfaces. OpenSearch (security disabled), MinIO and LiteLLM bind to <code>127.0.0.1</code>, and the MinIO bucket is private; images are served through presigned URLs.</p>
+<h3 id="available-docker-tags" class="tsd-anchor-link">Available Docker Tags<a href="#available-docker-tags" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><code>kinorai/prompt-keeper:latest</code> - Latest release</li>
+<li><code>kinorai/prompt-keeper:vx.y.z</code> - Specific version (see <a href="https://github.com/kinorai/prompt-keeper/releases">releases page</a> for available versions)</li>
+</ul>
+<p>The same tags exist for <code>kinorai/prompt-keeper-outbox-worker</code> and <code>kinorai/prompt-keeper-migrate</code>. Run all three at the same version.</p>
+<h2 id="database-migrations-🗄️" class="tsd-anchor-link">Database Migrations 🗄️<a href="#database-migrations-🗄️" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>The schema is applied by a dedicated run-once image, <code>kinorai/prompt-keeper-migrate</code>, which runs <code>prisma migrate deploy</code> and exits. It is a separate image on purpose: the app never migrates on startup, so multiple replicas cannot race each other and a failed migration shows up as one failed container instead of a crashloop.</p>
+<p><strong>Docker Compose</strong> — nothing to do. <code>docker-compose.yml</code> includes a <code>migrate</code> service, and the app and worker declare <code>depends_on: { migrate: { condition: service_completed_successfully } }</code>, so <code>docker compose up -d</code> migrates first and only then starts the app.</p>
+<p><strong>Plain <code>docker run</code>, or any other orchestrator</strong> — run it once before rolling out the new app version:</p>
+<pre><code class="bash"><span class="hl-0">docker</span><span class="hl-1"> </span><span class="hl-3">run</span><span class="hl-1"> </span><span class="hl-2">--rm</span><span class="hl-1"> </span><span class="hl-2">--env-file</span><span class="hl-1"> </span><span class="hl-3">.env</span><span class="hl-1"> </span><span class="hl-3">kinorai/prompt-keeper-migrate:vx.y.z</span>
+</code><button type="button">Copy</button></pre>
+
+<p><strong>Kubernetes</strong> — run it as a <code>pre-install,pre-upgrade</code> Helm hook <code>Job</code> (or an Argo CD <code>PreSync</code> hook) so it completes before the Deployment is updated.</p>
+<p>The image needs only <code>POSTGRES_PRISMA_URL</code> and <code>POSTGRES_URL_NON_POOLING</code>. It is idempotent — already-applied migrations are skipped — and exits non-zero on failure, so it is safe to gate a rollout on. The entrypoint is overridable for incident work, e.g. <code>docker run --rm --env-file .env kinorai/prompt-keeper-migrate:vx.y.z migrate status</code>.</p>
+<p>Migrations are written to be backwards compatible with the previous release (expand, then contract in a later version), so the running pods keep working while a migration is applied and a rollback of the app image does not need a schema rollback.</p>
+<h2 id="search-index-sync-🔁" class="tsd-anchor-link">Search Index Sync 🔁<a href="#search-index-sync-🔁" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Postgres is the source of truth. Every conversation write or delete also records an event in <code>outbox_events</code>, and the outbox worker applies it to OpenSearch (and deletes a deleted conversation's images from S3).</p>
+<p>A failed event is retried with exponential backoff: 10 s, 20 s, 40 s, … up to one hour between attempts. Connection errors, timeouts, throttling (429) and 5xx responses are retried for as long as the outage lasts, so nothing is lost while OpenSearch is down. Only an event that OpenSearch itself rejects (another 4xx, such as a mapping or validation error) <code>OUTBOX_MAX_ATTEMPTS</code> times (default 10) is dead-lettered: the worker logs it at error level and stops retrying it.</p>
+<p>List dead-lettered events:</p>
+<pre><code class="sql">SELECT id, event_type, aggregate_id, rejected_attempts, last_error, dead_lettered_at
+FROM outbox_events
+WHERE dead_lettered_at IS NOT NULL AND processed_at IS NULL
+ORDER BY dead_lettered_at;
+</code><button type="button">Copy</button></pre>
+
+<p>After fixing the cause (for example the index mapping), requeue them. The worker picks them up on its next poll:</p>
+<pre><code class="sql">UPDATE outbox_events
+SET dead_lettered_at = NULL, rejected_attempts = 0, next_attempt_at = NULL, locked_at = NULL, lock_id = NULL
+WHERE dead_lettered_at IS NOT NULL AND processed_at IS NULL;
+-- add "AND id = '...'" to requeue a single event
+</code><button type="button">Copy</button></pre>
+
+<h2 id="litellm-integration-🔄" class="tsd-anchor-link">LiteLLM Integration 🔄<a href="#litellm-integration-🔄" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Prompt Keeper uses <a href="https://docs.litellm.ai/docs/">LiteLLM</a> as its LLM routing layer. LiteLLM is a unified API for various LLM providers that:</p>
+<ul>
+<li>Provides a single OpenAI-compatible interface for 100+ LLM APIs (OpenAI, Anthropic, Gemini, etc.)</li>
+<li>Handles load balancing, fallbacks, and caching</li>
+<li>Offers detailed logging and observability</li>
+<li>Supports streaming responses and function calling</li>
+</ul>
+<p>All LLM requests through Prompt Keeper are routed via LiteLLM, allowing you to use any LLM provider supported by LiteLLM while maintaining a consistent interface and comprehensive conversation history.</p>
+<h3 id="litellm-configuration-file-🎛️" class="tsd-anchor-link">LiteLLM Configuration File 🎛️<a href="#litellm-configuration-file-🎛️" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Prompt Keeper uses a LiteLLM YAML config file — by default it looks for <code>config.litellm.yaml</code> in the project root. To customize:</p>
+<ol>
+<li>Edit <code>config.litellm.yaml</code>:
+<ul>
+<li><strong>model_list</strong>: array of provider entries:
+<ul>
+<li><code>model_name</code>: pattern matching LiteLLM API requests.</li>
+<li><code>litellm_params</code>: settings passed to LiteLLM (e.g. <code>model</code>, <code>api_key</code>, <code>api_base</code>, <code>provider</code>, <code>mock_response</code>, etc.).</li>
+</ul>
+</li>
+<li><strong>general_settings</strong>: top-level settings (e.g., <code>store_model_in_db: false</code>).</li>
+</ul>
+</li>
+</ol>
+<h2 id="authentication-🔒" class="tsd-anchor-link">Authentication 🔒<a href="#authentication-🔒" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Prompt Keeper uses three authentication methods:</p>
+<ol>
+<li>
+<p><strong>UI Authentication</strong>: Secure authentication using <strong>Better Auth</strong>.</p>
+<ul>
+<li><strong>First Run</strong>: The first user to sign up becomes the <strong>Admin</strong>. Subsequent signups are disabled by default.</li>
+<li><strong>Passkeys</strong>: Supports secure passwordless login with Passkeys (TouchID, FaceID, etc.).</li>
+<li><strong>Environment Variables</strong>:
+<ul>
+<li><code>BETTER_AUTH_SECRET</code>: A secure random string for signing session cookies.</li>
+<li><code>BETTER_AUTH_URL</code>: The full URL of your application (e.g., <code>http://localhost:3000</code>).</li>
+<li><code>ENABLE_SIGNUP</code>: Set to <code>true</code> to allow additional users to sign up (default: <code>false</code>).</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>LiteLLM API Authentication</strong>: For LLM API routes (<code>/api/chat/completions</code>, <code>/api/completions</code>, <code>/api/models</code>).</p>
+<ul>
+<li>Uses LiteLLM's authentication mechanism</li>
+<li>Configure through LiteLLM environment variables (e.g., <code>LITELLM_MASTER_KEY</code>)</li>
+</ul>
+</li>
+<li>
+<p><strong>Prompt Keeper API Authentication</strong>: For all other API routes (e.g., <code>/api/search</code>).</p>
+<ul>
+<li>
+<p>Set <code>PROMPT_KEEPER_API_KEY</code> in your <code>.env</code> file.</p>
+</li>
+<li>
+<p>Include the API key in your requests using the custom header:</p>
+<pre><code><span class="hl-5">X</span><span class="hl-1">-</span><span class="hl-6">Prompt</span><span class="hl-1">-</span><span class="hl-6">Keeper</span><span class="hl-1">-</span><span class="hl-5">API</span><span class="hl-1">-</span><span class="hl-7">Key</span><span class="hl-1">: </span><span class="hl-6">your</span><span class="hl-1">-</span><span class="hl-6">api</span><span class="hl-1">-</span><span class="hl-6">key</span>
+</code><button>Copy</button></pre>
+
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="contributing-🤝" class="tsd-anchor-link">Contributing 🤝<a href="#contributing-🤝" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>We welcome contributions! Please read the <a href="media/CONTRIBUTING.md">CONTRIBUTING.md</a> file for details.</p>
+<h2 id="license-📜" class="tsd-anchor-link">License 📜<a href="#license-📜" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>This project is licensed under the MIT License - see the <a href="LICENSE.md">LICENSE.md</a> file for details.</p>
+</div></div>
+<div class="col-sidebar">
+<div class="page-menu">
+<div class="tsd-navigation settings">
+<details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>Settings</h3></summary>
+<div class="tsd-accordion-details">
+<div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span>
+<ul id="tsd-filter-options">
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div>
+<div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div>
+<details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>On This Page</h3></summary>
+<div class="tsd-accordion-details"><a href="#prompt-keeper"><span>Prompt <wbr/>Keeper</span></a>
+<ul>
+<li>
+<ul>
+<li><a href="#never-lose-a-single-llm-conversation-again"><span>Never lose a single <wbr/>LLM conversation again!</span></a></li></ul></li>
+<li><a href="#features-🌟"><span>Features 🌟</span></a></li>
+<li><a href="#how-to-install-🚀"><span>How to <wbr/>Install 🚀</span></a></li>
+<li>
+<ul>
+<li><a href="#available-docker-tags"><span>Available <wbr/>Docker <wbr/>Tags</span></a></li></ul></li>
+<li><a href="#database-migrations-🗄️"><span>Database <wbr/>Migrations 🗄️</span></a></li>
+<li><a href="#search-index-sync-🔁"><span>Search <wbr/>Index <wbr/>Sync 🔁</span></a></li>
+<li><a href="#litellm-integration-🔄"><span>Lite<wbr/>LLM <wbr/>Integration 🔄</span></a></li>
+<li>
+<ul>
+<li><a href="#litellm-configuration-file-🎛️"><span>Lite<wbr/>LLM <wbr/>Configuration <wbr/>File 🎛️</span></a></li></ul></li>
+<li><a href="#authentication-🔒"><span>Authentication 🔒</span></a></li>
+<li><a href="#contributing-🤝"><span>Contributing 🤝</span></a></li>
+<li><a href="#license-📜"><span>License 📜</span></a></li></ul></div></details></div>
+<div class="site-menu">
+<nav class="tsd-navigation"><a href="modules.html">prompt-keeper</a>
+<ul class="tsd-small-nested-navigation" id="tsd-nav-container">
+<li>Loading...</li></ul></nav></div></div></div><footer>
+<p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer>
+<div class="overlay"></div></body></html>
