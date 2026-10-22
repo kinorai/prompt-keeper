@@ -6,13 +6,24 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
 
+# Serialise pushes to a branch so a release never races the next push to main
+concurrency:
+  group: ci-${{ github.event_name == 'push' && github.ref || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.ref != 'develop' && github.event.pull_request.head.ref != 'main')
+    # Skip only same-repo promotion PRs (develop -> main), whose commits were already checked on push.
+    # A fork's branch name is chosen by its author, so it must never decide whether checks run.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      (github.event.pull_request.head.ref != 'develop' && github.event.pull_request.head.ref != 'main')
     steps:
       - name: Checkout code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -48,7 +59,12 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.ref != 'develop' && github.event.pull_request.head.ref != 'main')
+    # Skip only same-repo promotion PRs (develop -> main), whose commits were already checked on push.
+    # A fork's branch name is chosen by its author, so it must never decide whether checks run.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      (github.event.pull_request.head.ref != 'develop' && github.event.pull_request.head.ref != 'main')
     steps:
       - name: Checkout code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -69,7 +85,9 @@ jobs:
     name: Docker Build for PR Validation
     runs-on: ubuntu-latest
     needs: [lint, test]
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true
+    # Every PR, same-repo or fork, Dependabot included, is built without pushing and without secrets.
+    # Unreviewed PR code is never published; :edge is cut from main only (see merge_release).
+    if: github.event_name == 'pull_request'
     strategy:
       fail-fast: false
       matrix:
@@ -102,105 +120,6 @@ jobs:
           push: false
           cache-from: type=gha,scope=buildkit-pr-${{ matrix.component.name }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=buildkit-pr-${{ matrix.component.name }}-${{ matrix.platform }}
-
-  build_edge_pr:
-    name: Build Edge Platform-Specific Images (PRs)
-    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    needs: [lint, test]
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-        component:
-          - name: app
-            file: Dockerfile
-            image: kinorai/prompt-keeper
-          - name: outbox-worker
-            file: Dockerfile.outbox-worker
-            image: kinorai/prompt-keeper-outbox-worker
-          - name: migrate
-            file: Dockerfile.migrate
-            image: kinorai/prompt-keeper-migrate
-    steps:
-      - name: Prepare
-        run: |
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
-          echo "REGISTRY_IMAGE=${{ matrix.component.image }}" >> $GITHUB_ENV
-      - name: Checkout code
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - name: Login to Docker Hub
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-      - name: Build and push by digest (edge)
-        id: build
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: ${{ matrix.component.file }}
-          platforms: ${{ matrix.platform }}
-          tags: ${{ env.REGISTRY_IMAGE }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=buildkit-edge-${{ matrix.component.name }}-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=buildkit-edge-${{ matrix.component.name }}-${{ matrix.platform }}
-      - name: Export digest
-        run: |
-          mkdir -p ${{ runner.temp }}/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "${{ runner.temp }}/digests/${digest#sha256:}"
-      - name: Upload digest
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: digests-edge-${{ matrix.component.name }}-${{ env.PLATFORM_PAIR }}
-          path: ${{ runner.temp }}/digests/*
-          if-no-files-found: error
-          retention-days: 1
-
-  merge_edge_pr:
-    name: Merge and Push Multi-Platform Edge Image (PRs)
-    runs-on: ubuntu-latest
-    needs: build_edge_pr
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    strategy:
-      fail-fast: false
-      matrix:
-        component:
-          - name: app
-            image: kinorai/prompt-keeper
-          - name: outbox-worker
-            image: kinorai/prompt-keeper-outbox-worker
-          - name: migrate
-            image: kinorai/prompt-keeper-migrate
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          path: ${{ runner.temp }}/digests
-          pattern: digests-edge-${{ matrix.component.name }}-*
-          merge-multiple: true
-      - name: Login to Docker Hub
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-      - name: Create manifest list and push (edge)
-        working-directory: ${{ runner.temp }}/digests
-        run: |
-          docker buildx imagetools create -t ${{ matrix.component.image }}:edge \
-            $(printf '${{ matrix.component.image }}@sha256:%s ' *)
-      - name: Inspect image (edge)
-        run: docker buildx imagetools inspect ${{ matrix.component.image }}:edge
 
   build_dev:
     name: Build Dev Platform-Specific Images
@@ -301,43 +220,6 @@ jobs:
       - name: Inspect image
         run: docker buildx imagetools inspect ${{ matrix.component.image }}:dev
 
-  merge_edge_dev:
-    name: Merge and Push Edge Image from Dev Digests
-    runs-on: ubuntu-latest
-    needs: build_dev
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-    strategy:
-      fail-fast: false
-      matrix:
-        component:
-          - name: app
-            image: kinorai/prompt-keeper
-          - name: outbox-worker
-            image: kinorai/prompt-keeper-outbox-worker
-          - name: migrate
-            image: kinorai/prompt-keeper-migrate
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          path: ${{ runner.temp }}/digests
-          pattern: digests-dev-${{ matrix.component.name }}-*
-          merge-multiple: true
-      - name: Login to Docker Hub
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-      - name: Create manifest list and push (edge)
-        working-directory: ${{ runner.temp }}/digests
-        run: |
-          docker buildx imagetools create -t ${{ matrix.component.image }}:edge \
-            $(printf '${{ matrix.component.image }}@sha256:%s ' *)
-      - name: Inspect image (edge)
-        run: docker buildx imagetools inspect ${{ matrix.component.image }}:edge
-
   versioning:
     name: Versioning
     runs-on: ubuntu-latest
@@ -401,10 +283,21 @@ jobs:
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
           echo "REGISTRY_IMAGE=${{ matrix.component.image }}" >> $GITHUB_ENV
-      - name: Checkout code
+      # The tag is the tested commit plus the release commit. The changelog action pulls main before
+      # tagging, so a commit pushed meanwhile could slip in: refuse to publish anything else.
+      - name: Checkout release tag
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          ref: main
+          ref: ${{ needs.versioning.outputs.version }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the tag matches the tested commit
+        run: |
+          if ! git diff --quiet "${{ github.sha }}" HEAD -- . ':(exclude)CHANGELOG.md' ':(exclude)package.json'; then
+            echo "::error::Release tag ${{ needs.versioning.outputs.version }} contains changes beyond ${{ github.sha }}"
+            git diff --stat "${{ github.sha }}" HEAD -- . ':(exclude)CHANGELOG.md' ':(exclude)package.json'
+            exit 1
+          fi
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
@@ -482,6 +375,7 @@ jobs:
           images: ${{ matrix.component.image }}
           tags: |
             type=raw,value=latest
+            type=raw,value=edge
             type=raw,value=${{ needs.versioning.outputs.version }}
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests

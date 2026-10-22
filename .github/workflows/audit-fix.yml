@@ -8,11 +8,11 @@ on:
         type: boolean
         default: false
 
-# Explicit block overrides the repo's read-only default so the built-in token
-# can push a branch and open the PR. No PAT / GitHub App token needed.
-permissions:
-  contents: write
-  pull-requests: write
+# npm audit fix pulls dependency versions nobody has reviewed yet and the gates
+# then run their code, so that job gets a read-only token that is never written
+# to disk. Only the final job, which runs no npm code, gets write access to push
+# the branch and open the PR with the built-in token. No PAT / GitHub App needed.
+permissions: {}
 
 concurrency:
   group: audit-fix
@@ -20,13 +20,19 @@ concurrency:
 
 jobs:
   audit-fix:
-    name: npm audit fix -> PR
+    name: npm audit fix + gates
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
     env:
       FORCE: ${{ inputs.force && '--force' || '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -112,7 +118,7 @@ jobs:
           }
           const note = "\n\n> All CI gates (prettier, eslint, tsc, jest, `next build`, prod audit) ran in the " +
             `[workflow run](${process.env.RUN_URL}) before this PR was opened. Because it was opened by the built-in ` +
-            "`GITHUB_TOKEN`, `ci.yml` / `security.yml` do not re-run on it - the gates above are your green light to merge.";
+            "`GITHUB_TOKEN`, `ci.yml` / `security.yml` do not re-run on it. The gates passed, but review the dependency diff before merging.";
           fs.writeFileSync(`${tmp}/pr-body.md`, out.join("\n") + note + "\n");
           console.log(out.join("\n"));
           EOF
@@ -153,8 +159,47 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Create Pull Request
+      - name: Stage fix for the PR job
         if: steps.diff.outputs.changed == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/audit-fix"
+          cp package.json package-lock.json "$RUNNER_TEMP/pr-body.md" "$RUNNER_TEMP/audit-fix/"
+
+      - name: Upload fix
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: audit-fix
+          path: ${{ runner.temp }}/audit-fix/
+          if-no-files-found: error
+          retention-days: 1
+
+  open-pr:
+    name: Open audit fix PR
+    runs-on: ubuntu-latest
+    needs: audit-fix
+    if: needs.audit-fix.outputs.changed == 'true'
+    # The only job with a write token. It runs no npm or project code: it copies
+    # the validated manifest and lockfile onto main and opens the PR.
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Download fix
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: audit-fix
+          path: ${{ runner.temp }}/audit-fix
+
+      - name: Apply fix
+        run: cp "$RUNNER_TEMP/audit-fix/package.json" "$RUNNER_TEMP/audit-fix/package-lock.json" .
+
+      - name: Create Pull Request
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           sign-commits: true
@@ -169,4 +214,4 @@ jobs:
           labels: |
             dependencies
             javascript
-          body-path: ${{ runner.temp }}/pr-body.md
+          body-path: ${{ runner.temp }}/audit-fix/pr-body.md

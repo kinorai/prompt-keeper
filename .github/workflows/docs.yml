@@ -10,14 +10,21 @@ on:
       - 'src/**/*.tsx'
       - '.github/workflows/docs.yml'
 
+permissions: {}
+
 jobs:
   build-and-deploy-docs:
     name: Build and Deploy Documentation
     runs-on: ubuntu-latest
+    # Pushes the generated site to gh-pages
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -31,16 +38,9 @@ jobs:
       - name: Install dependencies
         run: npm ci  --prefer-offline --no-audit
 
-      - name: Install TypeDoc
-        run: npm install --no-save typedoc
-
+      # TypeDoc is a pinned devDependency, installed from the lockfile by npm ci
       - name: Generate API documentation
-        run: npx typedoc --entryPointStrategy expand --out docs/api src
-
-      - name: Update README badges
-        run: |
-          sed -i 's|!\[CI\](.*)|![CI](https://github.com/${{ github.repository }}/actions/workflows/ci.yml/badge.svg)|g' README.md
-          sed -i 's|!\[Security\](.*)|![Security](https://github.com/${{ github.repository }}/actions/workflows/security.yml/badge.svg)|g' README.md
+        run: npx --no-install typedoc --entryPointStrategy expand --out docs/api src
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0

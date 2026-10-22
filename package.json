@@ -98,6 +98,7 @@
     "tailwindcss": "^4.1.17",
     "ts-jest": "^29.4.5",
     "tsx": "^4.20.6",
+    "typedoc": "0.28.20",
     "typescript": "^5"
   }
 }
