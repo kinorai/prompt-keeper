@@ -1,6 +1,12 @@
 export const DEFAULT_TIME_RANGE = "1y";
 export const DEFAULT_RESULTS_SIZE = 40;
 
+// Bounds for /api/search pagination. maxResultWindow matches OpenSearch's default index.max_result_window.
+export const SEARCH_LIMITS = {
+  maxResultsSize: 1000,
+  maxResultWindow: 10000,
+} as const;
+
 // UI and behavior defaults
 export const BREAKPOINTS = {
   // Tailwind 'sm' breakpoint

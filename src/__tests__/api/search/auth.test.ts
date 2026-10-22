@@ -76,3 +76,41 @@ describe("search route authentication", () => {
     expect(getSession).not.toHaveBeenCalled();
   });
 });
+
+describe("search request validation", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const search = (body: unknown) =>
+    POST(
+      new NextRequest("http://localhost/api/search", {
+        method: "POST",
+        headers: { "X-Prompt-Keeper-API-Key": "test-api-key" },
+        body: typeof body === "string" ? body : JSON.stringify(body),
+      }),
+    );
+
+  it.each([
+    ["size above the cap", { size: 1001 }],
+    ["size of zero", { size: 0 }],
+    ["non-integer size", { size: "20" }],
+    ["negative from", { from: -1 }],
+    ["from + size past the result window", { size: 100, from: 9950 }],
+    ["roles that are not an array", { roles: "user" }],
+    ["unknown roles", { roles: ["user", "admin"] }],
+    ["a non-string query", { query: { match_all: {} } }],
+    ["a custom range without string bounds", { timeRange: { start: 1, end: 2 } }],
+  ])("rejects %s with 400", async (_label, body) => {
+    const response = await search(body);
+
+    expect(response.status).toBe(400);
+    expect(getOpenSearchClient().search).not.toHaveBeenCalled();
+  });
+
+  it("rejects a body that is not JSON", async () => {
+    const response = await search("not json");
+
+    expect(response.status).toBe(400);
+  });
+});

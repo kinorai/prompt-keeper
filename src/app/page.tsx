@@ -15,7 +15,13 @@ import { LogoutButton } from "@/components/logout-button";
 import { PasskeySettings } from "@/components/auth/passkey-settings";
 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { DEFAULT_ROLES, FILTERS_DEFAULTS, MOBILE_MEDIA_QUERY, SEARCH_BEHAVIOR_DEFAULTS } from "@/lib/defaults";
+import {
+  DEFAULT_ROLES,
+  FILTERS_DEFAULTS,
+  MOBILE_MEDIA_QUERY,
+  SEARCH_BEHAVIOR_DEFAULTS,
+  SEARCH_LIMITS,
+} from "@/lib/defaults";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
@@ -91,9 +97,12 @@ function HomeContent() {
     return t;
   })();
   const [timeRange, setTimeRange] = useState<string | CustomRange>(initialTime);
-  const [resultsSize, setResultsSize] = useState(
-    parseInt(searchParams.get("size") || String(FILTERS_DEFAULTS.resultsSize)),
-  );
+  const [resultsSize, setResultsSize] = useState(() => {
+    const size = parseInt(searchParams.get("size") || String(FILTERS_DEFAULTS.resultsSize));
+    return Number.isFinite(size)
+      ? Math.min(Math.max(size, 1), SEARCH_LIMITS.maxResultsSize)
+      : FILTERS_DEFAULTS.resultsSize;
+  });
 
   const initialRoles = (() => {
     const rolesParam = searchParams.get("roles");

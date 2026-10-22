@@ -3,7 +3,7 @@ import { getOpenSearchClient, PROMPT_KEEPER_INDEX, ensureIndexExists } from "@/l
 import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/search-highlights";
 import { createLogger } from "@/lib/logger";
 import { getPresignedUrl } from "@/lib/s3";
-import { DEFAULT_ROLES } from "@/lib/defaults";
+import { DEFAULT_ROLES, SEARCH_LIMITS } from "@/lib/defaults";
 import { requireAuth } from "@/lib/request-auth";
 // @ts-expect-error — deep subpath types exist but aren't exposed in package exports for bundler resolution
 import type { Highlight, HighlightField } from "@opensearch-project/opensearch/api/_types/_core.search";
@@ -38,6 +38,36 @@ interface SearchHit {
 
 const HIGHLIGHT_FRAGMENT_SIZE = 2000;
 
+const isNonNegativeInteger = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
+
+// Returns an error message for a request body the search can't run safely, or null when it is valid
+function validateSearchParams({ query, size, from, roles, timeRange }: Record<string, unknown>): string | null {
+  if (query !== undefined && query !== null && typeof query !== "string") {
+    return "query must be a string";
+  }
+  if (!isNonNegativeInteger(size) || size < 1 || size > SEARCH_LIMITS.maxResultsSize) {
+    return `size must be an integer between 1 and ${SEARCH_LIMITS.maxResultsSize}`;
+  }
+  if (!isNonNegativeInteger(from) || from + size > SEARCH_LIMITS.maxResultWindow) {
+    return `from must be a non-negative integer and from + size at most ${SEARCH_LIMITS.maxResultWindow}`;
+  }
+  if (
+    roles != null &&
+    (!Array.isArray(roles) || !roles.every((role) => (DEFAULT_ROLES as readonly unknown[]).includes(role)))
+  ) {
+    return `roles must be an array of ${DEFAULT_ROLES.join(", ")}`;
+  }
+  if (
+    timeRange !== null &&
+    typeof timeRange === "object" &&
+    (typeof (timeRange as Record<string, unknown>).start !== "string" ||
+      typeof (timeRange as Record<string, unknown>).end !== "string")
+  ) {
+    return "timeRange start and end must be strings";
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const unauthorized = await requireAuth(req);
   if (unauthorized) {
@@ -48,13 +78,22 @@ export async function POST(req: NextRequest) {
     // Ensure index exists before searching
     await ensureIndexExists();
 
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
     const {
       query,
       timeRange,
       size = 20,
       from = 0,
       roles, // From UI filters
-    } = await req.json();
+    } = body;
+
+    const validationError = validateSearchParams({ query, size, from, roles, timeRange });
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
 
     // 1. Parse Magic Query
     const roleRegex = new RegExp(`\\brole:(${DEFAULT_ROLES.join("|")})\\b`, "gi");
@@ -244,7 +283,7 @@ export async function POST(req: NextRequest) {
 
     // Roles
     const validRoles: string[] = [...DEFAULT_ROLES];
-    const uiRoles = Array.isArray(roles) ? roles.filter((r) => validRoles.includes(r)) : [];
+    const uiRoles: string[] = roles ?? [];
 
     const activeRoles = new Set<string>();
     if (uiRoles.length > 0 && uiRoles.length < validRoles.length) {
