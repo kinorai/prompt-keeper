@@ -3,6 +3,11 @@ import { NextRequest } from "next/server";
 import getPrisma from "@/lib/prisma";
 
 // Mock Prisma
+// The handlers validate the caller; these tests run as a signed-in user
+jest.mock("@/lib/auth", () => ({
+  auth: { api: { getSession: jest.fn().mockResolvedValue({ session: { id: "session" }, user: { id: "user" } }) } },
+}));
+
 jest.mock("@/lib/prisma", () => ({
   __esModule: true,
   default: jest.fn(),

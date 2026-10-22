@@ -4,6 +4,7 @@ import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/searc
 import { createLogger } from "@/lib/logger";
 import { getPresignedUrl } from "@/lib/s3";
 import { DEFAULT_ROLES } from "@/lib/defaults";
+import { requireAuth } from "@/lib/request-auth";
 // @ts-expect-error — deep subpath types exist but aren't exposed in package exports for bundler resolution
 import type { Highlight, HighlightField } from "@opensearch-project/opensearch/api/_types/_core.search";
 // @ts-expect-error — same as above
@@ -38,6 +39,11 @@ interface SearchHit {
 const HIGHLIGHT_FRAGMENT_SIZE = 2000;
 
 export async function POST(req: NextRequest) {
+  const unauthorized = await requireAuth(req);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
   try {
     // Ensure index exists before searching
     await ensureIndexExists();

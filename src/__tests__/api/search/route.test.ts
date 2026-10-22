@@ -14,6 +14,11 @@ type ShouldClause = {
 };
 
 // Mock the OpenSearch client
+// The handlers validate the caller; these tests run as a signed-in user
+jest.mock("@/lib/auth", () => ({
+  auth: { api: { getSession: jest.fn().mockResolvedValue({ session: { id: "session" }, user: { id: "user" } }) } },
+}));
+
 jest.mock("@/lib/opensearch", () => {
   const mockClient = {
     search: jest.fn(),
