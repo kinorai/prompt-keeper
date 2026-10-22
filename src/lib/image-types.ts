@@ -41,3 +41,14 @@ export function hasImageSignature(buffer: Buffer, contentType: string): boolean 
       return false;
   }
 }
+
+// An inline data: image is shown only if it passes the same checks as an upload:
+// an allowed type and bytes that match it. Only the first bytes are decoded.
+export function isRenderableDataUrl(url: string): boolean {
+  const parsed = parseImageDataUrl(url);
+  if (!parsed) {
+    return false;
+  }
+  const head = Buffer.from(parsed.base64.slice(0, 24), "base64");
+  return hasImageSignature(head, parsed.contentType);
+}

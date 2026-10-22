@@ -122,8 +122,8 @@ const skipHeaders = [
   "content-encoding",
 ];
 
-// Headers LiteLLM reads a key from, in its order of precedence
-const CALLER_KEY_HEADERS = ["authorization", "x-litellm-api-key", "api-key", "x-api-key"];
+// Headers LiteLLM reads a key from, in its order of precedence: x-litellm-api-key wins over Authorization
+const CALLER_KEY_HEADERS = ["x-litellm-api-key", "authorization", "api-key", "x-api-key"];
 
 // Identifies the caller by its LiteLLM key without storing the key. Null when the request carries none.
 function hashCallerKey(headers: Headers): string | null {

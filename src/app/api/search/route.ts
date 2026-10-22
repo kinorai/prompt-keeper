@@ -5,7 +5,7 @@ import { createLogger } from "@/lib/logger";
 import { getPresignedUrl } from "@/lib/s3";
 import { DEFAULT_ROLES, SEARCH_LIMITS } from "@/lib/defaults";
 import { requireAuth } from "@/lib/request-auth";
-import { parseImageDataUrl, STORED_IMAGE_KEY_PREFIX } from "@/lib/image-types";
+import { isRenderableDataUrl, STORED_IMAGE_KEY_PREFIX } from "@/lib/image-types";
 // @ts-expect-error — deep subpath types exist but aren't exposed in package exports for bundler resolution
 import type { Highlight, HighlightField } from "@opensearch-project/opensearch/api/_types/_core.search";
 // @ts-expect-error — same as above
@@ -395,7 +395,7 @@ export async function POST(req: NextRequest) {
                     }
                     // Always overwrite the flag: stored content comes from callers and may carry its own.
                     // The UI auto-loads only renderable images; anything else becomes a link.
-                    item.image_url.renderable = parseImageDataUrl(item.image_url.url ?? "") !== null;
+                    item.image_url.renderable = isRenderableDataUrl(item.image_url.url ?? "");
                     const key = item.image_url.url?.startsWith("s3://")
                       ? item.image_url.url.slice("s3://".length)
                       : null;
