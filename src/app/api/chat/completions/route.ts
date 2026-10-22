@@ -531,9 +531,18 @@ export async function POST(req: NextRequest) {
             }
           }
         } catch (error) {
+          // Usually the client went away and the write failed. Cancel the upstream read so LiteLLM
+          // stops generating (and billing) instead of running until the request timeout. A stream
+          // cut short is not stored: there is no complete reply to keep.
           log.error(error, "[Stream Processing Error]");
+          try {
+            await reader.cancel();
+          } catch {
+            // already closed or errored upstream
+          }
         } finally {
-          writer.close();
+          // close() rejects when the client already cancelled the stream
+          writer.close().catch(() => {});
         }
       })();
 
