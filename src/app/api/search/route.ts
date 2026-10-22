@@ -41,22 +41,42 @@ const HIGHLIGHT_FRAGMENT_SIZE = 2000;
 
 const isNonNegativeInteger = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
 
-// Returns an error message for a request body the search can't run safely, or null when it is valid
-function validateSearchParams({ query, size, from, roles, timeRange }: Record<string, unknown>): string | null {
+// Clients that build the body from form or URL state send numbers as strings; accept "20" like 20
+const toInteger = (value: unknown): unknown =>
+  typeof value === "string" && /^\d+$/.test(value.trim()) ? Number(value.trim()) : value;
+
+interface SearchParams {
+  size: number;
+  from: number;
+  roles?: string[];
+}
+
+// Normalizes the paging and role filters, or returns an error message for a body the search can't run safely
+function parseSearchParams(body: Record<string, unknown>): SearchParams | { error: string } {
+  const { query, timeRange } = body;
+  const size = toInteger(body.size ?? 20);
+  const from = toInteger(body.from ?? 0);
+  // Roles are matched case-insensitively, like role: in the query
+  const roles = Array.isArray(body.roles)
+    ? body.roles.map((role) => (typeof role === "string" ? role.toLowerCase() : role))
+    : body.roles;
+
   if (query !== undefined && query !== null && typeof query !== "string") {
-    return "query must be a string";
+    return { error: "query must be a string" };
   }
   if (!isNonNegativeInteger(size) || size < 1 || size > SEARCH_LIMITS.maxResultsSize) {
-    return `size must be an integer between 1 and ${SEARCH_LIMITS.maxResultsSize}`;
+    return { error: `size must be an integer between 1 and ${SEARCH_LIMITS.maxResultsSize}` };
   }
   if (!isNonNegativeInteger(from) || from + size > SEARCH_LIMITS.maxResultWindow) {
-    return `from must be a non-negative integer and from + size at most ${SEARCH_LIMITS.maxResultWindow}`;
+    return {
+      error: `from must be a non-negative integer and from + size at most ${SEARCH_LIMITS.maxResultWindow}`,
+    };
   }
   if (
     roles != null &&
     (!Array.isArray(roles) || !roles.every((role) => (DEFAULT_ROLES as readonly unknown[]).includes(role)))
   ) {
-    return `roles must be an array of ${DEFAULT_ROLES.join(", ")}`;
+    return { error: `roles must be an array of ${DEFAULT_ROLES.join(", ")}` };
   }
   if (
     timeRange !== null &&
@@ -64,9 +84,9 @@ function validateSearchParams({ query, size, from, roles, timeRange }: Record<st
     (typeof (timeRange as Record<string, unknown>).start !== "string" ||
       typeof (timeRange as Record<string, unknown>).end !== "string")
   ) {
-    return "timeRange start and end must be strings";
+    return { error: "timeRange start and end must be strings" };
   }
-  return null;
+  return { size, from, roles: (roles as string[] | null) ?? undefined };
 }
 
 export async function POST(req: NextRequest) {
@@ -83,18 +103,13 @@ export async function POST(req: NextRequest) {
     if (!body || typeof body !== "object") {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
-    const {
-      query,
-      timeRange,
-      size = 20,
-      from = 0,
-      roles, // From UI filters
-    } = body;
+    const { query, timeRange } = body;
 
-    const validationError = validateSearchParams({ query, size, from, roles, timeRange });
-    if (validationError) {
-      return NextResponse.json({ error: validationError }, { status: 400 });
+    const params = parseSearchParams(body);
+    if ("error" in params) {
+      return NextResponse.json({ error: params.error }, { status: 400 });
     }
+    const { size, from, roles } = params; // roles: from UI filters
 
     // 1. Parse Magic Query
     const roleRegex = new RegExp(`\\brole:(${DEFAULT_ROLES.join("|")})\\b`, "gi");

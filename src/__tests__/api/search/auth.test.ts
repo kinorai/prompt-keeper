@@ -94,7 +94,9 @@ describe("search request validation", () => {
   it.each([
     ["size above the cap", { size: 1001 }],
     ["size of zero", { size: 0 }],
-    ["non-integer size", { size: "20" }],
+    ["non-integer size", { size: 2.5 }],
+    ["non-numeric size", { size: "20abc" }],
+    ["a numeric string above the cap", { size: "1001" }],
     ["negative from", { from: -1 }],
     ["from + size past the result window", { size: 100, from: 9950 }],
     ["roles that are not an array", { roles: "user" }],
@@ -106,6 +108,18 @@ describe("search request validation", () => {
 
     expect(response.status).toBe(400);
     expect(getOpenSearchClient().search).not.toHaveBeenCalled();
+  });
+
+  it("accepts numeric strings for size and from, and roles in any case", async () => {
+    const opensearchSearch = getOpenSearchClient().search as jest.Mock;
+    opensearchSearch.mockResolvedValue({ body: { hits: { hits: [], total: { value: 0 } }, took: 1 } });
+
+    const response = await search({ size: "20", from: " 40 ", roles: ["User", "ASSISTANT"] });
+
+    expect(response.status).toBe(200);
+    const { body } = opensearchSearch.mock.calls[0][0];
+    expect(body).toMatchObject({ size: 20, from: 40 });
+    expect(JSON.stringify(body.query)).toContain(JSON.stringify(["user", "assistant"]));
   });
 
   it("rejects a body that is not JSON", async () => {
