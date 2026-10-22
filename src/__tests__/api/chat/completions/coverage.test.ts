@@ -272,6 +272,34 @@ describe("Chat Completions API Coverage", () => {
     expect(uploadFile).toHaveBeenCalled();
   });
 
+  it("cancels the upstream stream when the client disconnects", async () => {
+    const upstreamCancel = jest.fn();
+    const chunk = new TextEncoder().encode('data: {"choices":[{"delta":{"content":"x"}}]}\n\n');
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ "content-type": "text/event-stream" }),
+      // Never ends on its own, like a long generation
+      body: new ReadableStream<Uint8Array>({
+        pull: (controller) => controller.enqueue(chunk),
+        cancel: upstreamCancel,
+      }),
+    });
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/chat/completions", {
+        method: "POST",
+        body: JSON.stringify({ model: "gpt-4", stream: true, messages: [{ role: "user", content: "hi" }] }),
+      }),
+    );
+    const clientReader = response.body!.getReader();
+    await clientReader.read();
+    await clientReader.cancel();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(upstreamCancel).toHaveBeenCalled();
+    expect(mockPrismaClient.$transaction).not.toHaveBeenCalled();
+  });
+
   it("should throw error when stream chunks are empty", async () => {
     const { POST } = require("@/app/api/chat/completions/route");
 
