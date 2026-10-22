@@ -69,7 +69,7 @@ describe("Chat Completions API Coverage", () => {
           content: [
             {
               type: "image_url",
-              image_url: { url: "data:image/jpeg;base64,abc123" },
+              image_url: { url: "data:image/jpeg;base64,/9j/4AAQSkZJRg==" },
             },
           ],
         },
@@ -105,6 +105,34 @@ describe("Chat Completions API Coverage", () => {
 
     // Verify uploadFile was called
     expect(uploadFile).toHaveBeenCalled();
+  });
+
+  it.each([
+    ["SVG", "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4="],
+    ["HTML", "data:text/html;base64,PHNjcmlwdD48L3NjcmlwdD4="],
+    ["HTML declared as JPEG", "data:image/jpeg;base64,PHNjcmlwdD48L3NjcmlwdD4="],
+  ])("does not upload a %s data: URL to S3", async (_label, url) => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: jest.fn().mockResolvedValueOnce({
+        id: "mock-id",
+        model: "gpt-4",
+        choices: [{ index: 0, message: { role: "assistant", content: "Response" }, finish_reason: "stop" }],
+      }),
+      headers: new Headers(),
+    });
+
+    const req = new NextRequest("http://localhost/api/chat/completions", {
+      method: "POST",
+      body: JSON.stringify({
+        model: "gpt-4",
+        messages: [{ role: "user", content: [{ type: "image_url", image_url: { url } }] }],
+      }),
+    });
+
+    const response = await POST(req);
+    expect(response.status).toBe(200);
+    expect(uploadFile).not.toHaveBeenCalled();
   });
 
   it("should update existing conversation if hash matches", async () => {
@@ -206,7 +234,7 @@ describe("Chat Completions API Coverage", () => {
           content: [
             {
               type: "image_url",
-              image_url: { url: "data:image/jpeg;base64,abc123" },
+              image_url: { url: "data:image/jpeg;base64,/9j/4AAQSkZJRg==" },
             },
           ],
         },
