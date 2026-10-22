@@ -2,8 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/request-auth";
+import { STORED_IMAGE_KEY_PREFIX } from "@/lib/image-types";
 
 const log = createLogger("api:search:delete");
+
+function collectStoredImageKeys(contents: unknown[]): string[] {
+  const keys = new Set<string>();
+  for (const content of contents) {
+    if (!Array.isArray(content)) continue;
+    for (const part of content as Array<{ type?: string; image_url?: { url?: unknown } }>) {
+      const url = part?.type === "image_url" ? part.image_url?.url : undefined;
+      if (typeof url === "string" && url.startsWith(`s3://${STORED_IMAGE_KEY_PREFIX}`)) {
+        keys.add(url.slice("s3://".length));
+      }
+    }
+  }
+  return [...keys];
+}
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = await requireAuth(req);
@@ -33,6 +48,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         throw new Error("NOT_FOUND");
       }
 
+      // Collect uploaded image keys first so the worker can delete the objects with the conversation
+      const messages = await tx.message.findMany({
+        where: { conversationId: id },
+        select: { content: true },
+      });
+      const imageKeys = collectStoredImageKeys(messages.map((message) => message.content));
+
       // Delete messages (cascade should handle this, but explicit is safer)
       await tx.message.deleteMany({
         where: { conversationId: id },
@@ -49,6 +71,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
           eventType: "conversation.deleted",
           aggregateType: "conversation",
           aggregateId: id,
+          ...(imageKeys.length > 0 ? { payload: { imageKeys } } : {}),
         },
       });
 
