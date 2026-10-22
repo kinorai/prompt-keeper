@@ -19,17 +19,20 @@
    curl -o config.litellm.yaml https://raw.githubusercontent.com/kinorai/prompt-keeper/main/files/config.example.litellm.yaml
    ```
 
-2. Generate a secure, salted APR1-MD5 password hash for the admin user and add it to the `.env` file. For example:
+2. Replace every `change-me` value in `.env` with your own secret before the first start. The placeholders are public, so an unchanged one is a credential anyone can use. Generate each secret with:
    ```bash
-   openssl passwd -apr1 "your_password_here" | sed 's/\$/\\$/g'
+   openssl rand -hex 32
    ```
+   Keep the `sk-` prefix on `LITELLM_MASTER_KEY`, which LiteLLM requires. A `PROMPT_KEEPER_API_KEY` that still starts with `change-me` is ignored.
 
 3. Start the services:
    ```bash
    docker-compose up -d
    ```
 
-4. Access the UI at http://localhost:3000
+4. Access the UI at http://localhost:3000 and sign up: the first account becomes the admin.
+
+Only the app's port 3000 is published on all interfaces. OpenSearch (security disabled), MinIO and LiteLLM bind to `127.0.0.1`, and the MinIO bucket is private; images are served through presigned URLs.
 
 ### Available Docker Tags
 

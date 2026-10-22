@@ -10,10 +10,13 @@ export const API_KEY_HEADER = "X-Prompt-Keeper-API-Key";
 // Hash both sides first so timingSafeEqual gets equal-length buffers and the key length doesn't leak
 const digest = (value: string) => createHash("sha256").update(value).digest();
 
+// .env.example ships PROMPT_KEEPER_API_KEY="change-me". An unchanged placeholder is public, so it never authenticates.
+const isPlaceholder = (value: string) => value.startsWith("change-me");
+
 export function hasValidApiKey(headers: Headers): boolean {
   const expected = process.env.PROMPT_KEEPER_API_KEY;
   const provided = headers.get(API_KEY_HEADER);
-  if (!expected || !provided) {
+  if (!expected || !provided || isPlaceholder(expected)) {
     return false;
   }
   return timingSafeEqual(digest(provided), digest(expected));
