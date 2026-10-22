@@ -74,6 +74,20 @@ describe("proxy", () => {
       expect(getSession).not.toHaveBeenCalled();
     });
 
+    it("never accepts the .env.example placeholder API key", async () => {
+      const configured = process.env.PROMPT_KEEPER_API_KEY;
+      process.env.PROMPT_KEEPER_API_KEY = "change-me";
+      try {
+        const response = await proxy(
+          request("/api/search", { method: "POST", headers: { "X-Prompt-Keeper-API-Key": "change-me" } }),
+        );
+
+        expect(response.status).toBe(401);
+      } finally {
+        process.env.PROMPT_KEEPER_API_KEY = configured;
+      }
+    });
+
     it("rejects a wrong API key", async () => {
       const response = await proxy(
         request("/api/search", { method: "POST", headers: { "X-Prompt-Keeper-API-Key": "test-api-kez" } }),
