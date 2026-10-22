@@ -41,7 +41,8 @@ export async function isAuthenticated(headers: Headers, options: { disableRefres
 
 export const unauthorizedResponse = () => NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-// Route-level guard so a protected handler stays protected even if the proxy matcher changes
+// Route-level guard so a protected handler stays protected even if the proxy matcher changes.
+// Like the proxy, handlers return their own response and drop the refreshed cookie, so don't refresh.
 export async function requireAuth(req: Request): Promise<NextResponse | null> {
-  return (await isAuthenticated(req.headers)) ? null : unauthorizedResponse();
+  return (await isAuthenticated(req.headers, { disableRefresh: true })) ? null : unauthorizedResponse();
 }

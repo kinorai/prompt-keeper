@@ -44,7 +44,7 @@ describe("search route authentication", () => {
     const response = await POST(req);
 
     expect(response.status).toBe(401);
-    expect(getSession).toHaveBeenCalledWith({ headers: req.headers });
+    expect(getSession).toHaveBeenCalledWith({ headers: req.headers, query: { disableRefresh: true } });
     expect(getOpenSearchClient().search).not.toHaveBeenCalled();
   });
 

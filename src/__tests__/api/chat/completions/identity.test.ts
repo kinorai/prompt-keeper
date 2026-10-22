@@ -1,5 +1,6 @@
 import { POST } from "@/app/api/chat/completions/route";
 import { NextRequest } from "next/server";
+import { createHash } from "crypto";
 
 // Deliberately no crypto mock here: identity is what is under test, so it needs real hashes.
 jest.mock("@/lib/opensearch", () => ({
@@ -146,6 +147,17 @@ describe("conversation identity", () => {
     expect(bobHash).not.toBe(aliceHash);
     // Bob can match his own conversations and unowned legacy rows, never Alice's
     expect(where.OR).toEqual([{ callerKeyHash: bobHash }, { callerKeyHash: null }]);
+  });
+
+  it("identifies the caller by x-litellm-api-key over Authorization, like LiteLLM", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce(jsonReply({ role: "assistant", content: "hi" }, "stop"));
+    await post(
+      { model: "gpt-4", messages: [{ role: "user", content: "hello" }] },
+      { "x-litellm-api-key": "sk-alice", Authorization: "Bearer provider-key" },
+    );
+
+    const expected = createHash("sha256").update("sk-alice").digest("hex");
+    expect(mockTx.conversation.create.mock.calls[0][0].data.callerKeyHash).toBe(expected);
   });
 
   it("adopts a legacy conversation on its first continuation", async () => {
