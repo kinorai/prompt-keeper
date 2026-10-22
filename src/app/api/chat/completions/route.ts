@@ -283,6 +283,12 @@ async function processMessageForStorage(message: Message): Promise<Message> {
   if (Array.isArray(message.content)) {
     const newContent = await Promise.all(
       message.content.map(async (item) => {
+        // s3:// URLs name objects this server uploaded; a client-supplied one could point at
+        // another conversation's image (search would sign it, delete would remove it).
+        if (item.type === "image_url" && item.image_url?.url?.startsWith("s3://")) {
+          log.warn("Refusing to store a client-supplied s3:// image URL");
+          return { type: "text", text: "[image reference removed]" };
+        }
         if (item.type === "image_url" && item.image_url?.url?.startsWith("data:")) {
           try {
             const image = parseImageDataUrl(item.image_url.url);
