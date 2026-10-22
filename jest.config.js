@@ -29,6 +29,8 @@ module.exports = {
         // isolatedModules is now configured in tsconfig.json
       },
     ],
+    // ESM-only packages under test (rehype-harden and its unist-util-* deps)
+    "^.+/node_modules/(rehype-harden|unist-util-[^/]+)/.+\\.js$": ["ts-jest", {}],
   },
-  transformIgnorePatterns: ["/node_modules/(?!better-auth|@better-auth|jose).+"],
+  transformIgnorePatterns: ["/node_modules/(?!better-auth|@better-auth|jose|rehype-harden|unist-util-).+"],
 };

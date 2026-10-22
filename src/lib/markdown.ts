@@ -29,3 +29,19 @@ export const normalizeMarkdownCodeFenceLanguages = (markdown: string): string =>
 
   return lines.join("\n");
 };
+
+// Stand-in origin for path-relative URLs: rehype-harden needs one to check image prefixes, and the real
+// origin isn't known during SSR. A relative src resolves against it and is emitted relative again.
+const SAME_ORIGIN_PLACEHOLDER = "https://same-origin.invalid";
+
+// Streamdown's default harden options let markdown images load from any host. Message content comes
+// from callers, so an image URL in it would leak the viewer's IP and viewing times to whoever stored it.
+// Markdown images may only be data: images or same-origin paths; any other image renders as a
+// "[Image blocked]" note. Uploaded images are presigned and shown by the conversation card, not here.
+export const MARKDOWN_HARDEN_OPTIONS = {
+  defaultOrigin: SAME_ORIGIN_PLACEHOLDER,
+  allowedImagePrefixes: [`${SAME_ORIGIN_PLACEHOLDER}/`],
+  allowDataImages: true,
+  allowedLinkPrefixes: ["*"],
+  allowedProtocols: ["*"],
+};
