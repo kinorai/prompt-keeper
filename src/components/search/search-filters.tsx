@@ -8,7 +8,7 @@ import type { DateRange } from "react-day-picker";
 import { labelForTimeRange, toCustomRangeFromDateRange, toDateRange } from "@/lib/date";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_ROLES, FILTERS_DEFAULTS } from "@/lib/defaults";
+import { DEFAULT_ROLES, FILTERS_DEFAULTS, SEARCH_LIMITS } from "@/lib/defaults";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface CustomRange {
@@ -88,7 +88,7 @@ export function SearchFilters({
             value={[value]}
             onValueChange={([v]) => onChange(v)}
             min={10}
-            max={1000}
+            max={SEARCH_LIMITS.maxResultsSize}
             step={10}
             className="w-full"
           />
