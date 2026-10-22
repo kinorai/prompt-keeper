@@ -122,6 +122,16 @@ const skipHeaders = [
   "content-encoding",
 ];
 
+// Headers LiteLLM reads a key from, in its order of precedence
+const CALLER_KEY_HEADERS = ["authorization", "x-litellm-api-key", "api-key", "x-api-key"];
+
+// Identifies the caller by its LiteLLM key without storing the key. Null when the request carries none.
+function hashCallerKey(headers: Headers): string | null {
+  const header = CALLER_KEY_HEADERS.map((name) => headers.get(name)).find(Boolean);
+  const key = header?.replace(/^Bearer\s+/i, "").trim();
+  return key ? crypto.createHash("sha256").update(key).digest("hex") : null;
+}
+
 // Conversation identity
 //
 // A client continuing a conversation resends the whole history, so the messages we stored last
@@ -321,6 +331,7 @@ async function storeConversationPostgres(
   response: FormattedResponse,
   latency: number,
   requestBody: Record<string, unknown> = {},
+  callerKeyHash: string | null = null,
 ) {
   try {
     const sanitizedRequestMessages = await Promise.all(requestMessages.map(processMessageForStorage));
@@ -347,7 +358,12 @@ async function storeConversationPostgres(
       const candidates =
         candidateHashes.length > 0
           ? await tx.conversation.findMany({
-              where: { conversationHash: { in: candidateHashes }, updatedAt: { gte: oneYearAgo } },
+              where: {
+                conversationHash: { in: candidateHashes },
+                updatedAt: { gte: oneYearAgo },
+                // Rows stored before keys were recorded have none; the first continuation adopts them
+                OR: [{ callerKeyHash }, { callerKeyHash: null }],
+              },
               orderBy: { updatedAt: "desc" },
             })
           : [];
@@ -361,6 +377,7 @@ async function storeConversationPostgres(
       const conversationData = {
         model: response.model,
         conversationHash: storeHash,
+        callerKeyHash,
         requestParams: Object.keys(requestParams).length > 0 ? (requestParams as Prisma.InputJsonValue) : Prisma.DbNull,
         latencyMs: latency,
         promptTokens: response.usage?.prompt_tokens ?? null,
@@ -462,6 +479,7 @@ export async function POST(req: NextRequest) {
 
     log.debug(req, "[Incoming Chat Completions Request]");
 
+    const callerKeyHash = hashCallerKey(req.headers);
     const forwardHeaders = new Headers(req.headers);
     skipHeaders.forEach((header) => forwardHeaders.delete(header));
 
@@ -502,7 +520,7 @@ export async function POST(req: NextRequest) {
             if (done) {
               // Stream is complete, now we can store the conversation
               const formattedResponse = formatStreamToResponse(chunks);
-              await storeConversationPostgres(requestMessages, formattedResponse, latency, requestData);
+              await storeConversationPostgres(requestMessages, formattedResponse, latency, requestData, callerKeyHash);
               break;
             }
 
@@ -555,7 +573,7 @@ export async function POST(req: NextRequest) {
       });
     } else {
       const jsonResponse = await response.json();
-      await storeConversationPostgres(requestMessages, jsonResponse, latency, requestData);
+      await storeConversationPostgres(requestMessages, jsonResponse, latency, requestData, callerKeyHash);
       return NextResponse.json(jsonResponse);
     }
   } catch (error) {

@@ -14,6 +14,9 @@ model Conversation {
   id               String  @id @default(cuid())
   model            String
   conversationHash String? @map("conversation_hash")
+  // SHA-256 of the LiteLLM key that wrote the conversation. A continuation only matches conversations
+  // of the same key, so one key holder can't rewrite another's history. Null on rows stored before.
+  callerKeyHash    String? @map("caller_key_hash")
 
   latencyMs Float? @map("latency_ms")
 

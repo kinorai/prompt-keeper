@@ -39,9 +39,10 @@ const jsonReply = (message: Record<string, unknown>, finishReason: string) => ({
   headers: new Headers({ "content-type": "application/json" }),
 });
 
-const post = async (body: unknown) => {
+const post = async (body: unknown, headers: Record<string, string> = {}) => {
   const req = new NextRequest("http://localhost/api/chat/completions", {
     method: "POST",
+    headers,
     body: JSON.stringify(body),
   });
   return POST(req);
@@ -111,6 +112,71 @@ describe("conversation identity", () => {
 
     expect(mockTx.conversation.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "parent-id" } }));
     expect(mockTx.conversation.create).not.toHaveBeenCalled();
+  });
+
+  it("matches a continuation only against the caller's own conversations", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce(jsonReply({ role: "assistant", content: "hi" }, "stop"));
+    await post(
+      { model: "gpt-4", messages: [{ role: "user", content: "hello" }] },
+      { Authorization: "Bearer sk-alice" },
+    );
+    const aliceHash = mockTx.conversation.create.mock.calls[0][0].data.callerKeyHash;
+    expect(aliceHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(aliceHash).not.toContain("sk-alice");
+
+    jest.clearAllMocks();
+    mockTx.conversation.findMany.mockResolvedValue([]);
+    mockTx.conversation.create.mockResolvedValue({ id: "new-id" });
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce(jsonReply({ role: "assistant", content: "again" }, "stop"));
+    await post(
+      {
+        model: "gpt-4",
+        messages: [
+          { role: "user", content: "hello" },
+          { role: "assistant", content: "hi" },
+          { role: "user", content: "more" },
+        ],
+      },
+      { "x-litellm-api-key": "sk-bob" },
+    );
+
+    const { where } = mockTx.conversation.findMany.mock.calls[0][0];
+    const bobHash = mockTx.conversation.create.mock.calls[0][0].data.callerKeyHash;
+    expect(bobHash).not.toBe(aliceHash);
+    // Bob can match his own conversations and unowned legacy rows, never Alice's
+    expect(where.OR).toEqual([{ callerKeyHash: bobHash }, { callerKeyHash: null }]);
+  });
+
+  it("adopts a legacy conversation on its first continuation", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce(jsonReply({ role: "assistant", content: "second" }, "stop"));
+    mockTx.conversation.findMany.mockImplementationOnce(
+      ({ where }: { where: { conversationHash: { in: string[] } } }) =>
+        Promise.resolve([
+          {
+            id: "legacy-id",
+            conversationHash: where.conversationHash.in[0],
+            callerKeyHash: null,
+            updatedAt: new Date(),
+          },
+        ]),
+    );
+
+    await post(
+      {
+        model: "gpt-4",
+        messages: [
+          { role: "user", content: "one" },
+          { role: "assistant", content: "first" },
+          { role: "user", content: "two" },
+        ],
+      },
+      { Authorization: "Bearer sk-alice" },
+    );
+
+    const { where, data } = mockTx.conversation.update.mock.calls[0][0];
+    expect(where).toEqual({ id: "legacy-id" });
+    expect(data.callerKeyHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("distinguishes assistant turns that differ only by their tool call", async () => {
