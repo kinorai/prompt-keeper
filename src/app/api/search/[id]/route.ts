@@ -53,7 +53,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         where: { conversationId: id },
         select: { content: true },
       });
-      const imageKeys = collectStoredImageKeys(messages.map((message) => message.content));
+      const storedKeys = collectStoredImageKeys(messages.map((message) => message.content));
+      // Only the server writes s3:// URLs (completions refuses them from clients), so a key
+      // normally belongs to one conversation. Rows stored before that rule may carry a key
+      // planted from another conversation: never delete an object something else still uses.
+      const sharedKeys =
+        storedKeys.length > 0
+          ? await tx.$queryRaw<{ key: string }[]>`
+              SELECT k.key FROM unnest(${storedKeys}::text[]) AS k(key)
+              WHERE EXISTS (
+                SELECT 1 FROM messages m
+                WHERE m.conversation_id <> ${id} AND strpos(m.content::text, 's3://' || k.key) > 0
+              )`
+          : [];
+      const shared = new Set(sharedKeys.map((row) => row.key));
+      const imageKeys = storedKeys.filter((key) => !shared.has(key));
 
       // Delete messages (cascade should handle this, but explicit is safer)
       await tx.message.deleteMany({

@@ -218,3 +218,32 @@ describe("conversation identity", () => {
     expect(withCall).not.toBe(otherCall);
   });
 });
+
+describe("stored image references", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockTx.conversation.findMany.mockResolvedValue([]);
+    mockTx.conversation.create.mockResolvedValue({ id: "new-id" });
+    mockPrismaClient.$transaction.mockImplementation((callback) => callback(mockTx));
+  });
+
+  it("never stores a client-supplied s3:// image URL", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce(jsonReply({ role: "assistant", content: "ok" }, "stop"));
+    await post({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "look" },
+            { type: "image_url", image_url: { url: "s3://conversations/images/2026/10/someone-else.png" } },
+          ],
+        },
+      ],
+    });
+
+    const stored = JSON.stringify([mockTx.conversation.create.mock.calls, mockTx.message.createMany.mock.calls]);
+    expect(stored).toContain("[image reference removed]");
+    expect(stored).not.toContain("s3://");
+  });
+});

@@ -38,6 +38,7 @@ describe("DELETE /api/search/[id]", () => {
     // Mock successful transaction
     mockPrisma.$transaction.mockImplementation(async (callback) => {
       return await callback({
+        $queryRaw: jest.fn().mockResolvedValue([]),
         conversation: {
           findUnique: jest.fn().mockResolvedValue({ id: "test-id" }),
           delete: jest.fn().mockResolvedValue({ id: "test-id" }),
@@ -81,6 +82,41 @@ describe("DELETE /api/search/[id]", () => {
         eventType: "conversation.deleted",
         payload: { imageKeys: ["conversations/images/2026/10/a.png"] },
       }),
+    });
+  });
+
+  it("keeps images another conversation still references", async () => {
+    const outboxCreate = jest.fn().mockResolvedValue({ id: "outbox-id" });
+    const queryRaw = jest.fn().mockResolvedValue([{ key: "conversations/images/2026/10/victim.png" }]);
+    mockPrisma.$transaction.mockImplementation(async (callback) =>
+      callback({
+        $queryRaw: queryRaw,
+        conversation: {
+          findUnique: jest.fn().mockResolvedValue({ id: "test-id" }),
+          delete: jest.fn().mockResolvedValue({ id: "test-id" }),
+        },
+        message: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              content: [
+                { type: "image_url", image_url: { url: "s3://conversations/images/2026/10/own.png" } },
+                { type: "image_url", image_url: { url: "s3://conversations/images/2026/10/victim.png" } },
+              ],
+            },
+          ]),
+          deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        outboxEvent: { create: outboxCreate },
+      }),
+    );
+
+    const request = new NextRequest("http://localhost:3000/api/search/test-id", { method: "DELETE" });
+    const response = await DELETE(request, { params: Promise.resolve({ id: "test-id" }) });
+
+    expect(response.status).toBe(200);
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+    expect(outboxCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ payload: { imageKeys: ["conversations/images/2026/10/own.png"] } }),
     });
   });
 
