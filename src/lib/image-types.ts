@@ -7,6 +7,9 @@ export const IMAGE_MIME_EXTENSIONS: Record<string, string> = {
   "image/webp": "webp",
 };
 
+// S3 prefix of uploaded images; search presigns only keys under it
+export const STORED_IMAGE_KEY_PREFIX = "conversations/images/";
+
 const DATA_URL_PATTERN = /^data:([A-Za-z0-9.+\/-]+);base64,([\s\S]+)$/;
 
 export function parseImageDataUrl(url: string): { contentType: string; base64: string } | null {
