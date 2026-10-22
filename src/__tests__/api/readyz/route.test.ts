@@ -76,7 +76,7 @@ describe("GET /api/readyz", () => {
     expect(response.status).toBe(503);
     expect(data.status).toBe("degraded");
     expect(data.checks.opensearch.ok).toBe(false);
-    expect(data.checks.opensearch.detail).toBe("Connection error");
+    expect(data.checks.opensearch).toEqual({ ok: false });
   });
 
   it("should return 503 when LiteLLM is unhealthy", async () => {

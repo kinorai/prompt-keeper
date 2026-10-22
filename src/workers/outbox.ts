@@ -191,25 +191,29 @@ async function pollOnce(): Promise<void> {
 }
 
 // Health check functions
-async function checkPostgres(): Promise<{ ok: boolean; detail?: unknown }> {
+// Failure details go to the log, not the response: the probe is unauthenticated
+async function checkPostgres(): Promise<{ ok: boolean }> {
   try {
     const prisma = getPrisma();
     await prisma.$queryRaw`SELECT 1`;
     return { ok: true };
   } catch (error) {
-    return { ok: false, detail: (error as Error).message };
+    log.error(error, "Readiness: Postgres check failed");
+    return { ok: false };
   }
 }
 
-async function checkOpenSearch(): Promise<{ ok: boolean; detail?: unknown }> {
+async function checkOpenSearch(): Promise<{ ok: boolean }> {
   try {
     const resp = await getOpenSearchClient().ping();
     if (resp.body === true) {
       return { ok: true };
     }
-    return { ok: false, detail: resp.body };
+    log.error({ body: resp.body }, "Readiness: OpenSearch ping failed");
+    return { ok: false };
   } catch (error) {
-    return { ok: false, detail: (error as Error).message };
+    log.error(error, "Readiness: OpenSearch check failed");
+    return { ok: false };
   }
 }
 

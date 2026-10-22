@@ -112,7 +112,7 @@ describe("DELETE /api/search/[id]", () => {
     expect(response.status).toBe(500);
     expect(data).toEqual({
       success: false,
-      error: "Server error",
+      error: "Failed to delete conversation",
     });
   });
 });

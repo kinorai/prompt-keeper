@@ -406,7 +406,7 @@ export async function POST(req: NextRequest) {
           total: { value: 0 },
         },
         took: 0,
-        error: error instanceof Error ? error.message : String(error),
+        error: "Search failed",
       },
       { status: 500 },
     );

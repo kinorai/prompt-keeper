@@ -70,7 +70,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: "Failed to delete conversation",
       },
       { status: 500 },
     );

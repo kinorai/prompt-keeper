@@ -4,7 +4,7 @@ import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api:readyz");
 
-async function checkOpenSearch(): Promise<{ ok: boolean; detail?: unknown }> {
+async function checkOpenSearch(): Promise<{ ok: boolean }> {
   try {
     // lightweight ping
     const resp = await getOpenSearchClient().ping();
@@ -12,10 +12,12 @@ async function checkOpenSearch(): Promise<{ ok: boolean; detail?: unknown }> {
       await ensureIndexExists();
       return { ok: true };
     }
-    return { ok: false, detail: resp.body };
+    log.error({ body: resp.body }, "[Readyz OpenSearch ping failed]");
+    return { ok: false };
   } catch (error) {
+    // Details stay in the server log: this probe is unauthenticated
     log.error(error, "[Readyz OpenSearch Error]");
-    return { ok: false, detail: (error as Error).message };
+    return { ok: false };
   }
 }
 
