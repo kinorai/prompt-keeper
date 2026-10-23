@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 // search_words repeats every message's words for the search indexes: never load it
-const createClient = () => new PrismaClient({ omit: { message: { searchWords: true } } });
+const createClient = () => new PrismaClient({ omit: { message: { searchWords: true, searchLong: true } } });
 
 let prismaSingleton: ReturnType<typeof createClient> | undefined;
 
