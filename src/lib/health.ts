@@ -2,6 +2,7 @@ import { S3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
 import getPrisma from "@/lib/prisma";
 import { getOpenSearchClient } from "@/lib/opensearch";
 import { createLogger } from "@/lib/logger";
+import { isOpenSearchBackend } from "@/lib/search/backend";
 
 const log = createLogger("health");
 
@@ -49,7 +50,11 @@ async function retry<T>(name: string, fn: () => Promise<T>, retries = MAX_RETRIE
 export async function checkConnections() {
   log.info("Starting health checks...");
   try {
-    await Promise.all([retry("Prisma", checkPrisma), retry("OpenSearch", checkOpenSearch), retry("S3", checkS3)]);
+    await Promise.all([
+      retry("Prisma", checkPrisma),
+      ...(isOpenSearchBackend() ? [retry("OpenSearch", checkOpenSearch)] : []),
+      retry("S3", checkS3),
+    ]);
     log.info("All health checks passed");
   } catch (error) {
     log.fatal({ error }, "Health checks failed. Exiting process.");

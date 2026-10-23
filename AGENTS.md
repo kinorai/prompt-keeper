@@ -2,7 +2,7 @@ Prompt Keeper
 1. OVERVIEW
 
 • Purpose:
- Create an open-source LLM API proxy that is OpenAI compatible, while also providing a rich user interface to search and analyze historical LLM conversations. The system intercepts API calls, forwards them to LiteLLM for processing, and stores the resulting conversation data in Postgres (single source of truth) and OpenSearch.
+ Create an open-source LLM API proxy that is OpenAI compatible, while also providing a rich user interface to search and analyze historical LLM conversations. The system intercepts API calls, forwards them to LiteLLM for processing, and stores the resulting conversation data in Postgres (single source of truth), which also runs the search (SEARCH_BACKEND=postgres, the default). OpenSearch is optional (SEARCH_BACKEND=opensearch).
 
 2. TECHNOLOGY STACK
 
@@ -20,7 +20,7 @@ Prompt Keeper
 • Data Storage & Search:
 
 - Postgres is used to store the single source of truth and all the stored data.
-- OpenSearch is used to index and store detailed conversation logs, enabling efficient full-text search and faceted filtering.
+- Search runs in Postgres by default (src/lib/search/postgres.ts, docs/search.md). OpenSearch can index the conversations instead (SEARCH_BACKEND=opensearch), fed by the outbox worker.
 
 3. SYSTEM ARCHITECTURE
 
