@@ -36,6 +36,8 @@ model Conversation {
   messages Message[]
 
   @@index([conversationHash])
+  @@index([createdAt(sort: Desc)])
+  @@index([model])
   @@map("conversations")
 }
 
@@ -66,7 +68,16 @@ model Message {
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  // Filled by a trigger from content, reasoning and tool names (see the add_postgres_search
+  // migration); never written by the app. The client omits searchWords from every query
+  // (src/lib/prisma.ts), and Prisma never selects an Unsupported field.
+  searchWords String?                  @map("search_words")
+  searchTsv  Unsupported("tsvector")? @map("search_tsv")
+
   @@index([conversationId])
+  @@index([role, conversationId])
+  @@index([searchTsv], type: Gin)
+  @@index([searchWords(ops: raw("gin_trgm_ops"))], type: Gin, map: "messages_search_words_trgm_idx")
   @@map("messages")
 }
 

@@ -1,3 +1,6 @@
+// These tests cover the OpenSearch backend; the Postgres one has its own
+process.env.SEARCH_BACKEND = "opensearch";
+
 import { POST } from "@/app/api/search/route";
 import { NextRequest, NextResponse } from "next/server";
 import { SEARCH_HIGHLIGHT_POST_TAG, SEARCH_HIGHLIGHT_PRE_TAG } from "@/lib/search-highlights";

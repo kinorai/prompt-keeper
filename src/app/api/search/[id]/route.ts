@@ -3,6 +3,7 @@ import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/request-auth";
 import { STORED_IMAGE_KEY_PREFIX } from "@/lib/image-types";
+import { isOpenSearchBackend } from "@/lib/search/backend";
 
 const log = createLogger("api:search:delete");
 
@@ -79,15 +80,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         where: { id },
       });
 
-      // Enqueue outbox event for OpenSearch deletion
-      await tx.outboxEvent.create({
-        data: {
-          eventType: "conversation.deleted",
-          aggregateType: "conversation",
-          aggregateId: id,
-          ...(imageKeys.length > 0 ? { payload: { imageKeys } } : {}),
-        },
-      });
+      // Enqueue outbox event for the OpenSearch deletion and the image cleanup. The Postgres
+      // backend has nothing to delete elsewhere, so only images need an event there.
+      if (isOpenSearchBackend() || imageKeys.length > 0)
+        await tx.outboxEvent.create({
+          data: {
+            eventType: "conversation.deleted",
+            aggregateType: "conversation",
+            aggregateId: id,
+            ...(imageKeys.length > 0 ? { payload: { imageKeys } } : {}),
+          },
+        });
 
       log.debug({ id }, "[Delete API] Conversation deleted from Postgres and outbox event created");
     });
