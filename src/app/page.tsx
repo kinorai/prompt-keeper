@@ -311,9 +311,10 @@ function HomeContent() {
             highlightedContent: messageHighlightMap.get(index),
           }));
 
-          const snippetFromMessages = messageHighlightMap.size
-            ? messageHighlightMap.values().next().value
-            : highlight["messages.content"]?.[0];
+          // The list shows two lines: a fragment around the match, not the whole matching message
+          const snippetFromMessages =
+            highlight["messages.content"]?.[0] ??
+            (messageHighlightMap.size ? messageHighlightMap.values().next().value : undefined);
 
           return {
             id: hit._id,

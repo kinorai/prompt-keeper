@@ -1,3 +1,6 @@
+// These tests cover the OpenSearch backend; the Postgres one has its own
+process.env.SEARCH_BACKEND = "opensearch";
+
 import { errors } from "@opensearch-project/opensearch";
 import { pollOnce, processEvent } from "@/workers/outbox";
 import { deleteFile } from "@/lib/s3";

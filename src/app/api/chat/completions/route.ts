@@ -11,6 +11,7 @@ import {
   parseImageDataUrl,
 } from "@/lib/image-types";
 import { collectUnknownFields, pickRequestParams } from "@/lib/message-fields";
+import { isOpenSearchBackend } from "@/lib/search/backend";
 
 const log = createLogger("api:chat/completions");
 
@@ -328,7 +329,7 @@ async function processMessageForStorage(message: Message): Promise<Message> {
   return message;
 }
 
-// Removed direct OpenSearch writes; indexing is done by the outbox worker
+// Removed direct OpenSearch writes; with SEARCH_BACKEND=opensearch the outbox worker indexes
 
 // Store conversation in Postgres (source of truth) and enqueue outbox event
 // If a conversation with the same hash exists (within 1 year), update it instead of creating new
@@ -453,21 +454,22 @@ async function storeConversationPostgres(
         await tx.message.createMany({ data: messagesToInsert });
       }
 
-      // Enqueue outbox event (will sync to OpenSearch)
-      await tx.outboxEvent.create({
-        data: {
-          eventType: "conversation.upserted",
-          aggregateType: "conversation",
-          aggregateId: conversationId,
-          payload: {
-            model: response.model,
-            conversationHash: storeHash,
-            usage: response.usage,
-            latency,
-            isUpdate,
+      // Enqueue outbox event (will sync to OpenSearch). The Postgres backend searches these rows directly.
+      if (isOpenSearchBackend())
+        await tx.outboxEvent.create({
+          data: {
+            eventType: "conversation.upserted",
+            aggregateType: "conversation",
+            aggregateId: conversationId,
+            payload: {
+              model: response.model,
+              conversationHash: storeHash,
+              usage: response.usage,
+              latency,
+              isUpdate,
+            },
           },
-        },
-      });
+        });
 
       log.debug({ conversationId, isUpdate, storeHash }, "[Postgres] Conversation stored");
     });

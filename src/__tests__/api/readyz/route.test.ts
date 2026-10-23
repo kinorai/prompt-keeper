@@ -1,3 +1,6 @@
+// These tests cover the OpenSearch backend; the Postgres one has its own
+process.env.SEARCH_BACKEND = "opensearch";
+
 import { GET } from "@/app/api/readyz/route";
 
 // Mock OpenSearch client

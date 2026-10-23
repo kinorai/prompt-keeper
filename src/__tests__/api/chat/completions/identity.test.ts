@@ -246,4 +246,21 @@ describe("stored image references", () => {
     expect(stored).toContain("[image reference removed]");
     expect(stored).not.toContain("s3://");
   });
+
+  it("enqueues an index sync only for the OpenSearch backend", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce(jsonReply({ role: "assistant", content: "hi" }, "stop"));
+    await post({ model: "gpt-4", messages: [{ role: "user", content: "hello" }] });
+    expect(mockTx.outboxEvent.create).not.toHaveBeenCalled();
+
+    process.env.SEARCH_BACKEND = "opensearch";
+    try {
+      (global.fetch as jest.Mock).mockResolvedValueOnce(jsonReply({ role: "assistant", content: "hi" }, "stop"));
+      await post({ model: "gpt-4", messages: [{ role: "user", content: "hello again" }] });
+      expect(mockTx.outboxEvent.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ eventType: "conversation.upserted" }) }),
+      );
+    } finally {
+      delete process.env.SEARCH_BACKEND;
+    }
+  });
 });
