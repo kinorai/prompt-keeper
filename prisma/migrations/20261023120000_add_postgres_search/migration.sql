@@ -79,10 +79,14 @@ $$;
 --   search_words  its distinct words of 3+ characters, for the 3-4 character substring match: the
 --                 trigram index over them is a third the size of one over the whole text, and
 --                 its candidates recheck faster
-ALTER TABLE "messages" ADD COLUMN "search_words" TEXT, ADD COLUMN "search_tsv" TSVECTOR;
+--   search_long   the text is longer than search_tsv covers (below): words past that point are
+--                 then looked up in search_words
+ALTER TABLE "messages" ADD COLUMN "search_words" TEXT, ADD COLUMN "search_tsv" TSVECTOR,
+  ADD COLUMN "search_long" BOOLEAN NOT NULL DEFAULT false;
 
 -- A tsvector over 1 MB fails the insert, so words are indexed from the first 256K characters
--- only. The substring match (search_words) still covers the whole message.
+-- only. search_words covers the whole message: the substring match always uses it, and word
+-- matches in a longer message (search_long) fall back to it; only phrases past 256K are missed.
 CREATE OR REPLACE FUNCTION pk_messages_search_columns() RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -93,6 +97,7 @@ BEGIN
     SELECT string_agg(DISTINCT word, ' ') FROM regexp_split_to_table(folded, ' ') AS word WHERE length(word) >= 3
   );
   NEW.search_tsv := to_tsvector('simple'::regconfig, left(coalesce(folded, ''), 262144));
+  NEW.search_long := coalesce(length(folded), 0) > 262144;
   RETURN NEW;
 END
 $$;

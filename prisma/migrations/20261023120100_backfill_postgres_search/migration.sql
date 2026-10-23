@@ -7,6 +7,8 @@ UPDATE "messages" SET "content" = "content";
 
 CREATE INDEX "messages_search_tsv_idx" ON "messages" USING GIN ("search_tsv");
 CREATE INDEX "messages_search_words_trgm_idx" ON "messages" USING GIN ("search_words" gin_trgm_ops);
+-- The word lookup in messages longer than search_tsv covers: a handful of rows
+CREATE INDEX "messages_search_long_words_trgm_idx" ON "messages" USING GIN ("search_words" gin_trgm_ops) WHERE "search_long";
 CREATE INDEX "messages_role_conversation_id_idx" ON "messages" ("role", "conversation_id");
 CREATE INDEX "conversations_created_at_idx" ON "conversations" ("created_at" DESC);
 -- The search lists the distinct models through it, to match the query against model names
