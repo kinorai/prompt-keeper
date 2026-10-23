@@ -52,8 +52,13 @@ async function buildQueries(): Promise<BenchQuery[]> {
   const stats = await prisma.$queryRaw<{ word: string; ndoc: number }[]>`
     SELECT word, ndoc FROM ts_stat('SELECT search_tsv FROM messages') WHERE length(word) BETWEEN 3 AND 30`;
   const isLatin = (word: string) => /^[a-z]+$/.test(word);
-  const common = stats.filter((s) => s.ndoc > 2000 && isLatin(s.word) && s.word.length >= 5);
-  const mid = stats.filter((s) => s.ndoc >= 50 && s.ndoc <= 500 && isLatin(s.word) && s.word.length >= 5);
+  // Frequency bands relative to the corpus size: common is in 4%+ of messages, mid in 0.1-1%
+  const [{ messages }] = await prisma.$queryRaw<{ messages: number }[]>`SELECT count(*)::int AS messages FROM messages`;
+  const common = stats.filter((s) => s.ndoc > messages * 0.04 && isLatin(s.word) && s.word.length >= 5);
+  const mid = stats.filter(
+    (s) =>
+      s.ndoc >= Math.max(5, messages * 0.001) && s.ndoc <= messages * 0.01 && isLatin(s.word) && s.word.length >= 5,
+  );
   const rare = stats.filter((s) => s.ndoc >= 2 && s.ndoc <= 10 && isLatin(s.word) && s.word.length >= 6);
   const nonLatin = stats.filter((s) => s.ndoc >= 5 && /[Ѐ-ӿ一-鿿]/.test(s.word));
 
@@ -176,11 +181,26 @@ function extraReason(hit: SearchResults["hits"][number], text: string): string {
   return "words split across content, reasoning and tool names";
 }
 
+const FULL_SET_PAGE = 200;
+
+async function allHits(backend: BackendName, request: SearchRequest): Promise<SearchResults> {
+  const hits: SearchResults["hits"] = [];
+  let total: SearchResults["total"] = { value: 0 };
+  for (let from = 0; from < SEARCH_LIMITS.maxResultWindow; from += FULL_SET_PAGE) {
+    const page = await BACKENDS[backend]({ ...request, from, size: FULL_SET_PAGE });
+    hits.push(...page.hits);
+    total = page.total;
+    if (page.hits.length < FULL_SET_PAGE) break;
+  }
+  return { hits, total, took: 0 };
+}
+
 async function compareQuery(query: BenchQuery) {
   const request = toRequest(query.body);
-  // Everything each backend matches, ids only matter here
-  const fullRequest = { ...request, from: 0, size: SEARCH_LIMITS.maxResultWindow };
-  const [osAll, pgAll] = await Promise.all([searchOpenSearch(fullRequest), searchPostgres(fullRequest)]);
+  // Everything each backend matches (up to the result window), fetched a page at a time: one
+  // 10,000-hit request with documents and highlights trips OpenSearch's memory circuit breaker
+  // on corpora with megabyte tool payloads
+  const [osAll, pgAll] = await Promise.all([allHits("opensearch", request), allHits("postgres", request)]);
   const osIds = new Set(osAll.hits.map((hit) => hit._id));
   const pgIds = new Set(pgAll.hits.map((hit) => hit._id));
   const missed = [...osIds].filter((id) => !pgIds.has(id));

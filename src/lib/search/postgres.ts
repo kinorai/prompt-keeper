@@ -22,7 +22,16 @@ function messagePredicate(node: QueryNode): Prisma.Sql {
       if (node.words.length === 1 && word.match === "substring") {
         return Prisma.sql`m.search_words LIKE ('%' || pk_search_fold(${node.source}) || '%')`;
       }
-      const matchesWords = Prisma.sql`m.search_tsv @@ pk_search_tsquery(${node.source}, ${node.lastPrefix})`;
+      const inTsv = Prisma.sql`m.search_tsv @@ pk_search_tsquery(${node.source}, ${node.lastPrefix})`;
+      // search_tsv stops at 256K characters; a single word in a longer message is also looked up
+      // in its distinct words (3+ characters, all of the message): the first LIKE uses the partial
+      // trigram index on long messages, the second keeps the match at the start of a word
+      const matchesWords =
+        node.words.length === 1 && [...word.token].length >= 3
+          ? Prisma.sql`(${inTsv} OR (m.search_long
+              AND m.search_words LIKE ('%' || pk_search_fold(${node.source}) || '%')
+              AND (' ' || m.search_words || ' ') LIKE ('% ' || pk_search_fold(${node.source}) || ${node.lastPrefix ? "%" : " %"})))`
+          : inTsv;
       if (!node.identifier) return matchesWords;
       // The index finds the words next to each other; the few candidates are then checked for
       // the identifier as typed
@@ -98,7 +107,7 @@ const MESSAGE_COLUMNS = Prisma.sql`m.id, m.conversation_id AS "conversationId", 
   m.thinking_blocks AS "thinkingBlocks", m.annotations, m.audio, m.images, m.refusal,
   m.finish_reason AS "finishReason", m.message_index AS "messageIndex", m.created_at AS "createdAt"`;
 
-type MessageRow = Omit<Message, "searchWords"> & { matched: boolean };
+type MessageRow = Omit<Message, "searchWords" | "searchLong"> & { matched: boolean };
 
 // A tool payload or system prompt that also contains the words makes a poorer snippet than the
 // conversation itself, so on equal matches the user's and assistant's messages come first

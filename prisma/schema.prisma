@@ -73,11 +73,14 @@ model Message {
   // (src/lib/prisma.ts), and Prisma never selects an Unsupported field.
   searchWords String?                  @map("search_words")
   searchTsv  Unsupported("tsvector")? @map("search_tsv")
+  searchLong Boolean                  @default(false) @map("search_long")
 
   @@index([conversationId])
   @@index([role, conversationId])
   @@index([searchTsv], type: Gin)
   @@index([searchWords(ops: raw("gin_trgm_ops"))], type: Gin, map: "messages_search_words_trgm_idx")
+  // Partial (WHERE search_long), which Prisma can't express: declared so migrate dev keeps it
+  @@index([searchWords(ops: raw("gin_trgm_ops"))], type: Gin, map: "messages_search_long_words_trgm_idx")
   @@map("messages")
 }
 

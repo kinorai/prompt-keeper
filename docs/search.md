@@ -94,6 +94,9 @@ wait at most for the index builds (about 10 s per 50,000 messages for the whole 
   index for the 3-4 character substring matches. A substring never spans a space, so the distinct
   words find the same messages as the whole text, with an index a third the size and candidates
   that recheck faster. It covers the whole message.
+- `search_long`: the text is longer than `search_tsv` covers. A single word is then also looked up
+  in `search_words` (a partial trigram index over these few rows), so only phrases past 256K
+  characters are missed.
 
 They are plain columns rather than generated ones because Prisma reads a generation expression as
 a default and would drop it in the next `migrate dev`. The client omits `search_words` from every
@@ -212,3 +215,25 @@ checked against each.
 | Memory | no extra process (the database's cache; the whole container used 434 MiB) | 1.8 GiB container (1 GB heap) |
 | Migration | 10 s for the backfill and the indexes (49k messages) | |
 | Freshness | at commit | when the outbox worker has indexed it |
+
+### Results on a production copy (2026-10-23)
+
+A copy of the production database, restored locally: 1,679 conversations, 7,594 messages, 34 MB
+of text, the largest message 1.8 million characters (a tool result). Both migrations applied to it
+in 11 s. The same 202 generated queries (fewer Cyrillic and CJK words exist there), aggregates only:
+
+| | OpenSearch | Postgres |
+|---|---|---|
+| Conversations OpenSearch found that Postgres also found | reference | 99.99% (2 phrases inside messages over 256K characters) |
+| Extra conversations | | 1.1%, mostly tool names: `fetch_url` finds the conversations that called `omnifeed_fetch_url`, which OpenSearch's exact keyword match misses |
+| First page in common | | 97.1% |
+| First-page results with a highlighted snippet | 2529 | 3911 |
+| Latency p50 / p95 / p99, all queries (ms) | 44 / 163 / 211 | 88 / 221 / 314 |
+| 8 concurrent clients | 61 queries/s, 0 errors with a 2 GB heap; with production's 1 GB heap the parent circuit breaker failed 8,030 of them | 15 queries/s, 0 errors |
+| Extra storage | 126 MB index | 24 MB of indexes, plus the two columns |
+
+Real conversations are large: a page of 40 is 5.4 MB, which both backends spend most of their time
+moving (one common-word page: 145 ms OpenSearch, 171 ms Postgres, measured alone). Postgres pays
+more for it, through Prisma and the highlighting in JavaScript, which is most of the gap above. The
+per-category figures on this corpus are noisy: the 5 MB responses make garbage collection pauses
+that land on whichever query runs next in the benchmark process.

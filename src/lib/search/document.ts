@@ -2,7 +2,7 @@ import type { Conversation, Message } from "@prisma/client";
 
 // A conversation as search results carry it: the OpenSearch document the outbox worker indexes,
 // and the `_source` the Postgres backend returns, so the UI reads one shape from either backend
-export function toSearchDocument(convo: Conversation, messages: Omit<Message, "searchWords">[]) {
+export function toSearchDocument(convo: Conversation, messages: Omit<Message, "searchWords" | "searchLong">[]) {
   return {
     model: convo.model,
     messages: messages.map((m) => {

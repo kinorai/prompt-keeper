@@ -153,6 +153,19 @@ describe("searchPostgres", () => {
     );
   });
 
+  it("also looks single words up in the distinct words of messages too long for the word index", async () => {
+    answer({ page: [], total: 0, messages: [] });
+
+    await search({ query: "ecuac" });
+
+    expect(pageQuery().sql).toContain("m.search_long");
+    // Not for phrases: the distinct words don't keep their order
+    jest.clearAllMocks();
+    answer({ page: [], total: 0, messages: [] });
+    await search({ query: '"una ecuacion"' });
+    expect(pageQuery().sql).not.toContain("m.search_long");
+  });
+
   it("checks an underscore identifier against the text as written", async () => {
     answer({ page: [], total: 0, messages: [] });
 
