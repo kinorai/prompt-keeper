@@ -1,6 +1,8 @@
 services:
   # Applies the database schema, then exits. The app and the worker wait for it to
   # succeed, so an upgrade never starts against an out-of-date schema.
+  # Search runs in Postgres by default. For SEARCH_BACKEND=opensearch, start the opensearch and
+  # outbox-worker services too: docker compose --profile opensearch up -d
   migrate:
     image: kinorai/prompt-keeper-migrate:latest
     env_file:
@@ -18,8 +20,10 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      # Only when the opensearch profile is on
       opensearch:
         condition: service_healthy
+        required: false
       litellm:
         condition: service_started
     networks:
@@ -27,6 +31,7 @@ services:
 
   outbox-worker:
     image: kinorai/prompt-keeper-outbox-worker:latest
+    profiles: ["opensearch"]
     env_file:
       - .env
     depends_on:
@@ -40,6 +45,7 @@ services:
 
   opensearch:
     image: opensearchproject/opensearch:2
+    profiles: ["opensearch"]
     environment:
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
       - bootstrap.memory_lock=true
