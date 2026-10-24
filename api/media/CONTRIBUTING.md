@@ -62,7 +62,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 - Node.js (v20 or later)
 - npm (v10 or later)
-- Docker and Docker Compose (for running OpenSearch locally)
+- Docker and Docker Compose (for running Postgres and the other services locally)
 - pre-commit (for Git hook management)
 
 ### Installation
@@ -71,7 +71,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 2. Install dependencies: `npm ci`
 3. Copy `.env.example` to `.env` and configure as needed
 4. Start the development server: `npm run dev`
-5. Start OpenSearch, litellm and open-webui, postgres using Docker Compose: `docker-compose up -f docker-compose.local.yml -d`
+5. Start postgres, litellm, open-webui and OpenSearch (only needed with `SEARCH_BACKEND=opensearch`) using Docker Compose: `docker-compose up -f docker-compose.local.yml -d`
 6. Install pre-commit hooks: `pre-commit install`
 
 ## Testing
