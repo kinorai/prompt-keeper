@@ -39,8 +39,12 @@ const BATCH_SIZE = 500;
 const YEAR_MS = 365 * 24 * 3600 * 1000;
 
 const args = process.argv.slice(2);
-const corpusPath = args.find((arg) => !arg.startsWith("--"));
-const copies = Number(args[args.indexOf("--copies") + 1]) || 1;
+const copiesIndex = args.indexOf("--copies");
+const copies = copiesIndex === -1 ? 1 : Number(args[copiesIndex + 1]) || 1;
+// The first argument that is neither a flag nor the value of --copies
+const corpusPath = args.find(
+  (arg, index) => !arg.startsWith("--") && (copiesIndex === -1 || index !== copiesIndex + 1),
+);
 const isPostgresOnly = args.includes("--postgres-only");
 const isFromPostgres = args.includes("--from-postgres");
 
