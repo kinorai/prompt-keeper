@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { passkey } from "@better-auth/passkey";
+import { haveIBeenPwned } from "better-auth/plugins/haveibeenpwned";
 import { createAuthMiddleware, APIError } from "better-auth/api";
 import getPrisma from "@/lib/prisma";
 
@@ -21,6 +22,13 @@ const trustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",")
 const rpID = process.env.BETTER_AUTH_RP_ID?.trim() || undefined;
 const rpName = process.env.BETTER_AUTH_RP_NAME?.trim() || "Prompt Keeper";
 
+// Rejects a new password (sign-up, password change or reset) found in the Have I Been Pwned
+// corpus. Only the first 5 hex characters of its SHA-1 go to api.pwnedpasswords.com; sign-in
+// never calls it. The check fails closed: when the API can't be reached the request fails with
+// a 500 and no password is set, so a blocked egress can't silently skip it. Set
+// PASSWORD_BREACH_CHECK=false on an install without internet access.
+const isPasswordBreachCheckEnabled = process.env.PASSWORD_BREACH_CHECK !== "false";
+
 export const auth = betterAuth({
   ...(trustedOrigins?.length ? { trustedOrigins } : {}),
   database: prismaAdapter(prisma, {
@@ -29,7 +37,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  plugins: [passkey({ ...(rpID ? { rpID } : {}), rpName })],
+  plugins: [passkey({ ...(rpID ? { rpID } : {}), rpName }), haveIBeenPwned({ enabled: isPasswordBreachCheckEnabled })],
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.path === "/sign-up/email") {
