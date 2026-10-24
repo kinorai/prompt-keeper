@@ -10,6 +10,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    # Same 7 days as min-release-age in .npmrc: a version bump waits until the
+    # release is a week old, so a hijacked publish is pulled before it lands
+    # here. Security updates ignore the cooldown.
+    cooldown:
+      default-days: 7
     groups:
       # All auto-fixable security advisories -> one consolidated PR
       npm-security:
