@@ -10,13 +10,13 @@
 <h1>prompt-keeper</h1></div>
 <div class="tsd-panel tsd-typography"><h1 id="prompt-keeper" class="tsd-anchor-link">Prompt Keeper<a href="#prompt-keeper" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
 <h3 id="never-lose-a-single-llm-conversation-again" class="tsd-anchor-link"><strong>Never lose a single LLM conversation again!</strong><a href="#never-lose-a-single-llm-conversation-again" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<p><strong>Prompt Keeper</strong> is an open-source LLM API proxy providing a <strong>rich user interface to search and analyze historical LLM conversations</strong>. The system intercepts API calls, <strong>forwards them to LiteLLM</strong> for processing, and stores the resulting conversation data in <strong>OpenSearch</strong>. It is fully <strong>OpenAI compatible</strong>.</p>
+<p><strong>Prompt Keeper</strong> is an open-source LLM API proxy providing a <strong>rich user interface to search and analyze historical LLM conversations</strong>. The system intercepts API calls, <strong>forwards them to LiteLLM</strong> for processing, and stores the resulting conversation data in <strong>Postgres</strong>, which also runs the search. It is fully <strong>OpenAI compatible</strong>.</p>
 <h2 id="features-🌟" class="tsd-anchor-link">Features 🌟<a href="#features-🌟" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
 <ul>
 <li>😌 <strong>Interactive frontend</strong> for searching and filtering conversations</li>
-<li>🧠 <strong>Conversation storage</strong> in Postgres (single source of truth) + OpenSearch (search index)</li>
+<li>🧠 <strong>Conversation storage</strong> in Postgres (single source of truth), with full-text search in Postgres or, optionally, OpenSearch</li>
 <li>✅ <strong>OpenAI-compatible API</strong> proxy that routes requests to LiteLLM</li>
-<li>🔄 <strong>Outbox pattern</strong> for reliable async syncing from Postgres to OpenSearch</li>
+<li>🔄 <strong>Outbox pattern</strong> for reliable async syncing from Postgres to OpenSearch, when OpenSearch runs the search</li>
 </ul>
 <h2 id="how-to-install-🚀" class="tsd-anchor-link">How to Install 🚀<a href="#how-to-install-🚀" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
 <ol>
@@ -43,13 +43,13 @@
 <p>Access the UI at <a href="http://localhost:3000">http://localhost:3000</a> and sign up: the first account becomes the admin.</p>
 </li>
 </ol>
-<p>Only the app's port 3000 is published on all interfaces. OpenSearch (security disabled), MinIO and LiteLLM bind to <code>127.0.0.1</code>, and the MinIO bucket is private; images are served through presigned URLs.</p>
+<p>Only the app's port 3000 is published on all interfaces. MinIO and LiteLLM (and OpenSearch, security disabled, when its profile is on) bind to <code>127.0.0.1</code>, and the MinIO bucket is private; images are served through presigned URLs.</p>
 <h3 id="available-docker-tags" class="tsd-anchor-link">Available Docker Tags<a href="#available-docker-tags" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul>
 <li><code>kinorai/prompt-keeper:latest</code> - Latest release</li>
 <li><code>kinorai/prompt-keeper:vx.y.z</code> - Specific version (see <a href="https://github.com/kinorai/prompt-keeper/releases">releases page</a> for available versions)</li>
 </ul>
-<p>The same tags exist for <code>kinorai/prompt-keeper-outbox-worker</code> and <code>kinorai/prompt-keeper-migrate</code>. Run all three at the same version.</p>
+<p>The same tags exist for <code>kinorai/prompt-keeper-outbox-worker</code> and <code>kinorai/prompt-keeper-migrate</code>. Run them at the same version as the app. The outbox worker is only needed with <code>SEARCH_BACKEND=opensearch</code>.</p>
 <h2 id="database-migrations-🗄️" class="tsd-anchor-link">Database Migrations 🗄️<a href="#database-migrations-🗄️" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
 <p>The schema is applied by a dedicated run-once image, <code>kinorai/prompt-keeper-migrate</code>, which runs <code>prisma migrate deploy</code> and exits. It is a separate image on purpose: the app never migrates on startup, so multiple replicas cannot race each other and a failed migration shows up as one failed container instead of a crashloop.</p>
 <p><strong>Docker Compose</strong> — nothing to do. <code>docker-compose.yml</code> includes a <code>migrate</code> service, and the app and worker declare <code>depends_on: { migrate: { condition: service_completed_successfully } }</code>, so <code>docker compose up -d</code> migrates first and only then starts the app.</p>
@@ -60,8 +60,20 @@
 <p><strong>Kubernetes</strong> — run it as a <code>pre-install,pre-upgrade</code> Helm hook <code>Job</code> (or an Argo CD <code>PreSync</code> hook) so it completes before the Deployment is updated.</p>
 <p>The image needs only <code>POSTGRES_PRISMA_URL</code> and <code>POSTGRES_URL_NON_POOLING</code>. It is idempotent — already-applied migrations are skipped — and exits non-zero on failure, so it is safe to gate a rollout on. The entrypoint is overridable for incident work, e.g. <code>docker run --rm --env-file .env kinorai/prompt-keeper-migrate:vx.y.z migrate status</code>.</p>
 <p>Migrations are written to be backwards compatible with the previous release (expand, then contract in a later version), so the running pods keep working while a migration is applied and a rollback of the app image does not need a schema rollback.</p>
+<h2 id="search-🔎" class="tsd-anchor-link">Search 🔎<a href="#search-🔎" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><code>SEARCH_BACKEND</code> picks where <code>/api/search</code> runs:</p>
+<ul>
+<li><strong><code>postgres</code></strong> (default): full-text search in the Postgres database the conversations live in, with the <code>pg_trgm</code> and <code>unaccent</code> extensions (both trusted: the migration creates them as the database owner, no superuser needed). No other service, no sync lag. The app deletes a deleted conversation's images from S3 itself.</li>
+<li><strong><code>opensearch</code></strong>: the OpenSearch index, kept in sync by the outbox worker below. Run the <code>opensearch</code> and <code>outbox-worker</code> services (<code>docker compose --profile opensearch up -d</code>) and set the <code>OPENSEARCH_*</code> variables.</li>
+</ul>
+<p>The query syntax is the same on both: words are ANDed, <code>|</code> is OR, <code>-word</code> excludes, <code>&quot;quotes&quot;</code> match a phrase, <code>word*</code> forces a prefix, parentheses group, and <code>role:user</code> / <code>model:&quot;gpt-4o&quot;</code> filter. Matching is accent- and case-insensitive; a word matches as the start of a longer word (as you type), and a 3-4 letter word also matches inside longer ones. <a href="media/search.md">docs/search.md</a> has the details and the benchmark against OpenSearch.</p>
+<p>Switching from <code>opensearch</code> to <code>postgres</code> needs nothing more than the variable: the migration indexes the existing messages, and the OpenSearch services can be stopped. Switching the other way needs the index rebuilt, since the app queues no index updates while it searches Postgres: start OpenSearch and the worker, set the variable, then queue every conversation once and let the worker index them:</p>
+<pre><code class="sql">INSERT INTO outbox_events (id, event_type, aggregate_type, aggregate_id)
+SELECT gen_random_uuid()::text, 'conversation.upserted', 'conversation', id FROM conversations;
+</code><button type="button">Copy</button></pre>
+
 <h2 id="search-index-sync-🔁" class="tsd-anchor-link">Search Index Sync 🔁<a href="#search-index-sync-🔁" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
-<p>Postgres is the source of truth. Every conversation write or delete also records an event in <code>outbox_events</code>, and the outbox worker applies it to OpenSearch (and deletes a deleted conversation's images from S3).</p>
+<p>With <code>SEARCH_BACKEND=opensearch</code>, Postgres is still the source of truth. Every conversation write or delete also records an event in <code>outbox_events</code>, and the outbox worker applies it to OpenSearch (and deletes a deleted conversation's images from S3).</p>
 <p>A failed event is retried with exponential backoff: 10 s, 20 s, 40 s, … up to one hour between attempts. Connection errors, timeouts, throttling (429) and 5xx responses are retried for as long as the outage lasts, so nothing is lost while OpenSearch is down. Only an event that OpenSearch itself rejects (another 4xx, such as a mapping or validation error) <code>OUTBOX_MAX_ATTEMPTS</code> times (default 10) is dead-lettered: the worker logs it at error level and stops retrying it.</p>
 <p>List dead-lettered events:</p>
 <pre><code class="sql">SELECT id, event_type, aggregate_id, rejected_attempts, last_error, dead_lettered_at
@@ -170,6 +182,7 @@ WHERE dead_lettered_at IS NOT NULL AND processed_at IS NULL;
 <ul>
 <li><a href="#available-docker-tags"><span>Available <wbr/>Docker <wbr/>Tags</span></a></li></ul></li>
 <li><a href="#database-migrations-🗄️"><span>Database <wbr/>Migrations 🗄️</span></a></li>
+<li><a href="#search-🔎"><span>Search 🔎</span></a></li>
 <li><a href="#search-index-sync-🔁"><span>Search <wbr/>Index <wbr/>Sync 🔁</span></a></li>
 <li><a href="#litellm-integration-🔄"><span>Lite<wbr/>LLM <wbr/>Integration 🔄</span></a></li>
 <li>
