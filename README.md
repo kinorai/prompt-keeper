@@ -131,6 +131,7 @@ Prompt Keeper uses three authentication methods:
         -   `BETTER_AUTH_SECRET`: A secure random string for signing session cookies.
         -   `BETTER_AUTH_URL`: The full URL of your application (e.g., `http://localhost:3000`).
         -   `ENABLE_SIGNUP`: Set to `true` to allow additional users to sign up (default: `false`).
+        -   `PASSWORD_BREACH_CHECK`: New passwords (sign-up, change, reset) that appear in a known breach are rejected, through the [Have I Been Pwned](https://haveibeenpwned.com/Passwords) range API (only the first 5 characters of the password's SHA-1 leave the server). The check fails closed: if `api.pwnedpasswords.com` can't be reached, the sign-up or password change fails. Set to `false` on an install without internet access (default: `true`).
 
 2.  **LiteLLM API Authentication**: For LLM API routes (`/api/chat/completions`, `/api/completions`, `/api/models`).
 

@@ -190,6 +190,10 @@ jest.mock("@better-auth/passkey", () => ({
   passkey: jest.fn(),
 }));
 
+jest.mock("better-auth/plugins/haveibeenpwned", () => ({
+  haveIBeenPwned: jest.fn(),
+}));
+
 jest.mock("better-auth/api", () => ({
   createAuthMiddleware: jest.fn(),
   APIError: class extends Error {
