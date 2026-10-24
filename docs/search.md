@@ -96,7 +96,10 @@ wait at most for the index builds (about 10 s per 50,000 messages for the whole 
   that recheck faster. It covers the whole message.
 - `search_long`: the text is longer than `search_tsv` covers. A single word is then also looked up
   in `search_words` (a partial trigram index over these few rows), so only phrases past 256K
-  characters are missed.
+  characters are missed. Phrases (and split terms like `gpt-4o`) can also miss earlier in a long
+  message: a tsvector keeps word positions up to 16,383 (every later word shares that position)
+  and at most 256 positions per word, so a phrase past the ~16,000th word, or after a word's
+  256th occurrence, does not match.
 
 They are plain columns rather than generated ones because Prisma reads a generation expression as
 a default and would drop it in the next `migrate dev`. The client omits `search_words` from every

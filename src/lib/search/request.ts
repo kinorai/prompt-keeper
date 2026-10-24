@@ -1,4 +1,5 @@
 import { DEFAULT_ROLES, SEARCH_LIMITS } from "@/lib/defaults";
+import { isOpenSearchBackend } from "@/lib/search/backend";
 import { countTerms, parseSearchQuery } from "@/lib/search/query-parser";
 
 // What /api/search asks for, once the body is validated and the magic filters (role:, model:)
@@ -68,6 +69,18 @@ function parsePagingParams(body: Record<string, unknown>): PagingParams | { erro
       typeof (timeRange as Record<string, unknown>).end !== "string")
   ) {
     return { error: "timeRange start and end must be strings" };
+  }
+  // Postgres casts them to timestamptz: an unreadable date would fail the query (a 500). OpenSearch
+  // also takes its date math (now-7d), so only the Postgres backend needs readable dates.
+  if (
+    timeRange !== null &&
+    typeof timeRange === "object" &&
+    !isOpenSearchBackend() &&
+    [(timeRange as { start: string }).start, (timeRange as { end: string }).end].some((date) =>
+      Number.isNaN(Date.parse(date)),
+    )
+  ) {
+    return { error: "timeRange start and end must be dates (ISO 8601)" };
   }
   return { size, from, roles: (roles as string[] | null) ?? undefined };
 }

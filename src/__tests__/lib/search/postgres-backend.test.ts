@@ -84,6 +84,17 @@ describe("Postgres search backend", () => {
     expect(searchPostgres).not.toHaveBeenCalled();
   });
 
+  it("rejects an unreadable custom date with a 400, not a failed query", async () => {
+    const response = await search(
+      new NextRequest("http://localhost/api/search", {
+        method: "POST",
+        body: JSON.stringify({ query: "x", timeRange: { start: "now-7d", end: "now" } }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(searchPostgres).not.toHaveBeenCalled();
+  });
+
   it("rejects a query of more than 32 words", async () => {
     const response = await search(
       new NextRequest("http://localhost/api/search", {
