@@ -1,3 +1,17 @@
+## [0.13.0](https://github.com/kinorai/prompt-keeper/compare/v0.12.2...v0.13.0) (2026-10-24)
+
+
+### Features
+
+* **search:** search in Postgres, OpenSearch optional ([f00f6e2](https://github.com/kinorai/prompt-keeper/commit/f00f6e2729d07175c084d868e802fcfc3a68ba5a))
+
+
+### Bug Fixes
+
+* **deps:** clear the high npm audit advisories ([a27f248](https://github.com/kinorai/prompt-keeper/commit/a27f248013173a05e7220420d428f77f31768e32))
+* **search:** code review fixes ([8f9bc1c](https://github.com/kinorai/prompt-keeper/commit/8f9bc1cade898ba1212ab7c262ef8012068aa441))
+* **search:** find words past the indexed 256K characters of long messages ([490294f](https://github.com/kinorai/prompt-keeper/commit/490294f0dc3a69e6e9879381af000fb4e4a716c0))
+
 ## [0.12.2](https://github.com/kinorai/prompt-keeper/compare/v0.12.1...v0.12.2) (2026-10-22)
 
 
@@ -51,11 +65,4 @@
 ### Performance Improvements
 
 * hash messages once, and clear the rest of the review ([4692cd2](https://github.com/kinorai/prompt-keeper/commit/4692cd2bbbce8ab22108264f4f0652178233580b))
-
-## [0.10.2](https://github.com/kinorai/prompt-keeper/compare/v0.10.1...v0.10.2) (2026-07-22)
-
-
-### Bug Fixes
-
-* **deps:** resolve remaining advisories via targeted overrides ([bb879a3](https://github.com/kinorai/prompt-keeper/commit/bb879a3e5c59e2c0c959db51dbfe7b023fd579ff))
 
