@@ -1,7 +1,7 @@
 # ADR 0004: Dependencies wait 7 days after a release
 
-- **Status:** proposed (PR #178, not merged). The `.npmrc` delay and the GitHub Actions
-  and Docker cooldowns are already on `main`; PR #178 adds the npm Dependabot cooldown.
+- **Status:** accepted (PR #178). The `.npmrc` delay and the GitHub Actions
+  and Docker cooldowns were already on `main`; PR #178 added the npm Dependabot cooldown.
 - **Date:** 2026-10-24
 - **Scope:** `.npmrc`, `.github/dependabot.yml`
 

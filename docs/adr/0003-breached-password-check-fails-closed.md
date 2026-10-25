@@ -1,6 +1,6 @@
 # ADR 0003: The breached-password check fails closed
 
-- **Status:** proposed (PR #178, not merged)
+- **Status:** accepted (PR #178)
 - **Date:** 2026-10-24
 - **Scope:** email and password auth (`src/lib/auth.ts`), `PASSWORD_BREACH_CHECK`
 
