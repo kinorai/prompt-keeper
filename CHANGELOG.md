@@ -1,3 +1,15 @@
+## [0.14.0](https://github.com/kinorai/prompt-keeper/compare/v0.13.1...v0.14.0) (2026-10-25)
+
+
+### Features
+
+* **auth:** reject breached passwords with Have I Been Pwned ([fd1ead6](https://github.com/kinorai/prompt-keeper/commit/fd1ead6aab098f0f8b6f6dee820ecd664db3faf1))
+
+
+### Bug Fixes
+
+* **deps:** bump better-auth and @better-auth/passkey to 1.7.10 ([23bf9c9](https://github.com/kinorai/prompt-keeper/commit/23bf9c94333bce3ba934c0c6680214c29a18ea14))
+
 ## [0.13.1](https://github.com/kinorai/prompt-keeper/compare/v0.13.0...v0.13.1) (2026-10-25)
 
 
@@ -44,11 +56,4 @@
 * **ui:** don't auto-load external image URLs from stored messages ([8532c43](https://github.com/kinorai/prompt-keeper/commit/8532c43e7a9c6af4c9ddf0097afae219d935a1f1))
 
 ## [0.12.1](https://github.com/kinorai/prompt-keeper/compare/v0.12.0...v0.12.1) (2026-08-22)
-
-## [0.12.0](https://github.com/kinorai/prompt-keeper/compare/v0.11.0...v0.12.0) (2026-07-29)
-
-
-### Features
-
-* **deploy:** ship a dedicated database migration runner image ([8c77dc6](https://github.com/kinorai/prompt-keeper/commit/8c77dc63579aad469654f6f1887f17530e4ea7f5))
 
