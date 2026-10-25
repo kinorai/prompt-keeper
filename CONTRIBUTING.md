@@ -35,6 +35,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 - Follow the TypeScript and React style guides
 - Include tests when adding new features
 - Update documentation as needed
+- If the change reverses or replaces a decision recorded in [docs/adr](docs/adr/README.md), add a new ADR and mark the old one superseded
 - End all files with a newline
 - Place imports in the following order:
   1. Built-in Node modules
