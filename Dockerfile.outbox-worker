@@ -34,7 +34,7 @@ RUN npx prisma generate
 RUN npx -y esbuild src/workers/outbox.ts \
     --bundle \
     --platform=node \
-    --target=node20 \
+    --target=node24 \
     --outfile=dist/outbox.js \
     --packages=external \
     --sourcemap

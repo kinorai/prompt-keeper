@@ -50,8 +50,10 @@ updates:
       interval: "weekly"
     # The Dockerfiles pin node:<version>-alpine@sha256. Dependabot bumps the
     # tag and the digest together, so a Node security release reaches the
-    # image instead of a stale pin. Majors stay a deliberate choice: move to
-    # the next LTS by hand.
+    # image instead of a stale pin. Dependabot has no security updates for
+    # Docker images, so the 7-day cooldown applies to those releases too:
+    # bump by hand for an urgent Node CVE. Majors stay a deliberate choice:
+    # move to the next LTS by hand.
     cooldown:
       default-days: 7
     ignore:
