@@ -150,6 +150,8 @@ Prompt Keeper uses three authentication methods:
 
 We welcome contributions! Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for details.
 
+Design decisions, and why they were made, are recorded as ADRs in [docs/adr](docs/adr/README.md).
+
 ## License 📜
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
