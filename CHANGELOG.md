@@ -1,3 +1,5 @@
+## [0.14.1](https://github.com/kinorai/prompt-keeper/compare/v0.14.0...v0.14.1) (2026-10-25)
+
 ## [0.14.0](https://github.com/kinorai/prompt-keeper/compare/v0.13.1...v0.14.0) (2026-10-25)
 
 
@@ -54,6 +56,4 @@
 * **search:** accept numeric strings and any-case roles; out-of-range size/from return 400 ([39a299a](https://github.com/kinorai/prompt-keeper/commit/39a299a38edebb214317a0069ff837e8ab292729))
 * **search:** bound size and from, validate roles and filters ([e6583bf](https://github.com/kinorai/prompt-keeper/commit/e6583bf54bc9fafc9cbfc64a4d28a880dc942727))
 * **ui:** don't auto-load external image URLs from stored messages ([8532c43](https://github.com/kinorai/prompt-keeper/commit/8532c43e7a9c6af4c9ddf0097afae219d935a1f1))
-
-## [0.12.1](https://github.com/kinorai/prompt-keeper/compare/v0.12.0...v0.12.1) (2026-08-22)
 
