@@ -44,3 +44,21 @@ updates:
       github-actions:
         patterns:
           - "*"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # The Dockerfiles pin node:<version>-alpine@sha256. Dependabot bumps the
+    # tag and the digest together, so a Node security release reaches the
+    # image instead of a stale pin. Majors stay a deliberate choice: move to
+    # the next LTS by hand.
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # One PR for the three Dockerfiles' shared base image
+      docker:
+        patterns:
+          - "*"
