@@ -7,8 +7,8 @@ Each file records one decision: the context, what was decided, and what it costs
 |---|---|---|
 | [0001](0001-record-decisions-as-adrs.md) | Record decisions as ADRs | accepted |
 | [0002](0002-search-runs-on-postgres.md) | Search runs on Postgres, OpenSearch is optional | accepted |
-| [0003](0003-breached-password-check-fails-closed.md) | The breached-password check fails closed | proposed (PR #178) |
-| [0004](0004-dependencies-wait-seven-days.md) | Dependencies wait 7 days after a release | proposed (PR #178) |
+| [0003](0003-breached-password-check-fails-closed.md) | The breached-password check fails closed | accepted (PR #178) |
+| [0004](0004-dependencies-wait-seven-days.md) | Dependencies wait 7 days after a release | accepted (PR #178) |
 
 Next number: **0005**.
 
