@@ -1,7 +1,7 @@
 # ADR 0004: Dependencies wait 7 days after a release
 
-- **Status:** proposed (PR #178, not merged). The npm, GitHub Actions and Docker parts
-  are already on `main`; PR #178 adds the npm Dependabot cooldown.
+- **Status:** proposed (PR #178, not merged). The `.npmrc` delay and the GitHub Actions
+  and Docker cooldowns are already on `main`; PR #178 adds the npm Dependabot cooldown.
 - **Date:** 2026-10-24
 - **Scope:** `.npmrc`, `.github/dependabot.yml`
 
@@ -17,8 +17,9 @@ Before PR #178, the repo had part of a delay:
 - `.npmrc` sets `min-release-age=7` (npm 11.10.0 or later): npm resolves only versions
   published at least 7 days ago.
 - Dependabot's `github-actions` and `docker` entries had a 7-day cooldown.
-- The `npm` entry had none, so Dependabot could propose a release minutes after it
-  was published, one that `npm install` itself would refuse.
+- The `npm` entry had none of its own, so it got GitHub's default 3-day cooldown:
+  Dependabot could propose a release 3 days after it was published, one that
+  `npm install` itself would refuse for 4 more days.
 
 ## Decision
 
@@ -29,8 +30,8 @@ Every dependency waits **7 days** after its release before it lands here:
   `npm` included. 7 days, not GitHub's default of 3, to match `.npmrc`.
 - **Security fixes may bypass it:**
   - Dependabot security updates ignore the cooldown.
-  - `min-release-age` does not block an audit fix. It picks the newest patched version
-    that is old enough. When the fix itself is newer than 7 days, a one-off
+  - `min-release-age` also applies to `npm audit fix`: it picks the newest patched
+    version that is old enough. When the fix itself is newer than 7 days, a one-off
     `npm install --min-release-age=0` pins it in the lockfile, and `npm ci` does not
     apply the setting.
   - Dependabot has no security updates for Docker images, so an urgent Node CVE is
@@ -45,4 +46,5 @@ Every dependency waits **7 days** after its release before it lands here:
   1.7.12 were 5 and 4 days old.
 - `npm ci` installs what the lockfile holds, whatever its age, so the delay applies
   when the lockfile changes, not when it is installed.
-- A security fix still lands at once, through the paths above.
+- A security fix skips the Dependabot cooldown. When the fix is less than 7 days old,
+  `min-release-age` still holds it back until the one-off override above pins it.

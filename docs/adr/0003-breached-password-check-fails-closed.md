@@ -45,9 +45,10 @@ Checked on PR #178 against a throwaway Postgres 17 with every migration applied:
 
 - **Deploy order:** a deployment needs HTTPS egress to `api.pwnedpasswords.com:443`
   before it runs this version. Behind a default-deny network policy, allow it first;
-  otherwise first sign-ups and password changes fail. Sign-in keeps working either way.
-- **An outage of the API blocks** sign-ups and password changes until it is back, or
-  until `PASSWORD_BREACH_CHECK=false` is set.
+  otherwise sign-ups, password changes and resets fail. Sign-in keeps working either
+  way.
+- **An outage of the API blocks** sign-ups, password changes and resets until it is
+  back, or until `PASSWORD_BREACH_CHECK=false` is set.
 - **Privacy:** the API sees 5 hex characters of a SHA-1 and the server's IP address on
   each checked request, never the password.
 - **Air-gapped installs** must set `PASSWORD_BREACH_CHECK=false`. PR #178 documents

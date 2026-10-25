@@ -1,7 +1,7 @@
 # ADR 0002: Search runs on Postgres, OpenSearch is optional
 
-- **Status:** accepted (recorded after the fact)
-- **Date:** 2026-10-24 (PR #177, released in v0.13.0)
+- **Status:** accepted
+- **Date:** 2026-10-24 (PR #177, released in v0.13.0; recorded after the fact on 2026-10-25)
 - **Scope:** `/api/search` (`src/lib/search/`), `SEARCH_BACKEND`, the outbox worker
 
 ## Context
@@ -69,23 +69,26 @@ From [docs/search.md](../search.md), 2026-10-23. PostgreSQL 18.6 against OpenSea
 | Throughput, 8 clients, OpenSearch / Postgres (queries/s) | 583 / 263 | 551 / 186 | 61 (2 GB heap) / 15 |
 | Extra storage, OpenSearch / Postgres | 150 MB / 147 MB | | 126 MB / 24 MB of indexes, plus two columns |
 
-Nearly all the extra results are matches in reasoning, which OpenSearch matched only as
-whole words.
+On oasst2, nearly all the extra results are matches in reasoning, which OpenSearch matched
+only as whole words. On the production copy they are mostly tool names: `fetch_url` finds
+the conversations that called `omnifeed_fetch_url`, which OpenSearch's exact keyword match
+misses.
 
 ## Consequences
 
 - **One service by default.** No OpenSearch, no `OPENSEARCH_*`, no outbox worker. A
   conversation is searchable when its transaction commits.
-- **Slower per query, still interactive.** Postgres is about twice OpenSearch's latency
-  on the production copy, mostly from moving large pages through Prisma and
-  highlighting in JavaScript. The weak spot is a 3-4 letter substring on a large
-  corpus: p95 220 ms at 5x, because the exact count rechecks every candidate. The
-  search box waits for 3 characters and 600 ms of quiet.
+- **Slower per query, still interactive.** Postgres's median latency is about twice
+  OpenSearch's on the production copy (p95 221 ms against 163 ms), mostly from moving
+  large pages through Prisma and highlighting in JavaScript. The weak spot is a 3-4
+  letter substring on a large corpus: p95 220 ms at 5x, because the exact count rechecks
+  every candidate. The search box waits for 3 characters and 600 ms of quiet.
 - **Throughput is lower** than OpenSearch's with a large enough heap. With 8
   concurrent clients, Postgres served fewer queries per second but failed none.
-- **Postgres tuning matters.** Rare-word prefix queries need raised statistics targets
-  (`SET STATISTICS`) to use the index (390 ms → 6 ms at 5x), and words past the first
-  256K characters of a message go through a separate flag and a partial trigram index.
+- **Postgres tuning matters.** An OR of two rare words needs raised statistics targets
+  (`SET STATISTICS`) to use the index instead of walking every conversation
+  (390 ms → 6 ms at 5x), and words past the first 256K characters of a message go
+  through a separate flag and a partial trigram index.
 - **Switching back to OpenSearch needs a reindex,** since the app queues no index
   updates while it searches Postgres. The steps are in the README, under Search.
 - **Two backends to keep in step.** A change to the query language or the response
