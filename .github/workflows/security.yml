@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '0 0 * * 0'  # Run weekly on Sundays
 
+# Jobs that upload results set their own permissions.
+permissions:
+  contents: read
+
 jobs:
   dependency-scan:
     name: Dependency Vulnerability Scan
