@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createLogger } from "@/lib/logger";
 import getPrisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { uploadFile } from "@/lib/s3";
 import {
   IMAGE_MIME_EXTENSIONS,

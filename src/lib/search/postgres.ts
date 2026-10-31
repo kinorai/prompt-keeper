@@ -1,4 +1,4 @@
-import { Prisma, type Conversation, type Message } from "@prisma/client";
+import { Prisma, type Conversation, type Message } from "@/generated/prisma/client";
 import getPrisma from "@/lib/prisma";
 import { createLogger } from "@/lib/logger";
 import { POSTGRES_SEARCH } from "@/lib/defaults";

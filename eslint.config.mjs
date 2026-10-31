@@ -28,6 +28,7 @@ const config = [
       "next-env.d.ts",
       "backup/**",
       "*.old.bak",
+      "src/generated/**",
     ],
   },
   // Next.js recommended config

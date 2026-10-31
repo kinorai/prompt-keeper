@@ -1,6 +1,6 @@
 import { POST } from "@/app/api/chat/completions/route";
 import { NextRequest } from "next/server";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 
 jest.mock("@/lib/opensearch", () => ({
   index: jest.fn(),
