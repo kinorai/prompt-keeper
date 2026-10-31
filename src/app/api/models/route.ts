@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLogger } from "@/lib/logger";
+import { liteLLMHeaders } from "@/lib/litellm-headers";
 
 const log = createLogger("api:models");
 
@@ -10,7 +11,7 @@ const CONFIG = {
 
 export async function GET(req: NextRequest) {
   try {
-    const forwardHeaders = new Headers(req.headers);
+    const forwardHeaders = liteLLMHeaders(req.headers);
     const response = await fetch(`${CONFIG.LITELLM_URL}/v1/models`, {
       headers: forwardHeaders,
       signal: AbortSignal.timeout(CONFIG.REQUEST_TIMEOUT),
