@@ -39,7 +39,8 @@ jobs:
 
       # TypeDoc is a pinned devDependency, installed from the lockfile by npm ci
       - name: Generate API documentation
-        run: npx --no-install typedoc --entryPointStrategy expand --out docs/api src
+        # src/generated is the Prisma Client the postinstall generates, not our API
+        run: npx --no-install typedoc --entryPointStrategy expand --exclude "src/generated/**" --out docs/api src
 
       - name: Upload documentation
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

@@ -69,7 +69,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 ### Installation
 
 1. Clone the repository
-2. Install dependencies: `npm ci`
+2. Install dependencies: `npm ci` (its postinstall generates the Prisma Client into `src/generated/prisma`)
 3. Copy `.env.example` to `.env` and configure as needed
 4. Start the development server: `npm run dev`
 5. Start postgres, litellm, open-webui and OpenSearch (only needed with `SEARCH_BACKEND=opensearch`) using Docker Compose: `docker-compose up -f docker-compose.local.yml -d`
