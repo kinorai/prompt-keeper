@@ -365,6 +365,9 @@ function HomeContent() {
     if (initialLoad) {
       // On initial load, if query is empty (or not from URL persisting a specific search),
       // handleSearch will send an empty query, which the backend now treats as 'fetch latest'.
+      // It fetches from the API: its setState calls are the loading state and the fetched results,
+      // the external-data case an effect is for, not state derived from props.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       handleSearch();
     }
   }, [handleSearch, initialLoad]);

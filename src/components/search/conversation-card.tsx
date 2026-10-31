@@ -323,6 +323,8 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContextDeleteConfirm, setShowContextDeleteConfirm] = useState(false);
+  // Where the delete confirm opens: under the menu button, measured when it opens (refs can't be read during render)
+  const [deleteConfirmPosition, setDeleteConfirmPosition] = useState({ left: 10, top: 10 });
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Generate full conversation text for copying
@@ -432,12 +434,11 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
     setContextMenuPosition({ x: e.clientX, y: e.clientY });
   };
 
-  // Reset context menu position when closing
-  useEffect(() => {
-    if (!showContextMenu) {
-      setContextMenuPosition({ x: 0, y: 0 });
-    }
-  }, [showContextMenu]);
+  // Closing forgets the right-click position, so the menu button opens the menu at the button again
+  const handleContextMenuOpenChange = (open: boolean) => {
+    setShowContextMenu(open);
+    if (!open) setContextMenuPosition({ x: 0, y: 0 });
+  };
 
   // Handle click outside and escape key for context delete confirmation
   useEffect(() => {
@@ -580,7 +581,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
               </div>
             </PopoverContent>
           </Popover>
-          <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
+          <DropdownMenu open={showContextMenu} onOpenChange={handleContextMenuOpenChange}>
             <DropdownMenuTrigger asChild>
               <Button
                 ref={dropdownButtonRef}
@@ -618,8 +619,12 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
                 className="text-destructive focus:text-destructive"
                 onSelect={(e) => {
                   e.preventDefault();
+                  const rect = dropdownButtonRef.current?.getBoundingClientRect();
+                  setDeleteConfirmPosition(
+                    rect ? { left: Math.max(10, rect.right - 320), top: rect.bottom + 5 } : { left: 10, top: 10 },
+                  );
                   setShowContextDeleteConfirm(true);
-                  setShowContextMenu(false); // Close the dropdown first
+                  handleContextMenuOpenChange(false); // Close the dropdown first
                 }}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -645,12 +650,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       {showContextDeleteConfirm && (
         <div
           className="context-delete-confirmation fixed z-50 w-80 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none"
-          style={{
-            left: dropdownButtonRef.current
-              ? Math.max(10, dropdownButtonRef.current.getBoundingClientRect().right - 320)
-              : 10,
-            top: dropdownButtonRef.current ? dropdownButtonRef.current.getBoundingClientRect().bottom + 5 : 10,
-          }}
+          style={deleteConfirmPosition}
         >
           <div className="flex gap-3">
             <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />

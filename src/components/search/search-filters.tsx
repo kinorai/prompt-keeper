@@ -26,6 +26,69 @@ interface SearchFiltersProps {
   alwaysExpanded?: boolean;
 }
 
+// Subcomponents to DRY repeated UI. Module level, so a re-render of SearchFilters does not remount them.
+function RolesToggle({ value, onChange }: { value: string[]; onChange?: (next: string[]) => void }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <Label className="text-sm font-medium">Filter by sender</Label>
+      <ToggleGroup
+        type="multiple"
+        className="rounded-md w-full"
+        value={value}
+        onValueChange={(vals) => onChange?.(vals as string[])}
+      >
+        <ToggleGroupItem
+          value="system"
+          aria-label="Filter system"
+          className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+        >
+          <span className="text-sm">system</span>
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="user"
+          aria-label="Filter user"
+          className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+        >
+          <span className="text-sm">user</span>
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="assistant"
+          aria-label="Filter assistant"
+          className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+        >
+          <span className="text-sm">assistant</span>
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="tool"
+          aria-label="Filter tool"
+          className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
+        >
+          <span className="text-sm">tool</span>
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </div>
+  );
+}
+
+function ResultsSizeControl({ value, onChange }: { value: number; onChange: (next: number) => void }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <Label className="text-sm font-medium">Results Size</Label>
+      <div className="flex gap-4 items-center">
+        <Slider
+          value={[value]}
+          onValueChange={([v]) => onChange(v)}
+          min={10}
+          max={SEARCH_LIMITS.maxResultsSize}
+          step={10}
+          className="w-full"
+        />
+        <span className="text-sm font-medium w-12 text-center">{value}</span>
+      </div>
+    </div>
+  );
+}
+
 export function SearchFilters({
   timeRange,
   resultsSize,
@@ -35,69 +98,6 @@ export function SearchFilters({
   onRolesChange,
   alwaysExpanded = false,
 }: SearchFiltersProps) {
-  // Subcomponents to DRY repeated UI
-  function RolesToggle({ value, onChange }: { value: string[]; onChange?: (next: string[]) => void }) {
-    return (
-      <div className="flex flex-col gap-2.5">
-        <Label className="text-sm font-medium">Filter by sender</Label>
-        <ToggleGroup
-          type="multiple"
-          className="rounded-md w-full"
-          value={value}
-          onValueChange={(vals) => onChange?.(vals as string[])}
-        >
-          <ToggleGroupItem
-            value="system"
-            aria-label="Filter system"
-            className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-          >
-            <span className="text-sm">system</span>
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="user"
-            aria-label="Filter user"
-            className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-          >
-            <span className="text-sm">user</span>
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="assistant"
-            aria-label="Filter assistant"
-            className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-          >
-            <span className="text-sm">assistant</span>
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="tool"
-            aria-label="Filter tool"
-            className="rounded-none first:rounded-l-md last:rounded-r-md flex-1"
-          >
-            <span className="text-sm">tool</span>
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-    );
-  }
-
-  function ResultsSizeControl({ value, onChange }: { value: number; onChange: (next: number) => void }) {
-    return (
-      <div className="flex flex-col gap-2.5">
-        <Label className="text-sm font-medium">Results Size</Label>
-        <div className="flex gap-4 items-center">
-          <Slider
-            value={[value]}
-            onValueChange={([v]) => onChange(v)}
-            min={10}
-            max={SEARCH_LIMITS.maxResultsSize}
-            step={10}
-            className="w-full"
-          />
-          <span className="text-sm font-medium w-12 text-center">{value}</span>
-        </div>
-      </div>
-    );
-  }
-
   const timeRangeLabel = labelForTimeRange(timeRange);
 
   const handleCalendarChange = (range?: DateRange) => {
