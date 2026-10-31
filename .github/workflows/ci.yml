@@ -83,7 +83,9 @@ jobs:
 
   docker_build_pr:
     name: Docker Build for PR Validation
-    runs-on: ubuntu-latest
+    # Native arm64 runner, like the dev and release builds: the image is validated the way it ships,
+    # not under QEMU, where `prisma generate` (WebAssembly in Node) has failed with garbled output.
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     needs: [lint, test]
     # Every PR, same-repo or fork, Dependabot included, is built without pushing and without secrets.
     # Unreviewed PR code is never published; :edge is cut from main only (see merge_release).
