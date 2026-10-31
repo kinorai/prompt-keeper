@@ -12,6 +12,7 @@ import {
 } from "@/lib/image-types";
 import { collectUnknownFields, pickRequestParams } from "@/lib/message-fields";
 import { isOpenSearchBackend } from "@/lib/search/backend";
+import { liteLLMHeaders } from "@/lib/litellm-headers";
 
 const log = createLogger("api:chat/completions");
 
@@ -112,16 +113,6 @@ function normalizeToolCalls(message: Message): ToolCall[] | null {
   if (message.function_call) return [{ index: 0, type: "function", function: message.function_call }];
   return null;
 }
-
-const skipHeaders = [
-  "host",
-  "domain",
-  "connection",
-  "keep-alive",
-  "transfer-encoding",
-  "content-length",
-  "content-encoding",
-];
 
 // Headers LiteLLM reads a key from, in its order of precedence: x-litellm-api-key wins over Authorization
 const CALLER_KEY_HEADERS = ["x-litellm-api-key", "authorization", "api-key", "x-api-key"];
@@ -488,8 +479,7 @@ export async function POST(req: NextRequest) {
     log.debug(req, "[Incoming Chat Completions Request]");
 
     const callerKeyHash = hashCallerKey(req.headers);
-    const forwardHeaders = new Headers(req.headers);
-    skipHeaders.forEach((header) => forwardHeaders.delete(header));
+    const forwardHeaders = liteLLMHeaders(req.headers);
 
     const requestData = parsedBody; // Use already parsed body
     const requestMessages = requestData.messages || [];
