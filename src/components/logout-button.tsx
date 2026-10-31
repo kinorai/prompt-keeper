@@ -15,7 +15,7 @@ export function LogoutButton() {
       await authClient.signOut({
         fetchOptions: {
           onSuccess: () => {
-            window.location.href = "/login";
+            window.location.assign("/login");
           },
         },
       });

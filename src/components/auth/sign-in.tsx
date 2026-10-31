@@ -52,7 +52,7 @@ export default function SignIn({ defaultSignUp = false }: { defaultSignUp?: bool
         toast.success("Account created successfully!");
         // Prompt for passkey registration after signup
         await registerPasskey();
-        window.location.href = "/";
+        window.location.assign("/");
       } else {
         const { error } = await authClient.signIn.email({
           email,
@@ -60,7 +60,7 @@ export default function SignIn({ defaultSignUp = false }: { defaultSignUp?: bool
         });
         if (error) throw error;
         toast.success("Signed in successfully!");
-        window.location.href = "/";
+        window.location.assign("/");
       }
     } catch (err: unknown) {
       const message = errorMessage(err, "Authentication failed");
@@ -76,7 +76,7 @@ export default function SignIn({ defaultSignUp = false }: { defaultSignUp?: bool
       const result = await authClient.signIn.passkey();
       if (result?.error) throw result.error;
       toast.success("Signed in with Passkey!");
-      window.location.href = "/";
+      window.location.assign("/");
     } catch (err: unknown) {
       const message = errorMessage(err, "Passkey sign in failed");
       toast.error(message);
@@ -118,7 +118,7 @@ export default function SignIn({ defaultSignUp = false }: { defaultSignUp?: bool
         return authClient.signIn.passkey({ autoFill: true }).then((result) => {
           if (cancelled || result?.error) return;
           toast.success("Signed in with Passkey!");
-          window.location.href = "/";
+          window.location.assign("/");
         });
       })
       .catch(() => {
