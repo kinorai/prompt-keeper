@@ -1,4 +1,4 @@
-import type { Conversation, Message } from "@prisma/client";
+import type { Conversation, Message } from "@/generated/prisma/client";
 
 // A conversation as search results carry it: the OpenSearch document the outbox worker indexes,
 // and the `_source` the Postgres backend returns, so the UI reads one shape from either backend

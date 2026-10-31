@@ -13,7 +13,7 @@
 // how the search scales.
 import { createReadStream } from "fs";
 import { createInterface } from "readline";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../src/generated/prisma/client";
 import getPrisma from "../../src/lib/prisma";
 import { getOpenSearchClient, INDEX_MAPPING, INDEX_SETTINGS, PROMPT_KEEPER_INDEX } from "../../src/lib/opensearch";
 import { toSearchDocument } from "../../src/lib/search/document";
