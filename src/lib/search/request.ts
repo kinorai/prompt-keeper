@@ -94,7 +94,10 @@ function parseTimeRange(timeRange: unknown): TimeFilter | null {
   }
   if (typeof timeRange === "object") {
     const { start, end } = timeRange as { start?: string; end?: string };
-    if (start && end) return { start, end };
+    if (!start || !end) return null;
+    // Date.parse reads more formats than Postgres (a bare year, Date's own toString): hand Postgres ISO 8601
+    if (isOpenSearchBackend()) return { start, end };
+    return { start: new Date(start).toISOString(), end: new Date(end).toISOString() };
   }
   return null;
 }

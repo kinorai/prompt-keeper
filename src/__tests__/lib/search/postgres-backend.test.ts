@@ -95,6 +95,21 @@ describe("Postgres search backend", () => {
     expect(searchPostgres).not.toHaveBeenCalled();
   });
 
+  it("hands Postgres ISO 8601 dates, whatever format Date.parse read", async () => {
+    const response = await search(
+      new NextRequest("http://localhost/api/search", {
+        method: "POST",
+        body: JSON.stringify({ query: "x", timeRange: { start: "2026", end: "Sat Oct 31 2026 12:00:00 GMT+0000" } }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(searchPostgres).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeRange: { start: "2026-01-01T00:00:00.000Z", end: "2026-10-31T12:00:00.000Z" },
+      }),
+    );
+  });
+
   it("rejects a query of more than 32 words", async () => {
     const response = await search(
       new NextRequest("http://localhost/api/search", {
