@@ -26,12 +26,13 @@ COPY . .
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Bundle the worker using esbuild
-# We use npx to run esbuild without adding it to devDependencies if not present,
-# but it's better to rely on installed deps if possible.
-# Assuming esbuild might not be in deps, we use npx -y.
+# Bundle the worker using esbuild. esbuild is a dev-only package, so the
+# production `npm ci` above leaves it out and npx fetches it: pin it to the
+# version the app's lockfile resolves (as Dockerfile.migrate does for prisma),
+# so a release never builds with whatever esbuild is latest that day.
 # We externalize all dependencies to keep the bundle small and avoid native module issues.
-RUN npx -y esbuild src/workers/outbox.ts \
+RUN version="$(node -p "require('./package-lock.json').packages['node_modules/esbuild'].version")" \
+    && npx -y "esbuild@${version}" src/workers/outbox.ts \
     --bundle \
     --platform=node \
     --target=node24 \
