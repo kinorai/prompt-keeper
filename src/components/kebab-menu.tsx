@@ -51,6 +51,8 @@ export function KebabMenu({
   const [confirmForId, setConfirmForId] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  // Where the confirm panel opens: under the button, measured when the panel opens (refs can't be read during render)
+  const [confirmPosition, setConfirmPosition] = useState({ left: 10, top: 10 });
 
   const actionNeedingConfirm = actions.find((a) => a.id === confirmForId);
   const isDestructive = actionNeedingConfirm?.confirm?.variant === "destructive";
@@ -59,6 +61,8 @@ export function KebabMenu({
     if (action.disabled) return;
     if (action.confirm) {
       setIsMenuOpen(false);
+      const rect = buttonRef.current?.getBoundingClientRect();
+      setConfirmPosition(rect ? { left: Math.max(10, rect.right - 320), top: rect.bottom + 5 } : { left: 10, top: 10 });
       // Let the dropdown close before showing the confirm
       setTimeout(() => setConfirmForId(action.id), 0);
       return;
@@ -137,10 +141,7 @@ export function KebabMenu({
       {confirmForId && actionNeedingConfirm?.confirm && (
         <div
           className="context-confirmation-panel fixed z-50 w-80 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none"
-          style={{
-            left: buttonRef.current ? Math.max(10, buttonRef.current.getBoundingClientRect().right - 320) : 10,
-            top: buttonRef.current ? buttonRef.current.getBoundingClientRect().bottom + 5 : 10,
-          }}
+          style={confirmPosition}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex gap-3">
