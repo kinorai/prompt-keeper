@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { securityHeaders } from "@/lib/content-security-policy";
+import { CSP_REPORTS } from "@/lib/defaults";
 import { API_KEY_HEADER, hasValidSession, isAuthenticated, unauthorizedResponse } from "@/lib/request-auth";
 
 // LiteLLM API routes that should use LiteLLM authentication
@@ -19,6 +21,12 @@ export async function proxy(request: NextRequest) {
     response.headers.set("Vary", "Origin");
   }
 
+  // The report-only CSP, on every page and API answer passed on: here, not in next.config.ts, because
+  // its image host comes from S3_ENDPOINT at runtime (lib/content-security-policy.ts)
+  for (const { key, value } of securityHeaders()) {
+    response.headers.set(key, value);
+  }
+
   response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", `Content-Type, ${API_KEY_HEADER}, Authorization`);
 
@@ -27,9 +35,11 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Skip authentication for login, auth endpoints, and health probes
+  // Skip authentication for login, auth endpoints, health probes, and CSP reports (the login page
+  // reports too, and a browser sends them without the app's API key)
   if (
     request.nextUrl.pathname === "/login" ||
+    request.nextUrl.pathname === CSP_REPORTS.path ||
     request.nextUrl.pathname === "/api/auth" ||
     request.nextUrl.pathname.startsWith("/api/auth/") ||
     request.nextUrl.pathname === "/api/healthz" ||

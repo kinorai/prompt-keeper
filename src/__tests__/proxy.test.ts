@@ -115,7 +115,7 @@ describe("proxy", () => {
       },
     );
 
-    it.each(["/api/auth/sign-in/email", "/api/healthz", "/api/readyz", "/api/livez"])(
+    it.each(["/api/auth/sign-in/email", "/api/healthz", "/api/readyz", "/api/livez", "/api/csp-report"])(
       "keeps public path %s public",
       async (path) => {
         const response = await proxy(request(path));
@@ -170,6 +170,16 @@ describe("proxy", () => {
 
       expect(passedThrough(response)).toBe(true);
       expect(getSession).not.toHaveBeenCalled();
+    });
+
+    it("sends the report-only CSP and its reporting endpoint", async () => {
+      const response = await proxy(request("/login"));
+
+      expect(response.headers.get("content-security-policy-report-only")).toContain(
+        "report-uri /api/csp-report; report-to csp-endpoint",
+      );
+      expect(response.headers.get("content-security-policy")).toBeNull();
+      expect(response.headers.get("reporting-endpoints")).toBe('csp-endpoint="/api/csp-report"');
     });
   });
 });
