@@ -76,9 +76,11 @@ function parsePagingParams(body: Record<string, unknown>): PagingParams | { erro
     timeRange !== null &&
     typeof timeRange === "object" &&
     !isOpenSearchBackend() &&
-    [(timeRange as { start: string }).start, (timeRange as { end: string }).end].some((date) =>
-      Number.isNaN(Date.parse(date)),
-    )
+    [(timeRange as { start: string }).start, (timeRange as { end: string }).end].some((date) => {
+      // toISOString writes a year outside 1-9999 as +010000 or -000001, which Postgres rejects
+      const year = new Date(date).getUTCFullYear();
+      return Number.isNaN(year) || year < 1 || year > 9999;
+    })
   ) {
     return { error: "timeRange start and end must be dates (ISO 8601)" };
   }

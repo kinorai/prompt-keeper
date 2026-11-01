@@ -9,6 +9,7 @@ describe("liteLLMHeaders", () => {
       new Headers({
         cookie: "better-auth.session_token=abc",
         [API_KEY_HEADER]: "pk-key",
+        "cf-access-jwt-assertion": "access-jwt",
         authorization: "Bearer sk-litellm",
         "x-litellm-api-key": "sk-litellm",
         "content-type": "application/json",
@@ -18,6 +19,7 @@ describe("liteLLMHeaders", () => {
 
     expect(headers.get("cookie")).toBeNull();
     expect(headers.get(API_KEY_HEADER)).toBeNull();
+    expect(headers.get("cf-access-jwt-assertion")).toBeNull();
     expect(headers.get("host")).toBeNull();
     expect(headers.get("authorization")).toBe("Bearer sk-litellm");
     expect(headers.get("x-litellm-api-key")).toBe("sk-litellm");
