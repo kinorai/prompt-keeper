@@ -57,3 +57,16 @@ export const FILTERS_DEFAULTS = {
 // Roles defaults used across the app
 export const DEFAULT_ROLES = ["system", "user", "assistant", "tool"] as const;
 export type Role = (typeof DEFAULT_ROLES)[number];
+
+// Content-Security-Policy violation reports (src/lib/content-security-policy.ts, POST /api/csp-report)
+export const CSP_REPORTS = {
+  path: "/api/csp-report",
+  // The name report-to uses and Reporting-Endpoints maps to the path
+  endpointName: "csp-endpoint",
+  // A report-to batch carries about 1 KB per violation
+  maxBodyBytes: 64 * 1024,
+  // Violations logged from one request; a page breaking a rule in a loop sends more
+  maxViolationsPerBatch: 50,
+  // Report requests from all browsers together, per process: the endpoint needs no sign-in
+  rateLimit: { interval: 10 * 60_000, allowedRequests: 600 },
+} as const;
