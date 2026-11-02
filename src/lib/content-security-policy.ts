@@ -23,13 +23,15 @@ export interface CspEnv {
 
 /**
  * The origin of the presigned image URLs (lib/s3.ts): the S3 endpoint's, or with virtual-hosted
- * style its bucket subdomain. Null without an http(s) endpoint.
+ * style its bucket subdomain (not on an IP endpoint). Null without an http(s) endpoint.
  */
 export function s3ImageOrigin(env: CspEnv): string | null {
   if (!env.S3_ENDPOINT || !URL.canParse(env.S3_ENDPOINT)) return null;
   const endpoint = new URL(env.S3_ENDPOINT);
   if (endpoint.protocol !== "http:" && endpoint.protocol !== "https:") return null;
-  if (env.S3_FORCE_PATH_STYLE === "true" || !env.S3_BUCKET_NAME) return endpoint.origin;
+  // The AWS SDK falls back to path style on an IP endpoint: a bucket can't be a subdomain of an IP
+  const ip = /^\d+\.\d+\.\d+\.\d+$/.test(endpoint.hostname) || endpoint.hostname.startsWith("[");
+  if (env.S3_FORCE_PATH_STYLE === "true" || !env.S3_BUCKET_NAME || ip) return endpoint.origin;
   return `${endpoint.protocol}//${env.S3_BUCKET_NAME}.${endpoint.host}`;
 }
 

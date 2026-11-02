@@ -98,6 +98,25 @@ describe("POST /api/csp-report", () => {
     expect(mockWarn).toHaveBeenCalledTimes(50);
   });
 
+  it("logs a CSP Level 2 report, whose violated-directive is the whole directive", async () => {
+    const level2 = JSON.stringify({
+      "csp-report": { "document-uri": "https://pk.test/", "violated-directive": "img-src 'self' data:" },
+    });
+
+    expect((await post(level2, "application/json")).status).toBe(204);
+    expect(logged()).toEqual([
+      { directive: "img-src", document: "https://pk.test/", userAgent: "TestBrowser/1", via: "report-uri" },
+    ]);
+  });
+
+  it.each(["text/plain", "application/x-www-form-urlencoded", ""])(
+    "refuses a body sent as %s, as another site's page can send it, logging nothing",
+    async (type) => {
+      expect((await post(legacy, type)).status).toBe(415);
+      expect(mockWarn).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     ["not JSON", "{", 400],
     ["JSON but no report", '{"hello":1}', 400],

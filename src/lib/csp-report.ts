@@ -84,8 +84,9 @@ const record = (value: unknown): Record<string, unknown> | null =>
 
 function violation(via: CspViolation["via"], fields: Record<string, unknown>): CspViolation | null {
   if (typeof fields.directive !== "string" || !DIRECTIVE.test(fields.directive)) return null;
-  const found: CspViolation = { directive: fields.directive, via };
-  const rest: Partial<CspViolation> = {
+  // Fields left undefined don't reach the log line: pino drops them, as JSON does
+  return {
+    directive: fields.directive,
     blocked: cleanReportUrl(fields.blocked),
     document: cleanReportUrl(fields.document),
     source: cleanReportUrl(fields.source),
@@ -93,9 +94,8 @@ function violation(via: CspViolation["via"], fields: Record<string, unknown>): C
     column: whole(fields.column),
     disposition: fields.disposition === "report" || fields.disposition === "enforce" ? fields.disposition : undefined,
     userAgent: text(fields.userAgent),
+    via,
   };
-  for (const [key, value] of Object.entries(rest)) if (value !== undefined) Object.assign(found, { [key]: value });
-  return found;
 }
 
 /**
@@ -124,7 +124,11 @@ export function parseCspReport(body: unknown, userAgent?: string | null): CspVio
   const legacy = record(record(body)?.["csp-report"]);
   if (!legacy) return null;
   const found = violation("report-uri", {
-    directive: legacy["effective-directive"] ?? legacy["violated-directive"],
+    // CSP Level 2 browsers send no effective-directive, and the whole directive in violated-directive
+    // ("img-src 'self'"): its name is the first word
+    directive:
+      legacy["effective-directive"] ??
+      (typeof legacy["violated-directive"] === "string" ? legacy["violated-directive"].split(" ")[0] : undefined),
     blocked: legacy["blocked-uri"],
     document: legacy["document-uri"],
     source: legacy["source-file"],
