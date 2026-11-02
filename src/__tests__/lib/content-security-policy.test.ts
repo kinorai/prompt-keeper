@@ -36,6 +36,11 @@ describe("s3ImageOrigin", () => {
     ["path style", PROD, "https://api-s3.example.com"],
     ["virtual-hosted style", { ...PROD, S3_FORCE_PATH_STYLE: "false" }, "https://prompt-keeper.api-s3.example.com"],
     ["a local endpoint with a port", { ...PROD, S3_ENDPOINT: "http://localhost:9000/" }, "http://localhost:9000"],
+    [
+      "an IP endpoint without path style",
+      { ...PROD, S3_ENDPOINT: "http://127.0.0.1:9000", S3_FORCE_PATH_STYLE: "false" },
+      "http://127.0.0.1:9000",
+    ],
     ["no endpoint", { NODE_ENV: "production" }, null],
     ["an endpoint that isn't a URL", { ...PROD, S3_ENDPOINT: "minio:9000" }, null],
   ])("finds the presigned URLs' origin with %s", (_, env, origin) => {

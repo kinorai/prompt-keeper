@@ -65,6 +65,9 @@ export const CSP_REPORTS = {
   endpointName: "csp-endpoint",
   // A report-to batch carries about 1 KB per violation
   maxBodyBytes: 64 * 1024,
+  // The media types browsers send reports as (application/json: older WebKit). None is a CORS-safelisted
+  // type, so another site's page can't post one without a preflight the proxy doesn't grant
+  contentTypes: ["application/reports+json", "application/csp-report", "application/json"],
   // Violations logged from one request; a page breaking a rule in a loop sends more
   maxViolationsPerBatch: 50,
   // Report requests from all browsers together, per process: the endpoint needs no sign-in

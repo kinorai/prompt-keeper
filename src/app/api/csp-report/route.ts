@@ -12,10 +12,13 @@ const limiter = rateLimit(CSP_REPORTS.rateLimit);
 /**
  * Where browsers report what the Content-Security-Policy would block (lib/content-security-policy.ts): a
  * Reporting API batch or one legacy report, as JSON. No sign-in: the login page reports too, so the proxy
- * lets it through. Past the rate limit a report is dropped unread, still with 204. Never 410: it tells the
- * browser to drop the endpoint.
+ * lets it through. Only the media types browsers send are read, so a cross-site form or text/plain fetch
+ * can't forge reports or use up the rate limit. Past the rate limit a report is dropped unread, still with
+ * 204. Never 410: it tells the browser to drop the endpoint.
  */
 export async function POST(request: Request) {
+  const type = request.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+  if (!CSP_REPORTS.contentTypes.some((allowed) => allowed === type)) return new Response(null, { status: 415 });
   if (limiter.check("all").isRateLimited) return new Response(null, { status: 204 });
   const body = await readReportBody(request);
   if (!body.ok) return new Response(null, { status: body.status });
