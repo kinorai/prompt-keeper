@@ -1,5 +1,6 @@
 import { Client } from "@opensearch-project/opensearch";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from "../src/generated/prisma/client";
+import getPrisma from "../src/lib/prisma";
 // import dotenv from "dotenv";
 
 // dotenv.config();
@@ -21,7 +22,7 @@ const osClient = new Client({
 });
 
 // Initialize Prisma Client
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 interface OpenSearchMessage {
   role: string;

@@ -1,13 +1,18 @@
 // Prisma schema for Prompt Keeper
 
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  // CommonJS so ts-jest and the esbuild-bundled outbox worker load it as they load
+  // the rest of src/ (the ESM default relies on import.meta.url).
+  moduleFormat = "cjs"
 }
 
+// The connection URLs live outside the schema since Prisma 7: the app passes
+// POSTGRES_PRISMA_URL to its driver adapter (src/lib/prisma.ts) and the CLI
+// migrates through POSTGRES_URL_NON_POOLING (prisma.config.ts).
 datasource db {
-  provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  provider = "postgresql"
 }
 
 model Conversation {
@@ -72,8 +77,8 @@ model Message {
   // migration); never written by the app. The client omits searchWords from every query
   // (src/lib/prisma.ts), and Prisma never selects an Unsupported field.
   searchWords String?                  @map("search_words")
-  searchTsv  Unsupported("tsvector")? @map("search_tsv")
-  searchLong Boolean                  @default(false) @map("search_long")
+  searchTsv   Unsupported("tsvector")? @map("search_tsv")
+  searchLong  Boolean                  @default(false) @map("search_long")
 
   @@index([conversationId])
   @@index([role, conversationId])

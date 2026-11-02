@@ -133,7 +133,7 @@ OPENSEARCH_URL=http://127.0.0.1:59200
 OPENSEARCH_INDEX=prompt-keeper
 LOG_LEVEL=warn
 EOF
-POSTGRES_PRISMA_URL=... npx prisma migrate deploy
+POSTGRES_URL_NON_POOLING=postgresql://postgres:bench@127.0.0.1:55432/prompt_keeper npx prisma migrate deploy
 npx tsx --env-file=.env.benchmark scripts/search-benchmark/load.ts corpus.jsonl [--copies 5]
 npx tsx --env-file=.env.benchmark scripts/search-benchmark/compare.ts --out report.json
 ```

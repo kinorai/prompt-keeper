@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { searchPostgres } from "@/lib/search/postgres";
 import { parseSearchRequest, type SearchRequest } from "@/lib/search/request";
 import { SEARCH_HIGHLIGHT_POST_TAG as END, SEARCH_HIGHLIGHT_PRE_TAG as START } from "@/lib/search-highlights";
