@@ -153,6 +153,14 @@ WHERE dead_lettered_at IS NOT NULL AND processed_at IS NULL;
 </ul>
 </li>
 </ol>
+<h2 id="content-security-policy-🛡️" class="tsd-anchor-link">Content Security Policy 🛡️<a href="#content-security-policy-🛡️" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Every page carries a <code>Content-Security-Policy-Report-Only</code> header and a <code>Reporting-Endpoints</code> header (<code>src/lib/content-security-policy.ts</code>, set by <code>src/proxy.ts</code>). Nothing is blocked yet: browsers only report what the policy would block. The proxy sets them, not <code>next.config.ts</code>, because the image host comes from <code>S3_ENDPOINT</code> at runtime.</p>
+<ul>
+<li><strong>The policy</strong>: <code>'self'</code> for everything, plus <code>data:</code> and <code>blob:</code> images, and the S3 origin for uploaded images (from <code>S3_ENDPOINT</code>, with the bucket as a subdomain unless <code>S3_FORCE_PATH_STYLE=true</code>). Scripts and styles allow <code>'unsafe-inline'</code> (no nonces, as in the Next.js guide's &quot;Without Nonces&quot;), and <code>'unsafe-eval'</code> only under <code>next dev</code>.</li>
+<li><strong>The reports</strong>: browsers send them two ways to <code>POST /api/csp-report</code>, as MDN advises while support differs: <code>report-to</code> (Reporting API batches, <code>application/reports+json</code>: Chrome, Safari 16.4+, Firefox 149+) and <code>report-uri</code> (one <code>application/csp-report</code> each, for older browsers). The endpoint needs no authentication, takes only the report media types (<code>application/reports+json</code>, <code>application/csp-report</code>, <code>application/json</code>: another site's page can't send those without a CORS preflight), reads at most 64 KB, logs at most 50 violations per request and 600 requests per 10 minutes per process, and answers 204.</li>
+<li><strong>The logs</strong>: one <code>warn</code> line per violation from module <code>api:csp-report</code>, with <code>directive</code>, <code>blocked</code>, <code>document</code>, <code>source</code>, <code>line</code>, <code>column</code>, <code>disposition</code>, <code>userAgent</code> and <code>via</code> (<code>report-to</code> or <code>report-uri</code>). Every URL keeps its origin and path only: queries (search terms) and fragments are dropped, and so are the script sample and the referrer. In VictoriaLogs: <code>_time:7d module:&quot;api:csp-report&quot; | stats by (directive, blocked) count() as reports | sort by (reports desc)</code>.</li>
+</ul>
+<p>Browser extensions report too (<code>blocked</code> or <code>source</code> of <code>chrome-extension</code>, <code>moz-extension</code>, <code>safari-web-extension</code>): ignore those. When a week of real use shows nothing else, rename the header to <code>Content-Security-Policy</code> in <code>src/lib/content-security-policy.ts</code> to enforce it, and keep both reporting directives.</p>
 <h2 id="contributing-🤝" class="tsd-anchor-link">Contributing 🤝<a href="#contributing-🤝" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
 <p>We welcome contributions! Please read the <a href="media/CONTRIBUTING.md">CONTRIBUTING.md</a> file for details.</p>
 <p>Design decisions, and why they were made, are recorded as ADRs in <a href="media/README.md">docs/adr</a>.</p>
@@ -191,6 +199,7 @@ WHERE dead_lettered_at IS NOT NULL AND processed_at IS NULL;
 <ul>
 <li><a href="#litellm-configuration-file-🎛️"><span>Lite<wbr/>LLM <wbr/>Configuration <wbr/>File 🎛️</span></a></li></ul></li>
 <li><a href="#authentication-🔒"><span>Authentication 🔒</span></a></li>
+<li><a href="#content-security-policy-🛡️"><span>Content <wbr/>Security <wbr/>Policy 🛡️</span></a></li>
 <li><a href="#contributing-🤝"><span>Contributing 🤝</span></a></li>
 <li><a href="#license-📜"><span>License 📜</span></a></li></ul></div></details></div>
 <div class="site-menu">
