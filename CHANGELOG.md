@@ -1,3 +1,15 @@
+## [0.15.0](https://github.com/kinorai/prompt-keeper/compare/v0.14.2...v0.15.0) (2026-11-02)
+
+
+### Features
+
+* **security:** a report-only content-security-policy and its report endpoint ([167f401](https://github.com/kinorai/prompt-keeper/commit/167f401606ba03515a259a6601a4a4b65365bea9))
+
+
+### Bug Fixes
+
+* **csp:** apply the code review of [#189](https://github.com/kinorai/prompt-keeper/issues/189) ([a6cbe9b](https://github.com/kinorai/prompt-keeper/commit/a6cbe9b71fba19ad99110ea11e3554269e6b29d1))
+
 ## [0.14.2](https://github.com/kinorai/prompt-keeper/compare/v0.14.1...v0.14.2) (2026-11-02)
 
 
@@ -30,18 +42,4 @@
 
 * **docker:** code review of the node 24 bump ([c2eb231](https://github.com/kinorai/prompt-keeper/commit/c2eb2317e959cbcb23b6b31a4e4c770b56757d93))
 * **docker:** node 24.22.1 lts, pinned by digest ([66ffb16](https://github.com/kinorai/prompt-keeper/commit/66ffb1602f27813092480ad5dfb8a7fcb5012324))
-
-## [0.13.0](https://github.com/kinorai/prompt-keeper/compare/v0.12.2...v0.13.0) (2026-10-24)
-
-
-### Features
-
-* **search:** search in Postgres, OpenSearch optional ([83a7282](https://github.com/kinorai/prompt-keeper/commit/83a7282a3c77e3ff85bc5b5c2f40ad91c59384f1))
-
-
-### Bug Fixes
-
-* **deps:** clear the high npm audit advisories ([b946cc2](https://github.com/kinorai/prompt-keeper/commit/b946cc2bfcc0c731ace3eaa7e834d3c71e0d2424))
-* **search:** code review fixes ([9fa1b0d](https://github.com/kinorai/prompt-keeper/commit/9fa1b0d2008643cc0633130b79063ce16d6f4568))
-* **search:** find words past the indexed 256K characters of long messages ([80a1667](https://github.com/kinorai/prompt-keeper/commit/80a1667b8bf0969d959a9c9bfd47c1f556465d96))
 
