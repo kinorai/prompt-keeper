@@ -10,15 +10,18 @@ const prisma = getPrisma();
 // Auth requests coming from an origin other than BETTER_AUTH_URL are rejected with
 // INVALID_ORIGIN. Set BETTER_AUTH_TRUSTED_ORIGINS (comma-separated, scheme and port
 // included) when the app is also reached by another address — a LAN/VPN host in
-// development, or an extra domain in production.
+// development, or an extra domain in production. Passkeys also need that host listed
+// here: since better-auth 1.7.16 a passkey ceremony is accepted only from the
+// BETTER_AUTH_URL origin or an exact (non-wildcard) entry of this list.
 const trustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
 // A passkey is bound to its Relying Party ID at creation, and the RP ID must be the origin's
 // domain or a registrable suffix of it. Setting the parent domain (e.g. example.com rather than
-// app.example.com) lets one passkey work across every subdomain — dev and production — at the
-// cost of trusting every host under that domain. Defaults to the origin's own host when unset.
+// app.example.com) lets one passkey work across every subdomain — dev and production, each one
+// listed in BETTER_AUTH_TRUSTED_ORIGINS — at the cost of trusting every host under that domain.
+// Defaults to the BETTER_AUTH_URL host when unset.
 const rpID = process.env.BETTER_AUTH_RP_ID?.trim() || undefined;
 const rpName = process.env.BETTER_AUTH_RP_NAME?.trim() || "Prompt Keeper";
 
