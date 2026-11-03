@@ -1,3 +1,11 @@
+## [0.15.1](https://github.com/kinorai/prompt-keeper/compare/v0.15.0...v0.15.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **deps:** apply the code review of [#190](https://github.com/kinorai/prompt-keeper/issues/190) ([008719a](https://github.com/kinorai/prompt-keeper/commit/008719a9a7965ec4ad7a0fa826741fc6269a000a))
+* **deps:** better-auth 1.7.16, the 2026-11-03 security release ([88b75aa](https://github.com/kinorai/prompt-keeper/commit/88b75aa0bc456dc116c766a6b6aa81d405149fcc))
+
 ## [0.15.0](https://github.com/kinorai/prompt-keeper/compare/v0.14.2...v0.15.0) (2026-11-02)
 
 
@@ -34,12 +42,4 @@
 ### Bug Fixes
 
 * **deps:** bump better-auth and @better-auth/passkey to 1.7.10 ([237bb34](https://github.com/kinorai/prompt-keeper/commit/237bb34c039bb14c557bfb9cb3378035ab9c5baa))
-
-## [0.13.1](https://github.com/kinorai/prompt-keeper/compare/v0.13.0...v0.13.1) (2026-10-25)
-
-
-### Bug Fixes
-
-* **docker:** code review of the node 24 bump ([c2eb231](https://github.com/kinorai/prompt-keeper/commit/c2eb2317e959cbcb23b6b31a4e4c770b56757d93))
-* **docker:** node 24.22.1 lts, pinned by digest ([66ffb16](https://github.com/kinorai/prompt-keeper/commit/66ffb1602f27813092480ad5dfb8a7fcb5012324))
 
