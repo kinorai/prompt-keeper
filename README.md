@@ -55,7 +55,7 @@ docker run --rm --env-file .env kinorai/prompt-keeper-migrate:vx.y.z
 
 **Kubernetes** — run it as a `pre-install,pre-upgrade` Helm hook `Job` (or an Argo CD `PreSync` hook) so it completes before the Deployment is updated.
 
-The image needs only `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING`. It is idempotent — already-applied migrations are skipped — and exits non-zero on failure, so it is safe to gate a rollout on. The entrypoint is overridable for incident work, e.g. `docker run --rm --env-file .env kinorai/prompt-keeper-migrate:vx.y.z migrate status`.
+The image needs only `POSTGRES_URL_NON_POOLING` (read by `prisma.config.ts`). It is idempotent — already-applied migrations are skipped — and exits non-zero on failure, so it is safe to gate a rollout on. The entrypoint is overridable for incident work, e.g. `docker run --rm --env-file .env kinorai/prompt-keeper-migrate:vx.y.z migrate status`.
 
 Migrations are written to be backwards compatible with the previous release (expand, then contract in a later version), so the running pods keep working while a migration is applied and a rollback of the app image does not need a schema rollback.
 
