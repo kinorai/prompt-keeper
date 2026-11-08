@@ -58,7 +58,7 @@
 </code><button type="button">Copy</button></pre>
 
 <p><strong>Kubernetes</strong> — run it as a <code>pre-install,pre-upgrade</code> Helm hook <code>Job</code> (or an Argo CD <code>PreSync</code> hook) so it completes before the Deployment is updated.</p>
-<p>The image needs only <code>POSTGRES_PRISMA_URL</code> and <code>POSTGRES_URL_NON_POOLING</code>. It is idempotent — already-applied migrations are skipped — and exits non-zero on failure, so it is safe to gate a rollout on. The entrypoint is overridable for incident work, e.g. <code>docker run --rm --env-file .env kinorai/prompt-keeper-migrate:vx.y.z migrate status</code>.</p>
+<p>The image needs only <code>POSTGRES_URL_NON_POOLING</code> (read by <code>prisma.config.ts</code>). It is idempotent — already-applied migrations are skipped — and exits non-zero on failure, so it is safe to gate a rollout on. The entrypoint is overridable for incident work, e.g. <code>docker run --rm --env-file .env kinorai/prompt-keeper-migrate:vx.y.z migrate status</code>.</p>
 <p>Migrations are written to be backwards compatible with the previous release (expand, then contract in a later version), so the running pods keep working while a migration is applied and a rollback of the app image does not need a schema rollback.</p>
 <h2 id="search-🔎" class="tsd-anchor-link">Search 🔎<a href="#search-🔎" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
 <p><code>SEARCH_BACKEND</code> picks where <code>/api/search</code> runs:</p>
