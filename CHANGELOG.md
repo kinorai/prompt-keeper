@@ -1,3 +1,10 @@
+## [0.15.2](https://github.com/kinorai/prompt-keeper/compare/v0.15.1...v0.15.2) (2026-11-08)
+
+
+### Bug Fixes
+
+* **readme:** the migrate image reads only the non-pooling url ([3965a1c](https://github.com/kinorai/prompt-keeper/commit/3965a1ca3395621a2609e645a1bc08cb98c2b9d6))
+
 ## [0.15.1](https://github.com/kinorai/prompt-keeper/compare/v0.15.0...v0.15.1) (2026-11-03)
 
 
@@ -30,16 +37,4 @@
 * **search:** hand postgres iso 8601 dates for a custom time range ([ef37983](https://github.com/kinorai/prompt-keeper/commit/ef379830b619077de5e84be6b89c1ec42ed2964d))
 
 ## [0.14.1](https://github.com/kinorai/prompt-keeper/compare/v0.14.0...v0.14.1) (2026-10-25)
-
-## [0.14.0](https://github.com/kinorai/prompt-keeper/compare/v0.13.1...v0.14.0) (2026-10-25)
-
-
-### Features
-
-* **auth:** reject breached passwords with Have I Been Pwned ([61adad9](https://github.com/kinorai/prompt-keeper/commit/61adad917f5f36c7e46d74ac780e5b77259f1576))
-
-
-### Bug Fixes
-
-* **deps:** bump better-auth and @better-auth/passkey to 1.7.10 ([237bb34](https://github.com/kinorai/prompt-keeper/commit/237bb34c039bb14c557bfb9cb3378035ab9c5baa))
 
