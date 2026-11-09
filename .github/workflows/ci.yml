@@ -248,12 +248,16 @@ jobs:
         env:
           TESTED_SHA: ${{ github.sha }}
         run: |
-          if git diff --quiet "$TESTED_SHA" HEAD -- . ':(exclude)CHANGELOG.md' ':(exclude)package.json'; then
-            echo "superseded=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::main moved past $TESTED_SHA; the run for the newer commit releases it"
-            echo "superseded=true" >> "$GITHUB_OUTPUT"
-          fi
+          # git diff --quiet: 0 same, 1 different, anything else an error (a
+          # force-push that dropped the tested commit), which fails the job.
+          rc=0
+          git diff --quiet "$TESTED_SHA" HEAD -- . ':(exclude)CHANGELOG.md' ':(exclude)package.json' || rc=$?
+          case "$rc" in
+            0) echo "superseded=false" >> "$GITHUB_OUTPUT" ;;
+            1) echo "::notice::main moved past $TESTED_SHA; the run for the newer commit releases it"
+               echo "superseded=true" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$rc" ;;
+          esac
       - name: Setup Node.js
         if: steps.superseded.outputs.superseded == 'false'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
