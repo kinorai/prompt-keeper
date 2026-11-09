@@ -1,3 +1,5 @@
+## [0.15.3](https://github.com/kinorai/prompt-keeper/compare/v0.15.2...v0.15.3) (2026-11-09)
+
 ## [0.15.2](https://github.com/kinorai/prompt-keeper/compare/v0.15.1...v0.15.2) (2026-11-08)
 
 
@@ -35,6 +37,4 @@
 * **ci:** give the security workflow a read-only token by default ([e01d76a](https://github.com/kinorai/prompt-keeper/commit/e01d76a77fb9d102f207de57699b95c42d630eb0))
 * **docker:** pin the outbox worker's esbuild to the lockfile version ([70d9fe7](https://github.com/kinorai/prompt-keeper/commit/70d9fe7e31045c6e0d41675b60e86b83c9aa291a))
 * **search:** hand postgres iso 8601 dates for a custom time range ([ef37983](https://github.com/kinorai/prompt-keeper/commit/ef379830b619077de5e84be6b89c1ec42ed2964d))
-
-## [0.14.1](https://github.com/kinorai/prompt-keeper/compare/v0.14.0...v0.14.1) (2026-10-25)
 
