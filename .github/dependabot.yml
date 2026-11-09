@@ -17,8 +17,8 @@ updates:
       default-days: 7
     ignore:
       # typescript-eslint and ts-jest do not support TypeScript 7 yet
-      # (typescript-eslint#10940): it breaks Lint and Test. Held at 6 since
-      # 385dd6b. Drop this once both support 7.
+      # (typescript-eslint#10940): it breaks Lint, Test and CodeQL. Held at 6 since
+      # 385dd6b. Drop this once both support 7 (docs/TODO.md).
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
     groups:
