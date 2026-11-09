@@ -15,6 +15,12 @@ updates:
     # here. Security updates ignore the cooldown.
     cooldown:
       default-days: 7
+    ignore:
+      # typescript-eslint and ts-jest do not support TypeScript 7 yet
+      # (typescript-eslint#10940): it breaks Lint and Test. Held at 6 since
+      # 385dd6b. Drop this once both support 7.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       # All auto-fixable security advisories -> one consolidated PR
       npm-security:
