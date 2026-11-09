@@ -230,7 +230,7 @@ jobs:
     permissions:
       contents: write
     outputs:
-      skipped: ${{ steps.changelog.outputs.skipped }}
+      skipped: ${{ steps.superseded.outputs.superseded == 'true' && 'true' || steps.changelog.outputs.skipped }}
       version: ${{ steps.changelog.outputs.tag }}
     steps:
       - name: Checkout main branch with full history
@@ -238,12 +238,30 @@ jobs:
         with:
           ref: 'main'
           fetch-depth: 0
+      # Main runs queue one at a time (the concurrency group above). When main
+      # already holds changes this run did not test, the queued run for them
+      # releases everything; releasing here would tag untested code, which
+      # build_release refuses. Release commits (CHANGELOG.md, package.json)
+      # do not count: they land on top of the tested commit.
+      - name: Skip if a newer commit will release
+        id: superseded
+        env:
+          TESTED_SHA: ${{ github.sha }}
+        run: |
+          if git diff --quiet "$TESTED_SHA" HEAD -- . ':(exclude)CHANGELOG.md' ':(exclude)package.json'; then
+            echo "superseded=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::main moved past $TESTED_SHA; the run for the newer commit releases it"
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Setup Node.js
+        if: steps.superseded.outputs.superseded == 'false'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '26'
       - name: Conventional Changelog Action
         id: changelog
+        if: steps.superseded.outputs.superseded == 'false'
         uses: TriPSs/conventional-changelog-action@469f0e5e35831fbd1962706f29f65daf0a5723f2 # v6.5.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
