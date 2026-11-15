@@ -69,7 +69,6 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "overrides": {
-    "@hono/node-server": "^2.0.10",
     "fast-uri": "^3.1.9",
     "katex": "^0.19.1"
   },
@@ -89,7 +88,7 @@
     "jest-environment-node": "^30.5.2",
     "postcss": "^8.5.31",
     "prettier": "3.9.10",
-    "shadcn": "^4.22.1",
+    "shadcn": "^4.23.0",
     "tailwindcss": "^4.3.5",
     "ts-jest": "^29.4.15",
     "tsx": "^4.23.15",
