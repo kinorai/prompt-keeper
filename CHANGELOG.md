@@ -1,3 +1,5 @@
+## [0.15.7](https://github.com/kinorai/prompt-keeper/compare/v0.15.6...v0.15.7) (2026-11-15)
+
 ## [0.15.6](https://github.com/kinorai/prompt-keeper/compare/v0.15.5...v0.15.6) (2026-11-11)
 
 
@@ -16,11 +18,4 @@
 ## [0.15.4](https://github.com/kinorai/prompt-keeper/compare/v0.15.3...v0.15.4) (2026-11-09)
 
 ## [0.15.3](https://github.com/kinorai/prompt-keeper/compare/v0.15.2...v0.15.3) (2026-11-09)
-
-## [0.15.2](https://github.com/kinorai/prompt-keeper/compare/v0.15.1...v0.15.2) (2026-11-08)
-
-
-### Bug Fixes
-
-* **readme:** the migrate image reads only the non-pooling url ([3965a1c](https://github.com/kinorai/prompt-keeper/commit/3965a1ca3395621a2609e645a1bc08cb98c2b9d6))
 
