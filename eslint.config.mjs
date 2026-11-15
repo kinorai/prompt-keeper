@@ -1,6 +1,4 @@
 import nextPlugin from "eslint-config-next";
-import tsPlugin from "@typescript-eslint/eslint-plugin";
-import tsParser from "@typescript-eslint/parser";
 
 const config = [
   // Global ignores
@@ -33,19 +31,11 @@ const config = [
   },
   // Next.js recommended config
   ...nextPlugin,
-  // TypeScript configuration
+  // TypeScript rules. eslint-config-next's next/typescript block already
+  // registers the @typescript-eslint plugin and parser for these files;
+  // registering our own copy again fails with "Cannot redefine plugin".
   {
     files: ["**/*.ts", "**/*.tsx"],
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        ecmaVersion: "latest",
-        sourceType: "module",
-      },
-    },
-    plugins: {
-      "@typescript-eslint": tsPlugin,
-    },
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": "warn",
