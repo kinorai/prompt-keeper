@@ -27,6 +27,27 @@ updates:
         applies-to: security-updates
         patterns:
           - "*"
+      # Families that must move together. A dependency joins the first group
+      # it matches, so these come before the "*" groups below, and they set
+      # no dependency-type so a pair split across dependencies and
+      # devDependencies (next + eslint-config-next, @tailwindcss/postcss +
+      # tailwindcss) still lands in one PR. #203 split them up and broke Lint.
+      tailwind:
+        applies-to: version-updates
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      next:
+        applies-to: version-updates
+        patterns:
+          - "next"
+          - "eslint-config-next"
+          - "@next/*"
+      typescript-eslint:
+        applies-to: version-updates
+        patterns:
+          - "typescript-eslint"
+          - "@typescript-eslint/*"
       # Routine version bumps: production deps in their own PR for review
       npm-production:
         applies-to: version-updates
