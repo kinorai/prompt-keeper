@@ -32,6 +32,8 @@ updates:
       # no dependency-type so a pair split across dependencies and
       # devDependencies (next + eslint-config-next, @tailwindcss/postcss +
       # tailwindcss) still lands in one PR. #203 split them up and broke Lint.
+      # typescript-eslint has no group: it is only a transitive dependency of
+      # eslint-config-next now, and version updates touch direct ones only.
       tailwind:
         applies-to: version-updates
         patterns:
@@ -42,12 +44,6 @@ updates:
         patterns:
           - "next"
           - "eslint-config-next"
-          - "@next/*"
-      typescript-eslint:
-        applies-to: version-updates
-        patterns:
-          - "typescript-eslint"
-          - "@typescript-eslint/*"
       # Routine version bumps: production deps in their own PR for review
       npm-production:
         applies-to: version-updates
