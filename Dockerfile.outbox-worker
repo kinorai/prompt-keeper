@@ -10,13 +10,13 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
-# postinstall runs `prisma generate`, which reads the schema and prisma.config.ts
-COPY prisma/schema.prisma ./prisma/
-COPY prisma.config.ts ./
+# Scripts off: the postinstall `prisma generate` would need the schema here, so
+# every schema edit would reinstall all dependencies. The builder stage runs
+# `prisma generate` once, after the sources are copied.
 RUN \
-    if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-    elif [ -f package-lock.json ]; then npm ci  --no-audit --no-fund; \
-    elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+    if [ -f yarn.lock ]; then yarn --frozen-lockfile --ignore-scripts; \
+    elif [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; \
+    elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile --ignore-scripts; \
     else echo "Lockfile not found." && exit 1; \
     fi
 
