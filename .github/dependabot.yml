@@ -18,7 +18,8 @@ updates:
     ignore:
       # typescript-eslint and ts-jest do not support TypeScript 7 yet
       # (typescript-eslint#10940): it breaks Lint, Test and CodeQL. Held at 6 since
-      # 385dd6b. Drop this once both support 7 (docs/TODO.md).
+      # 385dd6b. Drop this rule, and the ~6.0.3 pin in package.json, once the
+      # typescript peer range of both packages allows 7.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
     groups:
