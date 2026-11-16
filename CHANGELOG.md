@@ -1,3 +1,11 @@
+## [0.15.8](https://github.com/kinorai/prompt-keeper/compare/v0.15.7...v0.15.8) (2026-11-16)
+
+
+### Bug Fixes
+
+* **deps:** bump next, tailwind and typescript-eslint families together ([f9c70a6](https://github.com/kinorai/prompt-keeper/commit/f9c70a63ceeafc545c53c43bc78783fabf1efba8)), closes [#203](https://github.com/kinorai/prompt-keeper/issues/203) [#203](https://github.com/kinorai/prompt-keeper/issues/203)
+* the review's fixes ([9441b4a](https://github.com/kinorai/prompt-keeper/commit/9441b4aed474ce2436ce127a1a48f424c5b33c69))
+
 ## [0.15.7](https://github.com/kinorai/prompt-keeper/compare/v0.15.6...v0.15.7) (2026-11-15)
 
 ## [0.15.6](https://github.com/kinorai/prompt-keeper/compare/v0.15.5...v0.15.6) (2026-11-11)
@@ -16,6 +24,4 @@
 * **ci:** skip the release when a newer commit on main will release it ([2a20cb0](https://github.com/kinorai/prompt-keeper/commit/2a20cb0ac5b28793ef1bf6f39d77dbf9ca21e61d)), closes [#516](https://github.com/kinorai/prompt-keeper/issues/516)
 
 ## [0.15.4](https://github.com/kinorai/prompt-keeper/compare/v0.15.3...v0.15.4) (2026-11-09)
-
-## [0.15.3](https://github.com/kinorai/prompt-keeper/compare/v0.15.2...v0.15.3) (2026-11-09)
 
