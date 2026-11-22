@@ -1,3 +1,5 @@
+## [0.15.10](https://github.com/kinorai/prompt-keeper/compare/v0.15.9...v0.15.10) (2026-11-22)
+
 ## [0.15.9](https://github.com/kinorai/prompt-keeper/compare/v0.15.8...v0.15.9) (2026-11-16)
 
 ## [0.15.8](https://github.com/kinorai/prompt-keeper/compare/v0.15.7...v0.15.8) (2026-11-16)
@@ -16,12 +18,4 @@
 ### Bug Fixes
 
 * **docker:** node 26.13.1 for the november security release ([6912aeb](https://github.com/kinorai/prompt-keeper/commit/6912aebd86a141ac3f28f71fcc415da0b8dfdfab))
-
-## [0.15.5](https://github.com/kinorai/prompt-keeper/compare/v0.15.4...v0.15.5) (2026-11-09)
-
-
-### Bug Fixes
-
-* **ci:** fail the superseded check on a git error ([367d531](https://github.com/kinorai/prompt-keeper/commit/367d53109aa0f561a58fadcfbd704a00b5148053))
-* **ci:** skip the release when a newer commit on main will release it ([2a20cb0](https://github.com/kinorai/prompt-keeper/commit/2a20cb0ac5b28793ef1bf6f39d77dbf9ca21e61d)), closes [#516](https://github.com/kinorai/prompt-keeper/issues/516)
 
