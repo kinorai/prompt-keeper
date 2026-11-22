@@ -17,9 +17,12 @@ WORKDIR /cli
 COPY package-lock.json /tmp/app-lock.json
 # Only the Prisma CLI, pinned to the version the app's lockfile resolves, so the
 # migration runner can never drift from the generated client. dotenv too, at the
-# app's version: prisma.config.ts imports it to read a local .env.
+# app's version: prisma.config.ts imports it to read a local .env. effect is pinned
+# through an override, as in the app's package.json: @prisma/config pins a version
+# with a ReDoS (GHSA-7589), and this empty project does not see the app's overrides.
 RUN lock() { node -p "require('/tmp/app-lock.json').packages['node_modules/$1'].version"; } \
     && npm init -y > /dev/null \
+    && npm pkg set "overrides.effect=$(lock effect)" \
     && npm install --no-audit --no-fund --omit=dev "prisma@$(lock prisma)" "dotenv@$(lock dotenv)"
 
 FROM base AS runner
